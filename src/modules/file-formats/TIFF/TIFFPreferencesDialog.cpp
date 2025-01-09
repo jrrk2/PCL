@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard TIFF File Format Module Version 1.0.10
 // ----------------------------------------------------------------------------
-// TIFFPreferencesDialog.cpp - Released 2024-12-28T16:54:05Z
+// TIFFPreferencesDialog.cpp - Released 2025-01-09T18:44:23Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard TIFF PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -390,4 +390,4 @@ void TIFFPreferencesDialog::Dialog_Return( Dialog& sender, int retVal )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF TIFFPreferencesDialog.cpp - Released 2024-12-28T16:54:05Z
+// EOF TIFFPreferencesDialog.cpp - Released 2025-01-09T18:44:23Z

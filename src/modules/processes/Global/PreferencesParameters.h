@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard Global Process Module Version 1.6.2
 // ----------------------------------------------------------------------------
-// PreferencesParameters.h - Released 2024-12-28T16:54:15Z
+// PreferencesParameters.h - Released 2025-01-09T18:44:32Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Global PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -349,7 +349,7 @@ DECLARE_BOOLEAN_METAPARAMETER ( ImageWindow, rememberFileOpenType,             f
 DECLARE_BOOLEAN_METAPARAMETER ( ImageWindow, rememberFileSaveType,             true )
 DECLARE_BOOLEAN_METAPARAMETER ( ImageWindow, strictFileSaveMode,               true )
 DECLARE_BOOLEAN_METAPARAMETER ( ImageWindow, fileFormatWarnings,               true )
-DECLARE_BOOLEAN_METAPARAMETER ( ImageWindow, useFileNamesAsImageIdentifiers,   true )
+DECLARE_BOOLEAN_METAPARAMETER ( ImageWindow, useFileNamesAsImageIdentifiers,   false )
 DECLARE_INT32_METAPARAMETER   ( ImageWindow, cursorTolerance,                  3, 1, 16 )
 DECLARE_BOOLEAN_METAPARAMETER ( ImageWindow, zoomAtCursor,                     true )
 DECLARE_UINT32_METAPARAMETER  ( ImageWindow, wheelStepAngle,                   15, 1, 90 )
@@ -437,4 +437,4 @@ PCL_END_LOCAL
 #endif   // __PreferencesParameters_h
 
 // ----------------------------------------------------------------------------
-// EOF PreferencesParameters.h - Released 2024-12-28T16:54:15Z
+// EOF PreferencesParameters.h - Released 2025-01-09T18:44:32Z

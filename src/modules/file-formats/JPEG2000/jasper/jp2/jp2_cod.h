@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard JPEG2000 File Format Module Version 1.0.3
 // ----------------------------------------------------------------------------
-// jp2_cod.h - Released 2024-12-28T16:54:05Z
+// jp2_cod.h - Released 2025-01-09T18:44:23Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard JPEG2000 PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -371,4 +371,4 @@ jp2_cdefchan_t *jp2_cdef_lookup(jp2_cdef_t *cdef, int channo);
 #endif
 
 // ----------------------------------------------------------------------------
-// EOF jp2_cod.h - Released 2024-12-28T16:54:05Z
+// EOF jp2_cod.h - Released 2025-01-09T18:44:23Z

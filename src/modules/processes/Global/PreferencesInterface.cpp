@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard Global Process Module Version 1.6.2
 // ----------------------------------------------------------------------------
-// PreferencesInterface.cpp - Released 2024-12-28T16:54:15Z
+// PreferencesInterface.cpp - Released 2025-01-09T18:44:32Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Global PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -2592,10 +2592,17 @@ IdentifiersPreferencesPage::IdentifiersPreferencesPage( PreferencesInstance& ins
    UseFileNamesAsImageIdentifiers_Flag.checkBox.SetText( "Use file names as image identifiers" );
    UseFileNamesAsImageIdentifiers_Flag.item = &instance.imageWindow.useFileNamesAsImageIdentifiers;
    UseFileNamesAsImageIdentifiers_Flag.SetToolTip(
-      "<p>For images loaded from local or remote files, use file names to build meaningful image identifiers.<p>"
-      "<p>Illegal identifier characters in file names (such as white spaces) are automatically replaced with "
-      "underscores. When this option is disabled, the default image prefix is always used to generate image "
-      "identifiers.</p>" );
+      "<p>For images loaded from local or remote files, use file names to build image identifiers. "
+      "Illegal identifier characters in file names (such as white spaces) are automatically replaced "
+      "with underscores.</p>"
+      "<p>When this option is disabled, image identifiers are retrieved from XISF files when they "
+      "exist. When no identifier is available, the default image prefix is used to generate unique "
+      "image identifiers.</p>"
+      "<p>Since core version 1.9.3 Lockhart, this option is disabled by default and its use on a "
+      "regular basis is discouraged. Meaningful identifiers should be defined for each image, either "
+      "programmatically (for example, using our standard tools and preprocessing scripts), or by "
+      "manually renaming them. Identifiers are embedded as image properties in XISF files and loaded "
+      "automatically when the images are opened.</p>" );
 
    WorkspacePrefix_Id.label.SetText( "Workspace prefix" );
    WorkspacePrefix_Id.item = &instance.identifiers.workspacePrefix;
@@ -3141,4 +3148,4 @@ void PreferencesInterface::GUIData::InitializeCategories()
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF PreferencesInterface.cpp - Released 2024-12-28T16:54:15Z
+// EOF PreferencesInterface.cpp - Released 2025-01-09T18:44:32Z

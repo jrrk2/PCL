@@ -2,9 +2,9 @@
 <!--
 ######################################################################
 # PixInsight Makefile Generator Script v1.143
-# Copyright (C) 2009-2024 Pleiades Astrophoto
+# Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2024-12-28T16:56:18.267Z
+# Generated on .... 2025-01-09T20:21:28.789Z
 # Project id ...... CosmeticCorrection
 # Project type .... Module
 # Platform ........ Windows/vc16
@@ -16,13 +16,13 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>8ec5899a-a551-4072-99e1-07231062cb97</UniqueIdentifier>
+      <UniqueIdentifier>10d2d5fc-5c78-4616-912a-c027ed7adcdd</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>12835039-97a8-4ae2-8a97-6ea43ce64ebf</UniqueIdentifier>
+      <UniqueIdentifier>726cca8c-e0ca-4351-a483-5791e6d1c9a2</UniqueIdentifier>
     </Filter>
     <Filter Include="Image Files">
-      <UniqueIdentifier>14e611c7-4fde-4fb3-b818-9b4ac9e5fdc2</UniqueIdentifier>
+      <UniqueIdentifier>2fae93b9-da52-4677-bb33-8222cf7f3430</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

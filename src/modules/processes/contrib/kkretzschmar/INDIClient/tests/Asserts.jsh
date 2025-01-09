@@ -1,11 +1,11 @@
 // ----------------------------------------------------------------------------
 // PixInsight JavaScript Runtime API - PJSR Version 1.0
 // ----------------------------------------------------------------------------
-// Asserts.jsh - Released 2024-12-28T16:54:15Z
+// Asserts.jsh - Released 2025-01-09T18:44:32Z
 // ----------------------------------------------------------------------------
 //
 //
-// Copyright (c) 2014-2024 Klaus Kretzschmar
+// Copyright (c) 2014-2025 Klaus Kretzschmar
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -157,4 +157,4 @@ function parseXTPMFile(fileName) {
 #endif // _Asserts_jsh
 
 // ----------------------------------------------------------------------------
-// EOF Asserts.jsh - Released 2024-12-28T16:54:15Z
+// EOF Asserts.jsh - Released 2025-01-09T18:44:32Z

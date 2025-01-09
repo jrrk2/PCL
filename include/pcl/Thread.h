@@ -2,14 +2,14 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
-// pcl/Thread.h - Released 2024-12-28T16:53:48Z
+// pcl/Thread.h - Released 2025-01-09T18:43:56Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -108,7 +108,11 @@ namespace ThreadPriority
       High,
       Highest,
       TimeCritical,  // Schedule as often as possible, taking precedence over any other threads.
+#ifdef __PCL_WINDOWS
+      DefaultMax = Normal
+#else
       DefaultMax = Highest
+#endif
    };
 }
 
@@ -746,4 +750,4 @@ void PCL_FUNC Sleep( unsigned ms );
 #endif   // __PCL_Thread_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Thread.h - Released 2024-12-28T16:53:48Z
+// EOF pcl/Thread.h - Released 2025-01-09T18:43:56Z

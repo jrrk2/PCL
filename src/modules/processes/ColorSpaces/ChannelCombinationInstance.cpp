@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
-// Standard ColorSpaces Process Module Version 1.2.1
+// Standard ColorSpaces Process Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// ChannelCombinationInstance.cpp - Released 2024-12-28T16:54:15Z
+// ChannelCombinationInstance.cpp - Released 2025-01-09T18:44:31Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard ColorSpaces PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -57,6 +57,7 @@
 #include <pcl/AutoViewLock.h>
 #include <pcl/ImageWindow.h>
 #include <pcl/IntegrationMetadata.h>
+#include <pcl/MetaModule.h>
 #include <pcl/StandardStatus.h>
 #include <pcl/View.h>
 
@@ -605,6 +606,8 @@ bool ChannelCombinationInstance::ExecuteGlobal()
    ImageWindow sourceWindow[ 3 ];
    ImageVariant sourceImage[ 3 ];
    Array<IntegrationMetadata> sourceMetadata;
+   int sourcePCLCalibrationPropertyCount = 0;
+   int sourcePCLIntegrationPropertyCount = 0;
 
    int numberOfSources = 0;
    int width = 0, height = 0;
@@ -642,8 +645,15 @@ bool ChannelCombinationInstance::ExecuteGlobal()
                throw Error( "ChannelCombination: Incompatible source image dimensions: " + p_channelId[i] );
          }
 
-         sourceMetadata << IntegrationMetadata( sourceWindow[i].MainView().StorableProperties(),
-                                                sourceWindow[i].Keywords() );
+         PropertyArray properties = sourceWindow[i].MainView().StorableProperties();
+         for ( const auto& p : properties )
+            if ( p.Id() == "PCL:Calibration" )
+               ++sourcePCLCalibrationPropertyCount;
+            else if ( p.Id() == "PCL:Integration" )
+               ++sourcePCLIntegrationPropertyCount;
+
+         sourceMetadata << IntegrationMetadata( properties, sourceWindow[i].Keywords() );
+
          ++numberOfSources;
       }
 
@@ -735,6 +745,21 @@ bool ChannelCombinationInstance::ExecuteGlobal()
 
       IntegrationMetadata metadata = IntegrationMetadata::Summary( sourceMetadata );
       metadata.UpdatePropertiesAndKeywords( properties, keywords );
+
+      /*
+       * Signature property
+       */
+      if ( sourcePCLCalibrationPropertyCount == numberOfSources
+        || sourcePCLIntegrationPropertyCount == numberOfSources )
+      {
+         int major, minor, release, build;
+         IsoString dum1, dum2;
+         Module->GetVersion( major, minor, release, build, dum1, dum2 );
+         IsoString info = IsoString().Format( "process=ChannelCombination,version=%d.%d.%d", major, minor, release );
+         if ( build > 0 )
+            info.AppendFormat( "-%d", build );
+         properties << Property( "PCL:Integration", info );
+      }
 
       outputView.SetStorablePermanentProperties( properties );
       outputWindow.SetKeywords( keywords );
@@ -829,4 +854,4 @@ size_type ChannelCombinationInstance::ParameterLength( const MetaParameter* p, s
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF ChannelCombinationInstance.cpp - Released 2024-12-28T16:54:15Z
+// EOF ChannelCombinationInstance.cpp - Released 2025-01-09T18:44:31Z

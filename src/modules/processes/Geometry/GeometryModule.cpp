@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard Geometry Process Module Version 1.4.2
 // ----------------------------------------------------------------------------
-// GeometryModule.cpp - Released 2024-12-28T16:54:15Z
+// GeometryModule.cpp - Released 2025-01-09T18:44:32Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Geometry PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -56,9 +56,9 @@
 #define MODULE_VERSION_BUILD     0
 #define MODULE_VERSION_LANGUAGE  eng
 
-#define MODULE_RELEASE_YEAR      2024
-#define MODULE_RELEASE_MONTH     12
-#define MODULE_RELEASE_DAY       28
+#define MODULE_RELEASE_YEAR      2025
+#define MODULE_RELEASE_MONTH     1
+#define MODULE_RELEASE_DAY       9
 
 #include <pcl/AstrometricMetadata.h>
 #include <pcl/Console.h>
@@ -135,7 +135,7 @@ String GeometryModule::Author() const
 
 String GeometryModule::Copyright() const
 {
-   return "Copyright (c) 2005-2024 Pleiades Astrophoto";
+   return "Copyright (c) 2005-2025 Pleiades Astrophoto";
 }
 
 // ----------------------------------------------------------------------------
@@ -289,4 +289,4 @@ PCL_MODULE_EXPORT int InstallPixInsightModule( int mode )
 }
 
 // ----------------------------------------------------------------------------
-// EOF GeometryModule.cpp - Released 2024-12-28T16:54:15Z
+// EOF GeometryModule.cpp - Released 2025-01-09T18:44:32Z

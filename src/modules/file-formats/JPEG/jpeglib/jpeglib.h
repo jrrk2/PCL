@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard JPEG File Format Module Version 1.0.5
 // ----------------------------------------------------------------------------
-// jpeglib.h - Released 2024-12-28T16:54:05Z
+// jpeglib.h - Released 2025-01-09T18:44:23Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard JPEG PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -1235,4 +1235,4 @@ struct jpeg_color_quantizer { long dummy; };
 #endif /* JPEGLIB_H */
 
 // ----------------------------------------------------------------------------
-// EOF jpeglib.h - Released 2024-12-28T16:54:05Z
+// EOF jpeglib.h - Released 2025-01-09T18:44:23Z

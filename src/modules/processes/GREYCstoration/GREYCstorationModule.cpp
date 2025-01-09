@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard GREYCstoration Process Module Version 1.0.2
 // ----------------------------------------------------------------------------
-// GREYCstorationModule.cpp - Released 2024-12-28T16:54:15Z
+// GREYCstorationModule.cpp - Released 2025-01-09T18:44:32Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard GREYCstoration PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -71,9 +71,9 @@
 #define MODULE_VERSION_BUILD     0
 #define MODULE_VERSION_LANGUAGE  eng
 
-#define MODULE_RELEASE_YEAR      2024
-#define MODULE_RELEASE_MONTH     12
-#define MODULE_RELEASE_DAY       28
+#define MODULE_RELEASE_YEAR      2025
+#define MODULE_RELEASE_MONTH     1
+#define MODULE_RELEASE_DAY       9
 
 #include "GREYCstorationInterface.h"
 #include "GREYCstorationModule.h"
@@ -131,7 +131,7 @@ String GREYCstorationModule::Author() const
 
 String GREYCstorationModule::Copyright() const
 {
-   return "CImg: Copyright (c) David Tschumperl&eacute; / PCL: Copyright (c) 2003-2024 Pleiades Astrophoto";
+   return "CImg: Copyright (c) David Tschumperl&eacute; / PCL: Copyright (c) 2003-2025 Pleiades Astrophoto";
 }
 
 // ----------------------------------------------------------------------------
@@ -188,4 +188,4 @@ PCL_MODULE_EXPORT int InstallPixInsightModule( int mode )
 }
 
 // ----------------------------------------------------------------------------
-// EOF GREYCstorationModule.cpp - Released 2024-12-28T16:54:15Z
+// EOF GREYCstorationModule.cpp - Released 2025-01-09T18:44:32Z

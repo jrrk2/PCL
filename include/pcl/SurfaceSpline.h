@@ -2,14 +2,14 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
-// pcl/SurfaceSpline.h - Released 2024-12-28T16:53:48Z
+// pcl/SurfaceSpline.h - Released 2025-01-09T18:43:56Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -196,6 +196,19 @@ namespace RadialBasisFunction
    inline static bool IsVariableOrder( int rbf )
    {
       return rbf == DDMVariableOrder || rbf == VariableOrder;
+   }
+
+   /*!
+    * Returns true iff the specified \a rbf enumeration value corresponds to a
+    * radial basis function with adjustable shape parameter (usually specified
+    * as an \a eps parameter).
+    */
+   inline static bool HasShapeParameter( int rbf )
+   {
+      return rbf == Gaussian
+          || rbf == Multiquadric
+          || rbf == InverseMultiquadric
+          || rbf == InverseQuadratic;
    }
 }
 
@@ -838,9 +851,9 @@ public:
          m_r0 = 1/m_r0;
 
          /*
-          * If requested, compute an optimal shape parameter.
+          * If needed and requested, compute an optimal shape parameter.
           */
-         if ( m_eps == 0 )
+         if ( unlikely( RadialBasisFunction::HasShapeParameter( m_rbf ) ) && m_eps == 0 )
          {
             Array<double> R2;
             for ( int i = 0; i < n; ++i )
@@ -2651,4 +2664,4 @@ private:
 #endif   // __PCL_SurfaceSpline_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/SurfaceSpline.h - Released 2024-12-28T16:53:48Z
+// EOF pcl/SurfaceSpline.h - Released 2025-01-09T18:43:56Z

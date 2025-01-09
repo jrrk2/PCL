@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard JPEG2000 File Format Module Version 1.0.3
 // ----------------------------------------------------------------------------
-// jpc_util.c - Released 2024-12-28T16:54:05Z
+// jpc_util.c - Released 2025-01-09T18:44:23Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard JPEG2000 PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -246,4 +246,4 @@ jas_seq_t *jpc_seq_conv(jas_seq_t *x, jas_seq_t *y)
 }
 
 // ----------------------------------------------------------------------------
-// EOF jpc_util.c - Released 2024-12-28T16:54:05Z
+// EOF jpc_util.c - Released 2025-01-09T18:44:23Z

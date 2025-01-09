@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
-// Standard ColorSpaces Process Module Version 1.2.1
+// Standard ColorSpaces Process Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// ColorSpacesModule.cpp - Released 2024-12-28T16:54:15Z
+// ColorSpacesModule.cpp - Released 2025-01-09T18:44:31Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard ColorSpaces PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -52,13 +52,13 @@
 
 #define MODULE_VERSION_MAJOR     1
 #define MODULE_VERSION_MINOR     2
-#define MODULE_VERSION_REVISION  1
+#define MODULE_VERSION_REVISION  2
 #define MODULE_VERSION_BUILD     0
 #define MODULE_VERSION_LANGUAGE  eng
 
-#define MODULE_RELEASE_YEAR      2024
-#define MODULE_RELEASE_MONTH     12
-#define MODULE_RELEASE_DAY       28
+#define MODULE_RELEASE_YEAR      2025
+#define MODULE_RELEASE_MONTH     1
+#define MODULE_RELEASE_DAY       9
 
 #include "ColorSpacesModule.h"
 #include "GrayscaleRGBProcesses.h"
@@ -126,7 +126,7 @@ String ColorSpacesModule::Author() const
 
 String ColorSpacesModule::Copyright() const
 {
-   return "Copyright (c) 2005-2024 Pleiades Astrophoto";
+   return "Copyright (c) 2005-2025 Pleiades Astrophoto";
 }
 
 // ----------------------------------------------------------------------------
@@ -204,4 +204,4 @@ PCL_MODULE_EXPORT int InstallPixInsightModule( int mode )
 }
 
 // ----------------------------------------------------------------------------
-// EOF ColorSpacesModule.cpp - Released 2024-12-28T16:54:15Z
+// EOF ColorSpacesModule.cpp - Released 2025-01-09T18:44:31Z

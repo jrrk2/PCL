@@ -2,15 +2,15 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.8.6
 // ----------------------------------------------------------------------------
 // Standard IntensityTransformations Process Module Version 1.7.2
 // ----------------------------------------------------------------------------
-// ScreenTransferFunctionInstance.h - Released 2024-12-28T16:54:15Z
+// ScreenTransferFunctionInstance.h - Released 2025-01-09T18:44:32Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard IntensityTransformations PixInsight module.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -149,4 +149,4 @@ private:
 #endif   // __ScreenTransferFunctionInstance_h
 
 // ----------------------------------------------------------------------------
-// EOF ScreenTransferFunctionInstance.h - Released 2024-12-28T16:54:15Z
+// EOF ScreenTransferFunctionInstance.h - Released 2025-01-09T18:44:32Z
