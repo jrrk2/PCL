@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard SubframeSelector Process Module Version 1.9.1
+// Standard SubframeSelector Process Module Version 1.9.2
 // ----------------------------------------------------------------------------
-// SubframeSelectorParameters.h - Released 2025-01-09T18:44:32Z
+// SubframeSelectorParameters.h - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard SubframeSelector PixInsight module.
 //
@@ -846,6 +846,22 @@ extern SSOutputKeyword* TheSSOutputKeywordParameter;
 
 // ----------------------------------------------------------------------------
 
+class SSGenerateHistoryProperties : public MetaBoolean
+{
+public:
+
+   SSGenerateHistoryProperties( MetaProcess* );
+
+   IsoString Id() const override;
+   bool DefaultValue() const override;
+
+   IsoString Tooltip() const;
+};
+
+extern SSGenerateHistoryProperties* TheSSGenerateHistoryPropertiesParameter;
+
+// ----------------------------------------------------------------------------
+
 class SSOverwriteExistingFiles : public MetaBoolean
 {
 public:
@@ -1653,4 +1669,4 @@ PCL_END_LOCAL
 #endif   // __SubframeSelectorParameters_h
 
 // ----------------------------------------------------------------------------
-// EOF SubframeSelectorParameters.h - Released 2025-01-09T18:44:32Z
+// EOF SubframeSelectorParameters.h - Released 2025-02-19T18:29:34Z

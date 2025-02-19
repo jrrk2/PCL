@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard CometAlignment Process Module Version 1.3.8
+// Standard CometAlignment Process Module Version 1.3.9
 // ----------------------------------------------------------------------------
-// CometAlignmentProcess.cpp - Released 2025-01-09T18:44:32Z
+// CometAlignmentProcess.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard CometAlignment PixInsight module.
 //
@@ -100,6 +100,7 @@ CometAlignmentProcess::CometAlignmentProcess()
    new CAOutputExtension( this );
    new CAOutputPrefix( this );
    new CAOutputPostfix( this );
+   new CAGenerateHistoryProperties( this );
    new CAOverwriteExistingFiles( this );
    new CAGenerateCometPathMap( this );
    new CAOnError( this );
@@ -172,4 +173,4 @@ ProcessImplementation* CometAlignmentProcess::Clone( const ProcessImplementation
 } // namespace pcl
 
 // ----------------------------------------------------------------------------
-// EOF CometAlignmentProcess.cpp - Released 2025-01-09T18:44:32Z
+// EOF CometAlignmentProcess.cpp - Released 2025-02-19T18:29:34Z

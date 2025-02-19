@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Median.cpp - Released 2025-01-09T18:44:07Z
+// pcl/Median.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -49,7 +49,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 // ----------------------------------------------------------------------------
 
-#include <pcl/Math.h>
 #include <pcl/ReferenceArray.h>
 #include <pcl/Thread.h>
 #include <pcl/Vector.h>
@@ -65,9 +64,6 @@
 #endif
 #define CMPXCHG( a, b ) \
    if ( t[b] < t[a] ) Swap( t[a], t[b] )
-
-// #include <pcl/ElapsedTime.h>
-// #include <iostream>
 
 namespace pcl
 {
@@ -392,10 +388,10 @@ private:
 // ----------------------------------------------------------------------------
 
 template <typename T>
-static double PCL_FastMedian( const T* __restrict__ begin, const T* __restrict__ end, double eps )
+static double PCL_FastMedian( const T* __restrict__ begin, const T* __restrict__ end, double eps, int maxThreads = 0 )
 {
    distance_type N = end - begin;
-   if ( N <= __PCL_MEDIAN_HISTOGRAM_OVERHEAD )
+   if ( N <= 4096 )
    {
       Array<T> A( begin, end );
       double m = double( *pcl::Select( A.Begin(), A.End(), N >> 1 ) );
@@ -404,7 +400,22 @@ static double PCL_FastMedian( const T* __restrict__ begin, const T* __restrict__
       return (m + double( *pcl::Select( A.Begin(), A.End(), (N >> 1)-1 ) ))/2;
    }
 
-   Array<size_type> L = Thread::OptimalThreadLoads( N, __PCL_MEDIAN_HISTOGRAM_OVERHEAD );
+   Array<size_type> L;
+   if ( maxThreads <= 0 )
+   {
+      Thread::PerformanceAnalysisData data;
+      data.algorithm = PerformanceAnalysisAlgorithm::FastMedian;
+      data.length = N;
+      data.overheadLimit = __PCL_MEDIAN_HISTOGRAM_OVERHEAD;
+      data.itemSize = sizeof( T );
+      data.floatingPoint = std::is_floating_point_v<T>;
+      L = Thread::OptimalThreadLoads( data );
+   }
+   else
+   {
+      // Performance analysis
+      L = Thread::OptimalThreadLoads( N, 1, maxThreads );
+   }
 
    double low, high;
    {
@@ -440,7 +451,7 @@ static double PCL_FastMedian( const T* __restrict__ begin, const T* __restrict__
    }
 
    if ( eps <= 0 )
-      eps = std::is_floating_point<T>::value ?
+      eps = std::is_floating_point_v<T> ?
                         2*std::numeric_limits<T>::epsilon() : 1/Pow2( double( sizeof( T ) << 3 ) );
    if ( high - low < eps )
       return low;
@@ -1374,24 +1385,6 @@ double PCL_FUNC Median( const float* __restrict__ i, const float* __restrict__ j
 
 double PCL_FUNC Median( const double* __restrict__ i, const double* __restrict__ j, double eps )
 {
-// int n = j - i;
-// FVector F( n );
-// for ( int k = 0; k < n; ++k )
-//    F[k] = i[k];
-//
-// ElapsedTime ET1;
-//
-// double m = PCL_Median( F.Begin(), F.End(), eps );
-
-// ElapsedTime ET1;
-//
-// double m = PCL_Median( i, j, eps );
-//
-// IsoString ts1 = ET1.ToIsoString();
-// std::cout << IsoString().Format( "(MED) N = %lu", j - i ) << " " << ts1 << '\n';
-//
-// return m;
-
    return PCL_Median( i, j, eps );
 }
 
@@ -1484,19 +1477,34 @@ double PCL_FUNC SmallMedianDestructive( long double* __restrict__ i, long double
 // ----------------------------------------------------------------------------
 
 template <typename T>
-static double PCL_OrderStatistic( const T* __restrict__ begin, const T* __restrict__ end, distance_type k, double eps )
+static double PCL_OrderStatistic( const T* __restrict__ begin, const T* __restrict__ end, distance_type k, double eps, int maxThreads = 0 )
 {
    distance_type N = end - begin;
    if ( k < 0 || k >= N )
       return 0;
 
-   if ( N <= __PCL_MEDIAN_HISTOGRAM_OVERHEAD )
+   if ( N <= 4096 )
    {
       Array<T> A( begin, end );
       return double( *pcl::Select( A.Begin(), A.End(), k ) );
    }
 
-   Array<size_type> L = Thread::OptimalThreadLoads( N, __PCL_MEDIAN_HISTOGRAM_OVERHEAD );
+   Array<size_type> L;
+   if ( maxThreads <= 0 )
+   {
+      Thread::PerformanceAnalysisData data;
+      data.algorithm = PerformanceAnalysisAlgorithm::FastMedian;
+      data.length = N;
+      data.overheadLimit = __PCL_MEDIAN_HISTOGRAM_OVERHEAD;
+      data.itemSize = sizeof( T );
+      data.floatingPoint = std::is_floating_point_v<T>;
+      L = Thread::OptimalThreadLoads( data );
+   }
+   else
+   {
+      // Performance analysis
+      L = Thread::OptimalThreadLoads( N, 1, maxThreads );
+   }
 
    double low, high;
    {
@@ -1537,7 +1545,7 @@ static double PCL_OrderStatistic( const T* __restrict__ begin, const T* __restri
       return high;
 
    if ( eps <= 0 )
-      eps = std::is_floating_point<T>::value ?
+      eps = std::is_floating_point_v<T> ?
                         2*std::numeric_limits<T>::epsilon() : 1/Pow2( double( sizeof( T ) << 3 ) );
    if ( high - low < eps )
       return low;
@@ -1865,10 +1873,10 @@ private:
 };
 
 template <typename T>
-static double PCL_FastMAD( const T* __restrict__ begin, const T* __restrict__ end, double center, double eps )
+static double PCL_FastMAD( const T* __restrict__ begin, const T* __restrict__ end, double center, double eps, int maxThreads = 0 )
 {
    distance_type N = end - begin;
-   if ( N <= __PCL_MEDIAN_HISTOGRAM_OVERHEAD )
+   if ( N <= 4096 )
    {
       double* d = new double[ N ];
       double* __restrict__ p = d;
@@ -1881,7 +1889,22 @@ static double PCL_FastMAD( const T* __restrict__ begin, const T* __restrict__ en
       return m;
    }
 
-   Array<size_type> L = Thread::OptimalThreadLoads( N, __PCL_MEDIAN_HISTOGRAM_OVERHEAD );
+   Array<size_type> L;
+   if ( maxThreads <= 0 )
+   {
+      Thread::PerformanceAnalysisData data;
+      data.algorithm = PerformanceAnalysisAlgorithm::FastMAD;
+      data.length = N;
+      data.overheadLimit = __PCL_MEDIAN_HISTOGRAM_OVERHEAD;
+      data.itemSize = sizeof( T );
+      data.floatingPoint = std::is_floating_point_v<T>;
+      L = Thread::OptimalThreadLoads( data );
+   }
+   else
+   {
+      // Performance analysis
+      L = Thread::OptimalThreadLoads( N, 1, maxThreads );
+   }
 
    double low, high;
    {
@@ -2066,15 +2089,6 @@ double PCL_FUNC MAD( const float* __restrict__ i, const float* __restrict__ j, d
 
 double PCL_FUNC MAD( const double* __restrict__ i, const double* __restrict__ j, double center, double eps )
 {
-// ElapsedTime ET1;
-//
-// double m = PCL_MAD( i, j, center, eps );
-//
-// IsoString ts1 = ET1.ToIsoString();
-// std::cout << IsoString().Format( "(MAD) N = %lu", j - i ) << " " << ts1 << '\n';
-//
-// return m;
-
    return PCL_MAD( i, j, center, eps );
 }
 
@@ -2452,10 +2466,10 @@ private:
 };
 
 template <typename T>
-static TwoSidedEstimate PCL_TwoSidedFastMAD( const T* __restrict__ begin, const T* __restrict__ end, double center, double eps )
+static TwoSidedEstimate PCL_TwoSidedFastMAD( const T* __restrict__ begin, const T* __restrict__ end, double center, double eps, int maxThreads = 0 )
 {
    distance_type N = end - begin;
-   if ( N <= __PCL_MEDIAN_HISTOGRAM_OVERHEAD )
+   if ( N <= 4096 )
    {
       double* d = new double[ N ];
       double* __restrict__ p = d;
@@ -2475,7 +2489,22 @@ static TwoSidedEstimate PCL_TwoSidedFastMAD( const T* __restrict__ begin, const 
       return { l, h };
    }
 
-   Array<size_type> L = Thread::OptimalThreadLoads( N, __PCL_MEDIAN_HISTOGRAM_OVERHEAD );
+   Array<size_type> L;
+   if ( maxThreads <= 0 )
+   {
+      Thread::PerformanceAnalysisData data;
+      data.algorithm = PerformanceAnalysisAlgorithm::FastMAD;
+      data.length = N;
+      data.overheadLimit = __PCL_MEDIAN_HISTOGRAM_OVERHEAD;
+      data.itemSize = sizeof( T );
+      data.floatingPoint = std::is_floating_point_v<T>;
+      L = Thread::OptimalThreadLoads( data );
+   }
+   else
+   {
+      // Performance analysis
+      L = Thread::OptimalThreadLoads( N, 1, maxThreads );
+   }
 
    double minLow = 0, minHigh = 0, maxLow = 0, maxHigh = 0;
    size_type nLow = 0, nHigh = 0;
@@ -2709,8 +2738,31 @@ TwoSidedEstimate PCL_FUNC TwoSidedMAD( const long double* __restrict__ i, const 
 }
 
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/*
+ * Performance analysis
+ */
+double PCL_PA_FastMedian_F32( const float* __restrict__ begin, const float* __restrict__ end, int maxThreads )
+{
+   return PCL_FastMedian( begin, end, 0.0/*eps*/, maxThreads );
+}
+double PCL_PA_FastMedian_F64( const double* __restrict__ begin, const double* __restrict__ end, int maxThreads )
+{
+   return PCL_FastMedian( begin, end, 0.0/*eps*/, maxThreads );
+}
+double PCL_PA_FastMAD_F32( const float* __restrict__ begin, const float* __restrict__ end, double center, int maxThreads )
+{
+   return PCL_FastMAD( begin, end, center, 0.0/*eps*/, maxThreads );
+}
+double PCL_PA_FastMAD_F64( const double* __restrict__ begin, const double* __restrict__ end, double center, int maxThreads )
+{
+   return PCL_FastMAD( begin, end, center, 0.0/*eps*/, maxThreads );
+}
+
+// ----------------------------------------------------------------------------
 
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Median.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/Median.cpp - Released 2025-02-19T18:29:13Z

@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard CosmeticCorrection Process Module Version 1.4.0
+// Standard CosmeticCorrection Process Module Version 1.4.1
 // ----------------------------------------------------------------------------
-// CosmeticCorrectionProcess.cpp - Released 2025-01-09T18:44:32Z
+// CosmeticCorrectionProcess.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard CosmeticCorrection PixInsight module.
 //
@@ -76,6 +76,7 @@ CosmeticCorrectionProcess::CosmeticCorrectionProcess()
    new CCOutputExtension( this );
    new CCPrefix( this );
    new CCPostfix( this );
+   new CCGenerateHistoryProperties( this );
    new CCOverwrite( this );
    new CCAmount( this );
    new CCCFA( this );
@@ -165,4 +166,4 @@ ProcessImplementation* CosmeticCorrectionProcess::Clone( const ProcessImplementa
 } // namespace pcl
 
 // ----------------------------------------------------------------------------
-// EOF CosmeticCorrectionProcess.cpp - Released 2025-01-09T18:44:32Z
+// EOF CosmeticCorrectionProcess.cpp - Released 2025-02-19T18:29:34Z

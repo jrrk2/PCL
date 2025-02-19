@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard SubframeSelector Process Module Version 1.9.1
+// Standard SubframeSelector Process Module Version 1.9.2
 // ----------------------------------------------------------------------------
-// SubframeSelectorParameters.cpp - Released 2025-01-09T18:44:32Z
+// SubframeSelectorParameters.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard SubframeSelector PixInsight module.
 //
@@ -110,6 +110,7 @@ SSOutputExtension*                  TheSSOutputExtensionParameter = nullptr;
 SSOutputPrefix*                     TheSSOutputPrefixParameter = nullptr;
 SSOutputPostfix*                    TheSSOutputPostfixParameter = nullptr;
 SSOutputKeyword*                    TheSSOutputKeywordParameter = nullptr;
+SSGenerateHistoryProperties*        TheSSGenerateHistoryPropertiesParameter = nullptr;
 SSOverwriteExistingFiles*           TheSSOverwriteExistingFilesParameter = nullptr;
 SSOnError*                          TheSSOnErrorParameter = nullptr;
 
@@ -1589,6 +1590,28 @@ String SSOutputKeyword::DefaultValue() const
 IsoString SSOutputKeyword::Tooltip() const
 {
    return "<p>This is the FITS Keyword name that will be used to store the Weight.</p>";
+}
+
+// ----------------------------------------------------------------------------
+
+SSGenerateHistoryProperties::SSGenerateHistoryProperties( MetaProcess* P ) : MetaBoolean( P )
+{
+   TheSSGenerateHistoryPropertiesParameter = this;
+}
+
+IsoString SSGenerateHistoryProperties::Id() const
+{
+   return "generateHistoryProperties";
+}
+
+bool SSGenerateHistoryProperties::DefaultValue() const
+{
+   return true;
+}
+
+IsoString SSGenerateHistoryProperties::Tooltip() const
+{
+   return "<p>Generate PixInsight:ProcessingHistory XISF properties in output files.</p>";
 }
 
 // ----------------------------------------------------------------------------
@@ -3096,4 +3119,4 @@ bool SSMeasurementUnused01::IsReadOnly() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF SubframeSelectorParameters.cpp - Released 2025-01-09T18:44:32Z
+// EOF SubframeSelectorParameters.cpp - Released 2025-02-19T18:29:34Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/ImageWindow.h - Released 2025-01-09T18:43:56Z
+// pcl/ImageWindow.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -296,13 +296,13 @@ public:
    /*!
     * Represents a display image channel supported by the PixInsight core
     * application. Valid display channels and components are defined in the
-    * DisplayChannel namespace.
+    * pcl::DisplayChannel namespace.
     */
    using display_channel = DisplayChannel::value_type;
 
    /*!
     * Represents a mask rendering mode supported by the PixInsight core
-    * application. Valid mask rendering modes are defined in the MaskMode
+    * application. Valid mask rendering modes are defined in the pcl::MaskMode
     * namespace.
     */
    using mask_mode = MaskMode::value_type;
@@ -310,16 +310,22 @@ public:
    /*!
     * Represents a transparency background brush supported by the PixInsight
     * core application. Valid transparency brushes are defined in the
-    * BackgroundBrush namespace.
+    * pcl::BackgroundBrush namespace.
     */
    using background_brush = BackgroundBrush::value_type;
 
    /*!
     * Represents a transparency rendering mode supported by the PixInsight core
     * application. Valid transparency rendering modes are defined in the
-    * TransparencyMode namespace.
+    * pcl::TransparencyMode namespace.
     */
    using transparency_mode = TransparencyMode::value_type;
+
+   /*!
+    * Represents a standard image type supported by the PixInsight/PCL
+    * platform. Valid image types are defined in the pcl::ImageType namespace.
+    */
+   using image_type = pcl::ImageType::value_type;
 
    /*!
     * Constructs a null image window. A null %ImageWindow does not correspond
@@ -599,6 +605,33 @@ public:
     * this image window.
     */
    ImageOptions FileInfo() const;
+
+   /*!
+    * Returns the standard image type currently assigned to this window.
+    *
+    * The returned value should be the same as the one given by calling:
+    *
+    * \code FileInfo().imageType \endcode
+    *
+    * \sa SetImageType()
+    */
+   image_type ImageType() const;
+
+   /*!
+    * Sets the standard image type for this window.
+    *
+    * \param type       The new image type that will be assigned to this
+    *                   window. See the pcl::ImageType namespace for possible
+    *                   values.
+    *
+    * \param notify     Whether to notify the platform on the image type
+    *                   change. This is true by default.
+    *
+    * By default, image windows have the ImageType::Unknown type.
+    *
+    * \sa ImageType()
+    */
+   void SetImageType( image_type type, bool notify = true );
 
    /*!
     * Returns the <em>modification counter</em> for this image window. The
@@ -3070,4 +3103,4 @@ private:
 #endif   // __PCL_ImageWindow_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/ImageWindow.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/ImageWindow.h - Released 2025-02-19T18:29:04Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/IntegrationMetadata.cpp - Released 2025-01-09T18:44:07Z
+// pcl/IntegrationMetadata.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -50,13 +50,58 @@
 // ----------------------------------------------------------------------------
 
 #include <pcl/IntegrationMetadata.h>
+#include <pcl/XISF.h>
 
 namespace pcl
 {
 
 // ----------------------------------------------------------------------------
 
-IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const FITSKeywordArray& keywords )
+static ImageType::value_type ImageTypeFromFITSKeywordValue( const IsoString& keywordValue )
+{
+   IsoString type = keywordValue.Trimmed().CaseFolded();
+   type.DeleteChar( ' ' ); // e.g. 'light frame' -> 'lightframe'
+
+   if ( type == "bias" ||
+        type == "biasframe" )
+      return ImageType::Bias;
+
+   if ( type == "masterbias" )
+      return ImageType::MasterBias;
+
+   if ( type == "dark" ||
+        type == "darkframe" ||
+        type == "flatdark" ||
+        type == "darkflat" )
+      return ImageType::Dark;
+
+   if ( type == "masterdark" )
+      return ImageType::MasterDark;
+
+   if ( type == "flat" ||
+        type == "flatfield"||
+        type == "flatframe" )
+      return ImageType::Flat;
+
+   if ( type == "masterflat" )
+      return ImageType::MasterFlat;
+
+   if ( type == "light" ||
+        type == "lightframe" ||
+        type == "science" ||
+        type == "scienceframe" )
+      return ImageType::Light;
+
+   if ( type == "masterlight" )
+      return ImageType::MasterLight;
+
+   return ImageType::Unknown;
+}
+
+// ----------------------------------------------------------------------------
+
+IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const FITSKeywordArray& keywords, bool getSignatures )
+   : m_getSignatures( getSignatures )
 {
    /*
     * XISF properties take precedence over FITS keywords.
@@ -65,7 +110,9 @@ IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const
    {
       try
       {
-         if ( p.Id() ==      "Instrument:Camera:Gain" )
+         if ( p.Id() == "Image:Type" ) // since core 1.9.3: reserved, auto-generated
+            imageType = XISF::ImageTypeFromId( p.Value().ToIsoString() );
+         else if ( p.Id() == "Instrument:Camera:Gain" )
             cameraGain = p.Value().ToDouble();
          else if ( p.Id() == "Instrument:Camera:ISOSpeed" )
             cameraISO = p.Value().ToUInt();
@@ -76,21 +123,21 @@ IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const
          else if ( p.Id() == "Instrument:Camera:YBinning" )
             yBinning = p.Value().ToUInt();
          else if ( p.Id() == "Instrument:ExposureTime" )
-            expTime = p.Value().ToDouble();
+            expTime = Round( p.Value().ToDouble(), 3 ); // 1 ms
          else if ( p.Id() == "Instrument:Filter:Name" )
             filterName = p.Value().ToString();
          else if ( p.Id() == "Instrument:Sensor:Temperature" )
-            sensorTemp = p.Value().ToDouble();
+            sensorTemp = Round( p.Value().ToDouble(), 2 ); // 0.01 C
          else if ( p.Id() == "Instrument:Sensor:XPixelSize" )
-            xPixSize = p.Value().ToDouble();
+            xPixSize = Round( p.Value().ToDouble(), 3 ); // 0.001 um
          else if ( p.Id() == "Instrument:Sensor:YPixelSize" )
-            yPixSize = p.Value().ToDouble();
+            yPixSize = Round( p.Value().ToDouble(), 3 ); // 0.001 um
          else if ( p.Id() == "Instrument:Telescope:Aperture" )
-            aperture = p.Value().ToDouble() * 1000;
+            aperture = Round( p.Value().ToDouble() * 1000, 3 ); // 0.001 mm
          else if ( p.Id() == "Instrument:Telescope:CollectingArea" )
-            apertureArea = p.Value().ToDouble() * 1000 * 1000;
+            apertureArea = Round( p.Value().ToDouble() * 1000 * 1000, 3 ); // 0.001 um^2
          else if ( p.Id() == "Instrument:Telescope:FocalLength" )
-            focalLength = p.Value().ToDouble() * 1000;
+            focalLength = Round( p.Value().ToDouble() * 1000, 3 ); // 0.001 mm
          else if ( p.Id() == "Instrument:Telescope:Name" )
             telescopeName = p.Value().ToString();
          else if ( p.Id() == "Observer:Name" )
@@ -121,10 +168,26 @@ IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const
             cfaPatternName = p.Value().ToIsoString();
          else if ( p.Id() == "PCL:CFASourcePattern" )
             cfaPattern = p.Value().ToIsoString();
+         else
+         {
+            if ( m_getSignatures )
+               if ( p.Id().StartsWith( "PCL:Signature:" ) )
+               {                           //012345678901234
+                  IsoString signature = p.Id().Substring( 14 ) + ':' + p.Value().ToIsoString();
+                  if ( !signatures.Contains( signature ) )
+                     signatures << signature;
+               }
+               else if ( p.Id().StartsWith( "PCL:Signatures:" ) )
+               {
+                  IsoString signature = p.Value().ToIsoString();
+                  if ( !signatures.Contains( signature ) )
+                     signatures << signature;
+               }
+         }
       }
       catch ( Exception& x )
       {
-         Console().CriticalLn( "<end><cbr>*** Error: Parsing " + p.Id() + " image property: " + x.Message() );
+         Console().CriticalLn( "<end><cbr>*** Error: Parsing '" + p.Id() + "' image property: " + x.Message() );
       }
       catch ( ... )
       {
@@ -147,8 +210,8 @@ IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const
             observer = String( value );
          else if ( !instrumentName.IsDefined() && k.name == "INSTRUME" )
             instrumentName = String( value );
-         else if ( !frameType.IsDefined() && k.name == "IMAGETYP" )
-            frameType = String( value );
+         else if ( !imageType.IsDefined() && k.name == "IMAGETYP" )
+            imageType = ImageTypeFromFITSKeywordValue( value );
          else if ( !filterName.IsDefined() && k.name == "FILTER" )
             filterName = String( value );
          else if ( !pedestal.IsDefined() && k.name == "PEDESTAL" )
@@ -167,9 +230,9 @@ IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const
          else if ( !sensorTemp.IsDefined() && k.name == "CCD-TEMP" )
             sensorTemp = Round( value.ToDouble(), 1 ); // 0.1 C
          else if ( !xPixSize.IsDefined() && k.name == "XPIXSZ" )
-            xPixSize = value.ToDouble();
+            xPixSize = Round( value.ToDouble(), 3 ); // 0.001 um
          else if ( !yPixSize.IsDefined() && k.name == "YPIXSZ" )
-            yPixSize = value.ToDouble();
+            yPixSize = Round( value.ToDouble(), 3 ); // 0.001 um
          else if ( !cameraGain.IsDefined() && k.name == "EGAIN" )
             cameraGain = Max( 0.0, value.ToDouble() );
          else if ( !cameraISO.IsDefined() && k.name == "ISOSPEED" )
@@ -185,11 +248,11 @@ IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const
          else if ( !telescopeName.IsDefined() && k.name == "TELESCOP" )
             telescopeName = String( value );
          else if ( !focalLength.IsDefined() && k.name == "FOCALLEN" )
-            focalLength = value.ToDouble();
+            focalLength = Round( value.ToDouble(), 3 ); // 0.001 mm
          else if ( !aperture.IsDefined() && k.name == "APTDIA" )
-            aperture = value.ToDouble();
+            aperture = Round( value.ToDouble(), 3 ); // 0.001 mm
          else if ( !apertureArea.IsDefined() && k.name == "APTAREA" )
-            apertureArea = value.ToDouble();
+            apertureArea = Round( value.ToDouble(), 3 ); // 0.001 mm^2
          else if ( !objectName.IsDefined() && k.name == "OBJNAME" )
             objectName = String( value );
          else if ( !startTime.IsDefined() && k.name == "DATE-BEG" )
@@ -270,14 +333,14 @@ IntegrationMetadata::IntegrationMetadata( const PropertyArray& properties, const
       {
          IsoString value = k.StripValueDelimiters();
 
-         if ( !frameType.IsDefined() && k.name == "FRAME" )
-            frameType = String( value );
+         if ( !imageType.IsDefined() && k.name == "FRAME" )
+            imageType = ImageTypeFromFITSKeywordValue( value );
          else if ( !filterName.IsDefined() && k.name == "INSFLNAM" )
             filterName = String( value );
          else if ( !expTime.IsDefined() && k.name == "EXPOSURE" )
             expTime = Round( value.ToDouble(), 3 ); // 1 ms
          else if ( !xPixSize.IsDefined() && k.name == "PIXSIZE" )
-            xPixSize = yPixSize = value.ToDouble();
+            xPixSize = yPixSize = Round( value.ToDouble(), 3 );
          else if ( !xBinning.IsDefined() && k.name == "CCDBINX" )
             xBinning = unsigned( Max( 1.0, value.ToDouble() ) );
          else if ( !yBinning.IsDefined() && k.name == "CCDBINY" )
@@ -396,8 +459,8 @@ IntegrationMetadata::IntegrationMetadata( const String& serialization )
                observer = tokens[1];
             else if ( tokens[0] == "instrumentName" )
                instrumentName = tokens[1];
-            else if ( tokens[0] == "frameType" )
-               frameType = tokens[1];
+            else if ( tokens[0] == "imageType" )
+               imageType = tokens[1].ToInt();
             else if ( tokens[0] == "filterName" )
                filterName = tokens[1];
             else if ( tokens[0] == "cfaPatternName" )
@@ -460,6 +523,8 @@ IntegrationMetadata::IntegrationMetadata( const String& serialization )
                altObs = tokens[1].ToDouble();
             else if ( tokens[0] == "version" )
                version = tokens[1];
+            else if ( m_getSignatures && tokens[0] == "signatures" )
+               tokens[1].Break( signatures, '\n' );
       }
 
       m_valid = true;
@@ -477,46 +542,63 @@ String IntegrationMetadata::Serialize() const
    if ( !IsValid() )
       return String();
 
-   return String()   <<                  "version"         << TokenSeparator << __PCL_INTEGRATION_METADATA_VERSION
-                     << ItemSeparator << "author"          << TokenSeparator << author.ToString()
-                     << ItemSeparator << "observer"        << TokenSeparator << observer.ToString()
-                     << ItemSeparator << "instrumentName"  << TokenSeparator << instrumentName.ToString()
-                     << ItemSeparator << "frameType"       << TokenSeparator << frameType.ToString()
-                     << ItemSeparator << "filterName"      << TokenSeparator << filterName.ToString()
-                     << ItemSeparator << "cfaPatternName"  << TokenSeparator << cfaPatternName.ToString()
-                     << ItemSeparator << "cfaPattern"      << TokenSeparator << cfaPattern.ToString()
-                     << ItemSeparator << "cfaXOffset"      << TokenSeparator << cfaXOffset.ToString()
-                     << ItemSeparator << "cfaYOffset"      << TokenSeparator << cfaYOffset.ToString()
-                     << ItemSeparator << "pedestal"        << TokenSeparator << pedestal.ToString()
-                     << ItemSeparator << "expTime"         << TokenSeparator << expTime.ToString()
-                     << ItemSeparator << "sensorTemp"      << TokenSeparator << sensorTemp.ToString()
-                     << ItemSeparator << "xPixSize"        << TokenSeparator << xPixSize.ToString()
-                     << ItemSeparator << "yPixSize"        << TokenSeparator << yPixSize.ToString()
-                     << ItemSeparator << "cameraGain"      << TokenSeparator << cameraGain.ToString()
-                     << ItemSeparator << "cameraISO"       << TokenSeparator << cameraISO.ToString()
-                     << ItemSeparator << "xBinning"        << TokenSeparator << xBinning.ToString()
-                     << ItemSeparator << "yBinning"        << TokenSeparator << yBinning.ToString()
-                     << ItemSeparator << "xOrigin"         << TokenSeparator << xOrigin.ToString()
-                     << ItemSeparator << "yOrigin"         << TokenSeparator << yOrigin.ToString()
-                     << ItemSeparator << "telescopeName"   << TokenSeparator << telescopeName.ToString()
-                     << ItemSeparator << "focalLength"     << TokenSeparator << focalLength.ToString()
-                     << ItemSeparator << "aperture"        << TokenSeparator << aperture.ToString()
-                     << ItemSeparator << "apertureArea"    << TokenSeparator << apertureArea.ToString()
-                     << ItemSeparator << "objectName"      << TokenSeparator << objectName.ToString()
-                     << ItemSeparator << "startTime"       << TokenSeparator << startTime.ToString()
-                     << ItemSeparator << "endTime"         << TokenSeparator << endTime.ToString()
-                     << ItemSeparator << "ra"              << TokenSeparator << ra.ToString()
-                     << ItemSeparator << "dec"             << TokenSeparator << dec.ToString()
-                     << ItemSeparator << "celCrdSys"       << TokenSeparator << celCrdSys.ToString()
-                     << ItemSeparator << "equinox"         << TokenSeparator << equinox.ToString()
-                     << ItemSeparator << "longObs"         << TokenSeparator << longObs.ToString()
-                     << ItemSeparator << "latObs"          << TokenSeparator << latObs.ToString()
-                     << ItemSeparator << "altObs"          << TokenSeparator << altObs.ToString();
+   String data = String()
+      <<                  "version"         << TokenSeparator << __PCL_INTEGRATION_METADATA_VERSION
+      << ItemSeparator << "author"          << TokenSeparator << author.ToString()
+      << ItemSeparator << "observer"        << TokenSeparator << observer.ToString()
+      << ItemSeparator << "instrumentName"  << TokenSeparator << instrumentName.ToString()
+      << ItemSeparator << "imageType"       << TokenSeparator << imageType.ToString()
+      << ItemSeparator << "filterName"      << TokenSeparator << filterName.ToString()
+      << ItemSeparator << "cfaPatternName"  << TokenSeparator << cfaPatternName.ToString()
+      << ItemSeparator << "cfaPattern"      << TokenSeparator << cfaPattern.ToString()
+      << ItemSeparator << "cfaXOffset"      << TokenSeparator << cfaXOffset.ToString()
+      << ItemSeparator << "cfaYOffset"      << TokenSeparator << cfaYOffset.ToString()
+      << ItemSeparator << "pedestal"        << TokenSeparator << pedestal.ToString()
+      << ItemSeparator << "expTime"         << TokenSeparator << expTime.ToString()
+      << ItemSeparator << "sensorTemp"      << TokenSeparator << sensorTemp.ToString()
+      << ItemSeparator << "xPixSize"        << TokenSeparator << xPixSize.ToString()
+      << ItemSeparator << "yPixSize"        << TokenSeparator << yPixSize.ToString()
+      << ItemSeparator << "cameraGain"      << TokenSeparator << cameraGain.ToString()
+      << ItemSeparator << "cameraISO"       << TokenSeparator << cameraISO.ToString()
+      << ItemSeparator << "xBinning"        << TokenSeparator << xBinning.ToString()
+      << ItemSeparator << "yBinning"        << TokenSeparator << yBinning.ToString()
+      << ItemSeparator << "xOrigin"         << TokenSeparator << xOrigin.ToString()
+      << ItemSeparator << "yOrigin"         << TokenSeparator << yOrigin.ToString()
+      << ItemSeparator << "telescopeName"   << TokenSeparator << telescopeName.ToString()
+      << ItemSeparator << "focalLength"     << TokenSeparator << focalLength.ToString()
+      << ItemSeparator << "aperture"        << TokenSeparator << aperture.ToString()
+      << ItemSeparator << "apertureArea"    << TokenSeparator << apertureArea.ToString()
+      << ItemSeparator << "objectName"      << TokenSeparator << objectName.ToString()
+      << ItemSeparator << "startTime"       << TokenSeparator << startTime.ToString()
+      << ItemSeparator << "endTime"         << TokenSeparator << endTime.ToString()
+      << ItemSeparator << "ra"              << TokenSeparator << ra.ToString()
+      << ItemSeparator << "dec"             << TokenSeparator << dec.ToString()
+      << ItemSeparator << "celCrdSys"       << TokenSeparator << celCrdSys.ToString()
+      << ItemSeparator << "equinox"         << TokenSeparator << equinox.ToString()
+      << ItemSeparator << "longObs"         << TokenSeparator << longObs.ToString()
+      << ItemSeparator << "latObs"          << TokenSeparator << latObs.ToString()
+      << ItemSeparator << "altObs"          << TokenSeparator << altObs.ToString();
+
+   if ( m_getSignatures )
+      data << ItemSeparator << "signatures" << TokenSeparator << String().ToNewLineSeparated( signatures );
+
+   return data;
 }
 
 // ----------------------------------------------------------------------------
 
+void IntegrationMetadata::UpdateProperties( PropertyArray& properties ) const
+{
+   FITSKeywordArray dum;
+   DoUpdatePropertiesAndKeywords( properties, dum, false/*updateKeywords*/ );
+}
+
 void IntegrationMetadata::UpdatePropertiesAndKeywords( PropertyArray& properties, FITSKeywordArray& keywords ) const
+{
+   DoUpdatePropertiesAndKeywords( properties, keywords, true/*updateKeywords*/ );
+}
+
+void IntegrationMetadata::DoUpdatePropertiesAndKeywords( PropertyArray& properties, FITSKeywordArray& keywords, bool updateKeywords ) const
 {
    if ( !IsValid() )
       return;
@@ -524,40 +606,47 @@ void IntegrationMetadata::UpdatePropertiesAndKeywords( PropertyArray& properties
    if ( author.IsConsistentlyDefined( "Observation:Authors (AUTHOR keyword)" ) )
    {
       properties << Property( "Observation:Authors", author() );
-      keywords << FITSHeaderKeyword( "AUTHOR",
-                                     author().SingleQuoted(),
-                                     "Author of the data" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "AUTHOR",
+                                        author().SingleQuoted(),
+                                        "Author of the data" );
    }
 
    if ( observer.IsConsistentlyDefined( "Observer:Name (OBSERVER keyword)" ) )
    {
       properties << Property( "Observer:Name", observer() );
-      keywords << FITSHeaderKeyword( "OBSERVER",
-                                     observer().SingleQuoted(),
-                                     "Observer who acquired the data" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "OBSERVER",
+                                        observer().SingleQuoted(),
+                                        "Observer who acquired the data" );
    }
 
    if ( instrumentName.IsConsistentlyDefined( "Instrument:Camera:Name (INSTRUME keyword)" ) )
    {
       properties << Property( "Instrument:Camera:Name", instrumentName() );
-      keywords << FITSHeaderKeyword( "INSTRUME",
-                                     instrumentName().SingleQuoted(),
-                                     "Name of instrument" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "INSTRUME",
+                                        instrumentName().SingleQuoted(),
+                                        "Name of instrument" );
    }
 
-   if ( frameType.IsConsistentlyDefined( "image type (IMAGETYP keyword)" ) )
-   {
-      keywords << FITSHeaderKeyword( "IMAGETYP",
-                                     frameType().SingleQuoted(),
-                                     "Type of integrated image" );
-   }
+   if ( updateKeywords )
+      if ( imageType.IsConsistentlyDefined( "image type (IMAGETYP keyword)" ) )
+         keywords << FITSHeaderKeyword( "IMAGETYP",
+                                        IsoString( XISF::ImageTypeId( (XISF::image_type)imageType() ) ).SingleQuoted(),
+                                        "Type of integrated image" );
 
    if ( filterName.IsConsistentlyDefined( "Instrument:Filter:Name (FILTER keyword)" ) )
    {
       properties << Property( "Instrument:Filter:Name", filterName() );
-      keywords << FITSHeaderKeyword( "FILTER",
-                                     filterName().SingleQuoted(),
-                                     "Name of filter" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "FILTER",
+                                        filterName().SingleQuoted(),
+                                        "Name of filter" );
    }
 
    if ( cfaPatternName.IsConsistentlyDefined( "PCL:CFASourcePatternName" ) )
@@ -573,17 +662,20 @@ void IntegrationMetadata::UpdatePropertiesAndKeywords( PropertyArray& properties
             if ( !cfaYOffset.IsDefined() )
                properties << Property( "PCL:CFASourcePattern", cfaPattern() );
 
-         keywords << FITSHeaderKeyword( "BAYERPAT",
-                                        cfaPattern().SingleQuoted(),
-                                        "Bayer CFA pattern" );
-         if ( cfaXOffset.IsConsistentlyDefined( "XBAYROFF keyword" ) )
-            keywords << FITSHeaderKeyword( "XBAYROFF",
-                                           IsoString( cfaXOffset() ),
-                                          "Bayer CFA X-offset" );
-         if ( cfaYOffset.IsConsistentlyDefined( "YBAYROFF keyword" ) )
-            keywords << FITSHeaderKeyword( "YBAYROFF",
-                                           IsoString( cfaYOffset() ),
-                                          "Bayer CFA Y-offset" );
+         if ( updateKeywords )
+         {
+            keywords << FITSHeaderKeyword( "BAYERPAT",
+                                           cfaPattern().SingleQuoted(),
+                                           "Bayer CFA pattern" );
+            if ( cfaXOffset.IsConsistentlyDefined( "XBAYROFF keyword" ) )
+               keywords << FITSHeaderKeyword( "XBAYROFF",
+                                              IsoString( cfaXOffset() ),
+                                              "Bayer CFA X-offset" );
+            if ( cfaYOffset.IsConsistentlyDefined( "YBAYROFF keyword" ) )
+               keywords << FITSHeaderKeyword( "YBAYROFF",
+                                              IsoString( cfaYOffset() ),
+                                              "Bayer CFA Y-offset" );
+         }
       }
       else
       {
@@ -594,106 +686,148 @@ void IntegrationMetadata::UpdatePropertiesAndKeywords( PropertyArray& properties
 
    if ( pedestal.IsConsistentlyDefined( "PEDESTAL keyword" ) )
       if ( pedestal() > 0 )
-         keywords << FITSHeaderKeyword( "PEDESTAL",
-                                        IsoString().Format( "%.4f", pedestal() ),
-                                        "Value in DN added to enforce positivity" );
+      {
+         properties << Property( "PCL:OutputPedestal", pedestal() );
+
+         if ( updateKeywords )
+            keywords << FITSHeaderKeyword( "PEDESTAL",
+                                           IsoString().Format( "%.4f", pedestal() ),
+                                           "Value in DN added to enforce positivity" );
+      }
+
+   if ( expTime.IsConsistentlyDefined() )
+      if ( count == 1 )
+      {
+         properties << Property( "Instrument:ExposureTime", Round( expTime(), 3 ) ); // 1 ms
+
+         if ( updateKeywords )
+            keywords << FITSHeaderKeyword( "EXPTIME",
+                                           IsoString().Format( "%.3f", expTime() ),
+                                           "Exposure time (s)" );
+      }
+      else
+         properties << Property( "Instrument:FrameExposureTime", Round( expTime(), 3 ) ); // 1 ms
 
    if ( xPixSize.IsConsistentlyDefined( "Instrument:Sensor:XPixelSize (XPIXSZ keyword)" ) )
    {
       properties << Property( "Instrument:Sensor:XPixelSize", Round( xPixSize(), 3 ) );
-      keywords << FITSHeaderKeyword( "XPIXSZ",
-                                     IsoString().Format( "%.6g", xPixSize() ),
-                                     "Pixel size including binning, X-axis (um)" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "XPIXSZ",
+                                        IsoString().Format( "%.6g", xPixSize() ),
+                                        "Pixel size including binning, X-axis (um)" );
    }
 
    if ( yPixSize.IsConsistentlyDefined( "Instrument:Sensor:YPixelSize (YPIXSZ keyword)" ) )
    {
       properties << Property( "Instrument:Sensor:YPixelSize", Round( yPixSize(), 3 ) );
-      keywords << FITSHeaderKeyword( "YPIXSZ",
-                                     IsoString().Format( "%.6g", yPixSize() ),
-                                     "Pixel size including binning, Y-axis (um)" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "YPIXSZ",
+                                        IsoString().Format( "%.6g", yPixSize() ),
+                                        "Pixel size including binning, Y-axis (um)" );
    }
 
    if ( cameraGain.IsConsistentlyDefined( "Instrument:Camera:Gain (EGAIN keyword)" ) )
    {
       properties << Property( "Instrument:Camera:Gain", Round( cameraGain(), 3 ) );
-      keywords << FITSHeaderKeyword( "EGAIN",
-                                     IsoString().Format( "%.6g", cameraGain() ),
-                                     "Camera gain in electrons per data number" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "EGAIN",
+                                        IsoString().Format( "%.6g", cameraGain() ),
+                                        "Camera gain in electrons per data number" );
    }
 
    if ( cameraISO.IsConsistentlyDefined( "Instrument:Camera:ISOSpeed (ISOSPEED keyword)" ) )
    {
       properties << Property( "Instrument:Camera:ISOSpeed", cameraISO() );
-      keywords << FITSHeaderKeyword( "ISOSPEED",
-                                     IsoString( cameraISO() ),
-                                     "Camera sensitivity in ISO speed units" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "ISOSPEED",
+                                        IsoString( cameraISO() ),
+                                        "Camera sensitivity in ISO speed units" );
    }
 
    if ( xBinning.IsConsistentlyDefined( "Instrument:Camera:XBinning (XBINNING keyword)" ) )
    {
       properties << Property( "Instrument:Camera:XBinning", xBinning() );
-      keywords << FITSHeaderKeyword( "XBINNING",
-                                     IsoString( xBinning() ),
-                                     "Pixel binning factor, X-axis" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "XBINNING",
+                                        IsoString( xBinning() ),
+                                        "Pixel binning factor, X-axis" );
    }
 
    if ( yBinning.IsConsistentlyDefined( "Instrument:Camera:YBinning (YBINNING keyword)" ) )
    {
       properties << Property( "Instrument:Camera:YBinning", yBinning() );
-      keywords << FITSHeaderKeyword( "YBINNING",
-                                     IsoString( yBinning() ),
-                                     "Pixel binning factor, Y-axis" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "YBINNING",
+                                        IsoString( yBinning() ),
+                                        "Pixel binning factor, Y-axis" );
    }
 
-   if ( xOrigin.IsConsistentlyDefined( "subframe x-origin (XORGSUBF keyword)" ) )
-      keywords << FITSHeaderKeyword( "XORGSUBF",
-                                     IsoString( xOrigin() ),
-                                     "Subframe origin, X-axis (px)" );
-
-   if ( yOrigin.IsConsistentlyDefined( "subframe y-origin (YORGSUBF keyword)" ) )
-      keywords << FITSHeaderKeyword( "YORGSUBF",
-                                     IsoString( yOrigin() ),
-                                     "Subframe origin, Y-axis (px)" );
+   if ( updateKeywords )
+   {
+      if ( xOrigin.IsConsistentlyDefined( "subframe x-origin (XORGSUBF keyword)" ) )
+         keywords << FITSHeaderKeyword( "XORGSUBF",
+                                        IsoString( xOrigin() ),
+                                        "Subframe origin, X-axis (px)" );
+      if ( yOrigin.IsConsistentlyDefined( "subframe y-origin (YORGSUBF keyword)" ) )
+         keywords << FITSHeaderKeyword( "YORGSUBF",
+                                        IsoString( yOrigin() ),
+                                        "Subframe origin, Y-axis (px)" );
+   }
 
    if ( telescopeName.IsConsistentlyDefined( "Instrument:Telescope:Name (TELESCOP keyword)" ) )
    {
       properties << Property( "Instrument:Telescope:Name", telescopeName() );
-      keywords << FITSHeaderKeyword( "TELESCOP",
-                                     telescopeName().SingleQuoted(),
-                                     "Name of telescope" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "TELESCOP",
+                                        telescopeName().SingleQuoted(),
+                                        "Name of telescope" );
    }
 
    if ( focalLength.IsConsistentlyDefined( "Instrument:Telescope:FocalLength (FOCALLEN keyword)" ) )
    {
       properties << Property( "Instrument:Telescope:FocalLength", focalLength()/1000 );
-      keywords << FITSHeaderKeyword( "FOCALLEN",
-                                     IsoString().Format( "%.8g", focalLength() ),
-                                     "Effective focal length (mm)" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "FOCALLEN",
+                                        IsoString().Format( "%.8g", focalLength() ),
+                                        "Effective focal length (mm)" );
    }
 
    if ( aperture.IsConsistentlyDefined( "Instrument:Telescope:Aperture (APTDIA keyword)" ) )
    {
       properties << Property( "Instrument:Telescope:Aperture", aperture()/1000 );
-      keywords << FITSHeaderKeyword( "APTDIA",
-                                     IsoString().Format( "%.8g", aperture() ),
-                                     "Effective aperture diameter (mm)" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "APTDIA",
+                                        IsoString().Format( "%.8g", aperture() ),
+                                        "Effective aperture diameter (mm)" );
    }
 
    if ( apertureArea.IsConsistentlyDefined( "Instrument:Telescope:CollectingArea (APTAREA keyword)" ) )
    {
       properties << Property( "Instrument:Telescope:CollectingArea", apertureArea()/1000/1000 );
-      keywords << FITSHeaderKeyword( "APTAREA",
-                                     IsoString().Format( "%.8g", apertureArea() ),
-                                     "Effective aperture area (mm**2)" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "APTAREA",
+                                        IsoString().Format( "%.8g", apertureArea() ),
+                                        "Effective aperture area (mm**2)" );
    }
 
    if ( objectName.IsConsistentlyDefined( "Observation:Object:Name (OBJECT keyword)" ) )
    {
       properties << Property( "Observation:Object:Name", objectName() );
-      keywords << FITSHeaderKeyword( "OBJECT",
-                                     objectName().SingleQuoted(),
-                                     "Name of observed object" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "OBJECT",
+                                        objectName().SingleQuoted(),
+                                        "Name of observed object" );
    }
 
    if ( ra.IsConsistentlyDefined( "Observation:Center:RA (RA / OBJCTRA keyword)" ) )
@@ -701,133 +835,193 @@ void IntegrationMetadata::UpdatePropertiesAndKeywords( PropertyArray& properties
       double ra = this->ra();
       if ( ra < 0 )
          ra += 360;
+
       properties << Property( "Observation:Center:RA", ra );
-      keywords << FITSHeaderKeyword( "RA",
-                                     IsoString().Format( "%.16g", ra ),
-                                     "Right ascension of the center of the image (deg)" );
-      SexagesimalConversionOptions options( 3/*items*/, 3/*precision*/, false/*sign*/, 0/*width*/, ' '/*separator*/ );
-      keywords << FITSHeaderKeyword( "OBJCTRA",
-                                     IsoString::ToSexagesimal( ra/15, options ).SingleQuoted(),
-                                     "Right ascension (hours) (compatibility)" );
+
+      if ( updateKeywords )
+      {
+         keywords << FITSHeaderKeyword( "RA",
+                                        IsoString().Format( "%.16g", ra ),
+                                        "Right ascension of the center of the image (deg)" );
+         SexagesimalConversionOptions options( 3/*items*/, 3/*precision*/, false/*sign*/, 0/*width*/, ' '/*separator*/ );
+         keywords << FITSHeaderKeyword( "OBJCTRA",
+                                        IsoString::ToSexagesimal( ra/15, options ).SingleQuoted(),
+                                        "Right ascension (hours) (compatibility)" );
+      }
    }
 
    if ( dec.IsConsistentlyDefined( "Observation:Center:Dec (DEC / OBJCTDEC keyword)" ) )
    {
       properties << Property( "Observation:Center:Dec", dec() );
-      keywords << FITSHeaderKeyword( "DEC",
-                                     IsoString().Format( "%.16g", dec() ),
-                                     "Declination of the center of the image (deg)" );
-      SexagesimalConversionOptions options( 3/*items*/, 2/*precision*/, true/*sign*/, 0/*width*/, ' '/*separator*/ );
-      keywords << FITSHeaderKeyword( "OBJCTDEC",
-                                     IsoString::ToSexagesimal( dec(), options ).SingleQuoted(),
-                                     "Declination (deg) (compatibility)" );
+
+      if ( updateKeywords )
+      {
+         keywords << FITSHeaderKeyword( "DEC",
+                                       IsoString().Format( "%.16g", dec() ),
+                                       "Declination of the center of the image (deg)" );
+         SexagesimalConversionOptions options( 3/*items*/, 2/*precision*/, true/*sign*/, 0/*width*/, ' '/*separator*/ );
+         keywords << FITSHeaderKeyword( "OBJCTDEC",
+                                       IsoString::ToSexagesimal( dec(), options ).SingleQuoted(),
+                                       "Declination (deg) (compatibility)" );
+      }
    }
 
    if ( celCrdSys.IsConsistentlyDefined( "Observation:CelestialReferenceSystem (RADESYS keyword)" ) )
    {
       properties << Property( "Observation:CelestialReferenceSystem", celCrdSys() );
-      keywords << FITSHeaderKeyword( "RADESYS",
-                                     celCrdSys().SingleQuoted(),
-                                     "Reference system of celestial coordinates" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "RADESYS",
+                                        celCrdSys().SingleQuoted(),
+                                        "Reference system of celestial coordinates" );
    }
 
    if ( equinox.IsConsistentlyDefined( "Observation:Equinox (EQUINOX keyword)" ) )
    {
       properties << Property( "Observation:Equinox", equinox() );
-      keywords << FITSHeaderKeyword( "EQUINOX",
-                                     IsoString( equinox() ),
-                                     "Epoch of the mean equator and equinox (years)" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "EQUINOX",
+                                        IsoString( equinox() ),
+                                        "Epoch of the mean equator and equinox (years)" );
    }
 
    if ( startTime.IsConsistentlyDefined( "Observation:Time:Start (DATE-OBS / DATE-BEG keywords)" ) )
    {
       properties << Property( "Observation:Time:Start", startTime() );
-      keywords << FITSHeaderKeyword( "DATE-OBS",
-                                     startTime().ToIsoString( 3/*timeItems*/, 3/*precision*/, 0/*tz*/, false/*timeZone*/ ).SingleQuoted(),
-                                     "Date/time of start of observation (UTC)" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "DATE-OBS",
+                                        startTime().ToIsoString( 3/*timeItems*/, 3/*precision*/, 0/*tz*/, false/*timeZone*/ ).SingleQuoted(),
+                                        "Date/time of start of observation (UTC)" );
    }
 
    if ( endTime.IsConsistentlyDefined( "Observation:Time:End (DATE-END / DATE-OBS + EXPTIME keywords)" ) )
    {
       properties << Property( "Observation:Time:End", endTime() );
-      keywords << FITSHeaderKeyword( "DATE-END",
-                                     endTime().ToIsoString( 3/*timeItems*/, 3/*precision*/, 0/*tz*/, false/*timeZone*/ ).SingleQuoted(),
-                                     "Date/time of end of observation (UTC)" );
+
+      if ( updateKeywords )
+         keywords << FITSHeaderKeyword( "DATE-END",
+                                        endTime().ToIsoString( 3/*timeItems*/, 3/*precision*/, 0/*tz*/, false/*timeZone*/ ).SingleQuoted(),
+                                        "Date/time of end of observation (UTC)" );
    }
 
    if ( longObs.IsConsistentlyDefined( "Observation:Location:Longitude (OBSGEO-L / LONG-OBS keyword)" ) )
    {
       properties << Property( "Observation:Location:Longitude", Round( longObs(), 6 ) );
-      keywords << FITSHeaderKeyword( "OBSGEO-L",
-                                     IsoString().Format( "%.10g", longObs() ),
-                                     "Geodetic longitude of observation location (deg)" );
-      keywords << FITSHeaderKeyword( "LONG-OBS",
-                                     IsoString().Format( "%.10g", longObs() ),
-                                     "Geodetic longitude (deg) (compatibility)" );
+
+      if ( updateKeywords )
+      {
+         keywords << FITSHeaderKeyword( "OBSGEO-L",
+                                        IsoString().Format( "%.10g", longObs() ),
+                                        "Geodetic longitude of observation location (deg)" );
+         keywords << FITSHeaderKeyword( "LONG-OBS",
+                                        IsoString().Format( "%.10g", longObs() ),
+                                        "Geodetic longitude (deg) (compatibility)" );
+      }
    }
 
    if ( latObs.IsConsistentlyDefined( "Observation:Location:Latitude (OBSGEO-B / LAT-OBS keyword)" ) )
    {
       properties << Property( "Observation:Location:Latitude", Round( latObs(), 6 ) );
-      keywords << FITSHeaderKeyword( "OBSGEO-B",
-                                     IsoString().Format( "%.10g", latObs() ),
-                                     "Geodetic latitude of observation location (deg)" );
-      keywords << FITSHeaderKeyword( "LAT-OBS",
-                                     IsoString().Format( "%.10g", latObs() ),
-                                     "Geodetic latitude (deg) (compatibility)" );
+
+      if ( updateKeywords )
+      {
+         keywords << FITSHeaderKeyword( "OBSGEO-B",
+                                        IsoString().Format( "%.10g", latObs() ),
+                                        "Geodetic latitude of observation location (deg)" );
+         keywords << FITSHeaderKeyword( "LAT-OBS",
+                                        IsoString().Format( "%.10g", latObs() ),
+                                        "Geodetic latitude (deg) (compatibility)" );
+      }
    }
 
    if ( altObs.IsConsistentlyDefined( "Observation:Location:Elevation (OBSGEO-H / ALT-OBS keyword)" ) )
    {
       properties << Property( "Observation:Location:Elevation", RoundInt( altObs() ) );
-      keywords << FITSHeaderKeyword( "OBSGEO-H",
-                                     IsoString().Format( "%.0f", altObs() ),
-                                     "Geodetic height of observation location (m)" );
-      keywords << FITSHeaderKeyword( "ALT-OBS",
-                                     IsoString().Format( "%.0f", altObs() ),
-                                     "Geodetic height (m) (compatibility)" );
+
+      if ( updateKeywords )
+      {
+         keywords << FITSHeaderKeyword( "OBSGEO-H",
+                                       IsoString().Format( "%.0f", altObs() ),
+                                       "Geodetic height of observation location (m)" );
+         keywords << FITSHeaderKeyword( "ALT-OBS",
+                                       IsoString().Format( "%.0f", altObs() ),
+                                       "Geodetic height (m) (compatibility)" );
+      }
    }
+
+   if ( m_getSignatures )
+      if ( !signatures.IsEmpty() )
+      {
+         IsoStringList chronological = signatures.ToUnsorted();
+         chronological.Sort(
+            []( const IsoString& s1, const IsoString& s2 )
+            {                       //  01234567890
+               size_type p1 = s1.Find( "timestamp=" );
+               size_type p2 = s2.Find( "timestamp=" );
+               if ( unlikely( p1 == IsoString::notFound ) ) // ?!
+               {
+                  if ( p2 == IsoString::notFound )
+                     return s1 < s2;
+                  else
+                     return false;
+               }
+               if ( unlikely( p2 == IsoString::notFound ) ) // ?!
+                  return true;
+
+               int r = ::strcmp( s1.At( p1+10 ), s2.At( p2+10 ) );
+               if ( likely( r != 0 ) )
+                  return r < 0;
+               return s1 < s2;
+            } );
+         unsigned count = 0;
+         int width = pcl::Max( 1 + TruncInt( Log( chronological.Length() ) ), 4 );
+         for ( const IsoString& signature : chronological )
+            properties << Property( IsoString().Format( "PCL:Signatures:_%0*u", width, count++ ), signature );
+      }
 }
 
 // ----------------------------------------------------------------------------
 
-IntegrationMetadata IntegrationMetadata::Summary( const Array<IntegrationMetadata>& items )
+IntegrationMetadata IntegrationMetadata::Summary( const Array<IntegrationMetadata>& collection )
 {
    IntegrationMetadata summary;
+   summary.count = 0;
    ConsistentlyDefined<TimePoint> startTime, endTime;
    int raTotal = 0, decTotal = 0, longObsTotal = 0, latObsTotal = 0, altObsTotal = 0;
-   for ( const IntegrationMetadata& metadata : items )
+   for ( const IntegrationMetadata& metadata : collection )
       if ( metadata.IsValid() )
       {
          if ( summary.IsValid() )
          {
-            summary.author           = metadata.author;
-            summary.observer         = metadata.observer;
-            summary.instrumentName   = metadata.instrumentName;
-            summary.frameType        = metadata.frameType;
-            summary.filterName       = metadata.filterName;
-            summary.cfaPatternName   = metadata.cfaPatternName;
-            summary.cfaPattern       = metadata.cfaPattern;
-            summary.cfaXOffset       = metadata.cfaXOffset;
-            summary.cfaYOffset       = metadata.cfaYOffset;
-            summary.pedestal         = metadata.pedestal;
-            summary.expTime         += metadata.expTime;
-            summary.sensorTemp       = metadata.sensorTemp;
-            summary.xPixSize         = metadata.xPixSize;
-            summary.yPixSize         = metadata.yPixSize;
-            summary.cameraGain       = metadata.cameraGain;
-            summary.cameraISO        = metadata.cameraISO;
-            summary.xBinning         = metadata.xBinning;
-            summary.yBinning         = metadata.yBinning;
-            summary.xOrigin          = metadata.xOrigin;
-            summary.yOrigin          = metadata.yOrigin;
-            summary.telescopeName    = metadata.telescopeName;
-            summary.focalLength      = metadata.focalLength;
-            summary.aperture         = metadata.aperture;
-            summary.apertureArea     = metadata.apertureArea;
-            summary.objectName       = metadata.objectName;
-            summary.celCrdSys        = metadata.celCrdSys;
-            summary.equinox          = metadata.equinox;
+            summary.author         = metadata.author;
+            summary.observer       = metadata.observer;
+            summary.instrumentName = metadata.instrumentName;
+            summary.imageType      = metadata.imageType;
+            summary.filterName     = metadata.filterName;
+            summary.cfaPatternName = metadata.cfaPatternName;
+            summary.cfaPattern     = metadata.cfaPattern;
+            summary.cfaXOffset     = metadata.cfaXOffset;
+            summary.cfaYOffset     = metadata.cfaYOffset;
+            summary.pedestal       = metadata.pedestal;
+            summary.expTime        = metadata.expTime;
+            summary.sensorTemp     = metadata.sensorTemp;
+            summary.xPixSize       = metadata.xPixSize;
+            summary.yPixSize       = metadata.yPixSize;
+            summary.cameraGain     = metadata.cameraGain;
+            summary.cameraISO      = metadata.cameraISO;
+            summary.xBinning       = metadata.xBinning;
+            summary.yBinning       = metadata.yBinning;
+            summary.xOrigin        = metadata.xOrigin;
+            summary.yOrigin        = metadata.yOrigin;
+            summary.telescopeName  = metadata.telescopeName;
+            summary.focalLength    = metadata.focalLength;
+            summary.aperture       = metadata.aperture;
+            summary.apertureArea   = metadata.apertureArea;
+            summary.objectName     = metadata.objectName;
+            summary.celCrdSys      = metadata.celCrdSys;
+            summary.equinox        = metadata.equinox;
 
             if ( metadata.ra.IsDefined() )
                summary.ra += metadata.ra;
@@ -843,6 +1037,11 @@ IntegrationMetadata IntegrationMetadata::Summary( const Array<IntegrationMetadat
 
             if ( metadata.altObs.IsDefined() )
                summary.altObs += metadata.altObs;
+
+            if ( metadata.SignaturesEnabled() )
+               for ( const IsoString& signature : metadata.signatures )
+                  if ( !summary.signatures.Contains( signature ) )
+                     summary.signatures << signature;
          }
          else
             summary = metadata;
@@ -885,6 +1084,8 @@ IntegrationMetadata IntegrationMetadata::Summary( const Array<IntegrationMetadat
             startTime.SetInconsistent();
             endTime.SetInconsistent();
          }
+
+         ++summary.count;
       }
       else
       {
@@ -928,4 +1129,4 @@ IntegrationMetadata IntegrationMetadata::Summary( const Array<IntegrationMetadat
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/IntegrationMetadata.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/IntegrationMetadata.cpp - Released 2025-02-19T18:29:13Z

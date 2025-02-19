@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/FFTConvolution.h - Released 2025-01-09T18:43:56Z
+// pcl/FFTConvolution.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -330,98 +330,23 @@ public:
    /*!
     * Returns the minimum filter size in pixels for which FFT-based
     * two-dimensional convolution is consistently faster than nonseparable
-    * convolution on the current PixInsight/PCL platform, for the specified
-    * number of parallel execution threads.
+    * convolution on the current PixInsight/PCL platform and host machine.
     *
-    * The values returned by this function have been determined experimentally
-    * on reference hardware for optimized execution on machines and builds with
-    * and without AVX2/FMA3 processor instruction support.
+    * \param width   Width of the convolved image in pixels.
+    * \param height  Height of the convolved image in pixels.
     *
-    * \ingroup convolution_speed_limits
-    */
-   static constexpr int FasterThanNonseparableFilterSize( int numThreads )
-   {
-#ifdef __PCL_COMPATIBILITY
-
-      // No vectorization
-
-      if ( numThreads >= 32 )
-         return 17;
-      if ( numThreads >= 24 )
-         return 15;
-      if ( numThreads >= 12 )
-         return 13;
-      if ( numThreads >= 8 )
-         return 11;
-      return 9;
-
-#else
-
-      // Vectorization with SSE4.2 / AVX2 and FMA instructions
-
-      if ( numThreads >= 32 )
-         return 29;
-      if ( numThreads >= 24 )
-         return 27;
-      if ( numThreads >= 16 )
-         return 25;
-      if ( numThreads >= 12 )
-         return 21;
-      if ( numThreads >= 8 )
-         return 19;
-      if ( numThreads >= 4 )
-         return 17;
-      if ( numThreads >= 2 )
-         return 15;
-      return 13;
-
-#endif
-   }
-
-   /*!
-    * Returns the minimum filter size in pixels for which FFT-based
-    * two-dimensional convolution is consistently faster than separable
-    * convolution on the current PixInsight/PCL platform, for the specified
-    * number of parallel execution threads.
+    * Since PixInsight 1.9.3 Lockhart, this function queries the running
+    * PixInsight core application to retrieve a critical value based on thread
+    * performance analysis microbenchmarks. If no performance analysis data are
+    * available, the function returns an empirical value based on average
+    * reference hardware.
     *
-    * The values returned by this function have been determined experimentally
-    * on reference hardware for optimized execution on machines and builds with
-    * and without AVX2/FMA3 processor instruction support.
+    * \note Both \a width and \a height parameters are currently ignored and
+    * reserved for future implementations.
     *
     * \ingroup convolution_speed_limits
     */
-   static constexpr int FasterThanSeparableFilterSize( int numThreads )
-   {
-#ifdef __PCL_COMPATIBILITY
-
-      // No vectorization
-
-      if ( numThreads >= 24 )
-         return 191;
-      if ( numThreads >= 16 )
-         return 141;
-      if ( numThreads >= 12 )
-         return 135;
-      if ( numThreads >= 8 )
-         return 95;
-      if ( numThreads >= 4 )
-         return 75;
-      return 61;
-
-#else
-
-      // Vectorization with SSE4.2 / AVX2 and FMA instructions
-
-      if ( numThreads >= 16 )
-         return 901;
-      if ( numThreads >= 12 )
-         return 831;
-      if ( numThreads >= 8 )
-         return 741;
-      return 395;
-
-#endif
-   }
+   static int FasterThanNonseparableFilterSize( int width = 0, int height = 0 );
 
 protected:
 
@@ -474,4 +399,4 @@ private:
 #endif   // __PCL_FFTConvolution_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/FFTConvolution.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/FFTConvolution.h - Released 2025-02-19T18:29:04Z

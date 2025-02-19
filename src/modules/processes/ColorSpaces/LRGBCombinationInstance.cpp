@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard ColorSpaces Process Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// LRGBCombinationInstance.cpp - Released 2025-01-09T18:44:31Z
+// LRGBCombinationInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard ColorSpaces PixInsight module.
 //
@@ -870,7 +870,8 @@ bool LRGBCombinationInstance::ExecuteOn( View& view )
 
          if ( !view.IsPreview() )
             sourceMetadata << IntegrationMetadata( sourceWindow[i].MainView().StorableProperties(),
-                                                   sourceWindow[i].Keywords() );
+                                                   sourceWindow[i].Keywords(),
+                                                   true/*getSignatures*/ );
          ++numberOfSources;
       }
 
@@ -966,6 +967,9 @@ bool LRGBCombinationInstance::ExecuteOn( View& view )
       view.SetStorablePermanentProperties( properties );
       window.SetKeywords( keywords );
 
+      if ( metadata.imageType.IsConsistentlyDefined() )
+         window.SetImageType( (ImageWindow::image_type)metadata.imageType() );
+
       if ( p_inheritAstrometricSolution )
       {
          ImageWindow asSourceWindow = sourceWindow[3]; // L
@@ -1060,7 +1064,8 @@ bool LRGBCombinationInstance::ExecuteGlobal()
          }
 
          sourceMetadata << IntegrationMetadata( sourceWindow[i].MainView().StorableProperties(),
-                                                sourceWindow[i].Keywords() );
+                                                sourceWindow[i].Keywords(),
+                                                true/*getSignatures*/ );
          ++numberOfSources;
       }
 
@@ -1175,6 +1180,9 @@ bool LRGBCombinationInstance::ExecuteGlobal()
       outputView.SetStorablePermanentProperties( properties );
       outputWindow.SetKeywords( keywords );
 
+      if ( metadata.imageType.IsConsistentlyDefined() )
+         outputWindow.SetImageType( (ImageWindow::image_type)metadata.imageType() );
+
       if ( p_inheritAstrometricSolution )
       {
          ImageWindow asSourceWindow = sourceWindow[3]; // L
@@ -1277,4 +1285,4 @@ size_type LRGBCombinationInstance::ParameterLength( const MetaParameter* p, size
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF LRGBCombinationInstance.cpp - Released 2025-01-09T18:44:31Z
+// EOF LRGBCombinationInstance.cpp - Released 2025-02-19T18:29:34Z

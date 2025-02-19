@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/MetaFileFormat.cpp - Released 2025-01-09T18:44:07Z
+// pcl/MetaFileFormat.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -94,6 +94,7 @@ void APIImageOptionsToPCL( ImageOptions& opt, const api_image_options& o )
    opt.exposure               = o.exposure;
    opt.aperture               = o.aperture;
    opt.focalLength            = o.focalLength;
+   opt.imageType              = o.imageType;
    opt.cfaType                = o.cfaType;
 }
 
@@ -131,6 +132,7 @@ void PCLImageOptionsToAPI( api_image_options& o, const ImageOptions& opt )
    o.exposure               = opt.exposure;
    o.aperture               = opt.aperture;
    o.focalLength            = opt.focalLength;
+   o.imageType              = opt.imageType;
    o.cfaType                = opt.cfaType;
    o.__r__                  = 0;
 }
@@ -1884,4 +1886,4 @@ void MetaFileFormat::PerformAPIDefinitions() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/MetaFileFormat.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/MetaFileFormat.cpp - Released 2025-02-19T18:29:13Z

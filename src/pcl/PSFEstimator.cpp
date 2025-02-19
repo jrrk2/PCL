@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/PSFEstimator.cpp - Released 2025-01-09T18:44:07Z
+// pcl/PSFEstimator.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -154,7 +154,7 @@ private:
 
 // ----------------------------------------------------------------------------
 
-Array<PSFData> PSFEstimator::FitStars( const ImageVariant& image ) const
+Array<PSFData> PSFEstimator::FitStars( const ImageVariant& image, const void* __stars__, int __maxThreads__ ) const
 {
    bool initializeStatus = image.Status().IsInitializationEnabled();
 
@@ -164,6 +164,7 @@ Array<PSFData> PSFEstimator::FitStars( const ImageVariant& image ) const
     * Perform star detection
     */
    StarDetector::star_list stars;
+   if ( __stars__ == nullptr )
    {
       volatile AutoStatusCallbackRestorer saveStatus( image.Status() );
 
@@ -180,6 +181,11 @@ Array<PSFData> PSFEstimator::FitStars( const ImageVariant& image ) const
 
       if ( initializeStatus )
          image.Status().EnableInitialization();
+   }
+   else
+   {
+      // Performance analysis
+      stars = *(const StarDetector::star_list*)__stars__;
    }
 
    if ( !stars.IsEmpty() )
@@ -200,9 +206,22 @@ Array<PSFData> PSFEstimator::FitStars( const ImageVariant& image ) const
       /*
        * Perform PSF fitting
        */
-      Array<size_type> L = Thread::OptimalThreadLoads( numberOfStars,
-                                          1/*overheadLimit*/,
-                                          IsParallelProcessingEnabled() ? MaxProcessors() : 1 );
+      Array<size_type> L;
+      if ( __maxThreads__ <= 0 )
+      {
+         pcl::Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::PSFFit;
+         data.length = numberOfStars;
+         data.overheadLimit = 1;
+         data.itemSize = image.BytesPerSample();
+         data.floatingPoint = image.IsFloatSample();
+         L = pcl::Thread::OptimalThreadLoads( data, IsParallelProcessingEnabled() ? MaxProcessors() : 1 );
+      }
+      else
+      {
+         // Performance analysis
+         L = pcl::Thread::OptimalThreadLoads( numberOfStars, 1/*overheadLimit*/, __maxThreads__ );
+      }
       ReferenceArray<PCL_PSFE_PSFFitThread> threads;
       AbstractImage::ThreadData data( *image, numberOfStars );
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -272,4 +291,4 @@ Array<PSFData> PSFEstimator::FitStars( const ImageVariant& image ) const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/PSFEstimator.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/PSFEstimator.cpp - Released 2025-02-19T18:29:13Z

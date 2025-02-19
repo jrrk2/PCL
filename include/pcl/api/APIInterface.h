@@ -2,14 +2,14 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/APIInterface.h - Released 2024-12-27T18:16:01Z
+// pcl/APIInterface.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -56,7 +56,7 @@
 
 // Global namespace
 
-#define PCL_API_Version 0x0183
+#define PCL_API_Version 0x0186
 
 extern "C"
 {
@@ -1711,7 +1711,7 @@ struct api_context ThreadContext
    thread_handle  (api_func* CreateThread)( api_handle, api_handle client, uint32 flags );
 
    void           (api_func* StartThread)( thread_handle, uint32 priority );
-   void           (api_func* KillThread)( thread_handle ); // ### dangerous - deprecate?
+   void           (api_func* KillThread)( thread_handle );
 
    api_bool       (api_func* IsThreadActive)( const_thread_handle );
 
@@ -1737,6 +1737,9 @@ struct api_context ThreadContext
    thread_handle  (api_func* GetCurrentThread)();
 
    api_bool       (api_func* SetThreadExecRoutine)( thread_handle, pcl::thread_exec_routine );
+
+   int32          (api_func* PerformanceAnalysisValue)( int32 algorithm, size_type length,
+                                                        int32 itemSize, api_bool floatingPoint, int32 kernelSize, int32 width, int32 height );
 };
 
 // ----------------------------------------------------------------------------
@@ -2464,6 +2467,9 @@ struct api_context ImageWindowContext
    view_handle    (api_func* GetImageWindowCurrentView)( const_window_handle );
    void           (api_func* SetImageWindowCurrentView)( window_handle, view_handle );
 
+   int32          (api_func* GetImageType)( const_window_handle );
+   api_bool       (api_func* SetImageType)( window_handle, int32 imageType, api_bool notify );
+
    void           (api_func* PurgeImageWindowProperties)( window_handle );
 
    api_bool       (api_func* ValidateImageWindowView)( const_window_handle, const_view_handle );
@@ -3111,4 +3117,4 @@ extern "C" void* api_func APIFunctionResolver( const char* );
 #endif   // __PCL_API_APIInterface_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/APIInterface.h - Released 2024-12-27T18:16:01Z
+// EOF pcl/APIInterface.h - Released 2025-02-19T18:29:04Z

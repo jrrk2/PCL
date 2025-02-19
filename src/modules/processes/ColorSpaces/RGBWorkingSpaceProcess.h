@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard ColorSpaces Process Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// RGBWorkingSpaceProcess.h - Released 2025-01-09T18:44:31Z
+// RGBWorkingSpaceProcess.h - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard ColorSpaces PixInsight module.
 //
@@ -89,4 +89,4 @@ PCL_END_LOCAL
 #endif   // __RGBWorkingSpaceProcess_h
 
 // ----------------------------------------------------------------------------
-// EOF RGBWorkingSpaceProcess.h - Released 2025-01-09T18:44:31Z
+// EOF RGBWorkingSpaceProcess.h - Released 2025-02-19T18:29:34Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Rectangle.h - Released 2025-01-09T18:43:56Z
+// pcl/Rectangle.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -676,6 +676,17 @@ public:
    component Area() const noexcept
    {
       return pcl::Abs( (x1 - x0)*(y1 - y0) );
+   }
+
+   /*!
+    * Returns the area of this rectangle in unsigned integer units.
+    * The returned value is equal to the width multiplied by the height after
+    * converting them to 64-bit unsigned integers (by truncation in the case of
+    * floating point coordinates).
+    */
+   size_type IntegerArea() const
+   {
+      return size_type( Width() ) * size_type( Height() );
    }
 
    /*!
@@ -3294,4 +3305,4 @@ using DRect = F64Rect;
 #endif  // __PCL_Rectangle_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Rectangle.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/Rectangle.h - Released 2025-02-19T18:29:04Z

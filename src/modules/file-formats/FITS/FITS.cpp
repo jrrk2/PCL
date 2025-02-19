@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard FITS File Format Module Version 1.2.1
+// Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// FITS.cpp - Released 2025-01-09T18:44:23Z
+// FITS.cpp - Released 2025-02-19T18:29:25Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -2086,6 +2086,7 @@ void FITSWriter::CreateImage( const ImageInfo& info )
                kname          != "PROGRAM"   &&
                kname          != "CREATOR"   &&
                kname          != "SWCREATE"  &&
+               kname          != "SOFTWARE"  &&
                kname          != "CONFIGUR"  &&
                kname          != "XTENSION"  &&
                kname          != "PCOUNT"    &&
@@ -2341,4 +2342,4 @@ void FITSWriter::WriteExtensionHDU( const FITSExtensionData& ext )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF FITS.cpp - Released 2025-01-09T18:44:23Z
+// EOF FITS.cpp - Released 2025-02-19T18:29:25Z

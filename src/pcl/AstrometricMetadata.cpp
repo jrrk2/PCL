@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/AstrometricMetadata.cpp - Released 2025-01-09T18:44:07Z
+// pcl/AstrometricMetadata.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -535,7 +535,7 @@ String AstrometricMetadata::Summary() const
    if ( !m_description->referenceCatalog.IsEmpty() )
       summary << "Reference catalog ........ " << m_description->referenceCatalog << '\n';
 
-   summary    << "Linear transformation matrix (world[ra,dec] = matrix * image[x,y]):" << '\n'
+   summary    << "Linear transformation matrix (native[l,b] = matrix * image[x,y]):" << '\n'
               << m_description->referenceMatrix << '\n'
               << "WCS transformation ....... " << m_description->wcsTransformationType << '\n';
 
@@ -1367,4 +1367,4 @@ void AstrometricMetadata::UpdateDescription() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/AstrometricMetadata.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/AstrometricMetadata.cpp - Released 2025-02-19T18:29:13Z

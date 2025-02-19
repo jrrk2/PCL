@@ -4,7 +4,7 @@
 # PixInsight Makefile Generator Script v1.143
 # Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2025-01-09T20:21:30.905Z
+# Generated on .... 2025-02-19T21:24:54.355Z
 # Project id ...... LocalHistogramEqualization
 # Project type .... Module
 # Platform ........ Windows/vc16
@@ -16,13 +16,13 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>31ea0206-114c-460e-a0e9-069d6fc14c0e</UniqueIdentifier>
+      <UniqueIdentifier>8bce62f6-288b-40cd-9ab4-b5254a954a03</UniqueIdentifier>
     </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>3fd55f23-59dd-40d3-8284-f7c30c937589</UniqueIdentifier>
+      <UniqueIdentifier>af6e21f2-fe72-4f6a-9cab-69e16eedbb22</UniqueIdentifier>
     </Filter>
     <Filter Include="Image Files">
-      <UniqueIdentifier>93b197af-7672-4a59-ab6f-79f7915664d1</UniqueIdentifier>
+      <UniqueIdentifier>fc7dec5e-acab-4944-a68c-65548a1b4e27</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

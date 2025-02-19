@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/ImageWindow.cpp - Released 2025-01-09T18:44:07Z
+// pcl/ImageWindow.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -188,8 +188,24 @@ ImageOptions ImageWindow::FileInfo() const
    o.exposure               = a.exposure;
    o.aperture               = a.aperture;
    o.focalLength            = a.focalLength;
+   o.imageType              = a.imageType;
    o.cfaType                = a.cfaType;
    return o;
+}
+
+// ----------------------------------------------------------------------------
+
+ImageWindow::image_type ImageWindow::ImageType() const
+{
+   return (ImageWindow::image_type)(*API->ImageWindow->GetImageType)( handle );
+}
+
+// ----------------------------------------------------------------------------
+
+void ImageWindow::SetImageType( ImageWindow::image_type type, bool notify )
+{
+   if ( (*API->ImageWindow->SetImageType)( handle, type, api_bool( notify ) ) == api_false )
+      throw APIFunctionError( "SetImageType" );
 }
 
 // ----------------------------------------------------------------------------
@@ -1223,4 +1239,4 @@ Array<ImageWindow> ImageWindow::AllWindows( bool includeIconicWindows )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/ImageWindow.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/ImageWindow.cpp - Released 2025-02-19T18:29:13Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/SectionBar.cpp - Released 2025-01-09T18:44:07Z
+// pcl/SectionBar.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -192,9 +192,9 @@ void SectionBar::Enable( bool enabled )
    if ( m_handlers.IsNull() )    \
       m_handlers = new EventHandlers
 
-void SectionBar::OnToggleSection( section_event_handler f, Control& c )
+void SectionBar::OnToggleSection( section_event_handler handler, Control& receiver )
 {
-   if ( f == nullptr || c.IsNull() )
+   if ( handler == nullptr || receiver.IsNull() )
    {
       if ( !m_handlers.IsNull() )
       {
@@ -205,14 +205,14 @@ void SectionBar::OnToggleSection( section_event_handler f, Control& c )
    else
    {
       INIT_EVENT_HANDLERS();
-      m_handlers->onToggleSection = f;
-      m_handlers->onToggleSectionReceiver = &c;
+      m_handlers->onToggleSection = handler;
+      m_handlers->onToggleSectionReceiver = &receiver;
    }
 }
 
-void SectionBar::OnCheck( check_event_handler f, Control& c )
+void SectionBar::OnCheck( check_event_handler handler, Control& receiver )
 {
-   if ( Title_CheckBox.IsNull() || f == nullptr || c.IsNull() )
+   if ( Title_CheckBox.IsNull() || handler == nullptr || receiver.IsNull() )
    {
       if ( !m_handlers.IsNull() )
       {
@@ -223,8 +223,8 @@ void SectionBar::OnCheck( check_event_handler f, Control& c )
    else
    {
       INIT_EVENT_HANDLERS();
-      m_handlers->onCheck = f;
-      m_handlers->onCheckReceiver = &c;
+      m_handlers->onCheck = handler;
+      m_handlers->onCheckReceiver = &receiver;
    }
 }
 
@@ -237,12 +237,12 @@ void SectionBar::SetSectionVisible( bool visible )
    if ( m_section != nullptr )
       if ( visible != m_section->IsVisible() )
       {
-         Control* p = &m_section->Parent();
-         if ( !p->IsNull() )
+         Control* parent = &m_section->Parent();
+         if ( !parent->IsNull() )
          {
-            while ( !p->Parent().IsNull() )
-               p = &p->Parent();
-            p->DisableUpdates();
+            while ( !parent->Parent().IsNull() )
+               parent = &parent->Parent();
+            parent->DisableUpdates();
          }
 
          m_section->SetVisible( visible );
@@ -254,26 +254,26 @@ void SectionBar::SetSectionVisible( bool visible )
 #ifndef __PCL_MACOSX
          Module->ProcessEvents();
 #endif
-         if ( !p->IsNull() )
+         if ( !parent->IsNull() )
          {
-            bool fixedWidth = p->IsFixedWidth();
+            bool fixedWidth = parent->IsFixedWidth();
             if ( !fixedWidth )
-               p->SetFixedWidth();
+               parent->SetFixedWidth();
 
-            bool fixedHeight = p->IsFixedHeight();
+            bool fixedHeight = parent->IsFixedHeight();
             if ( fixedHeight )
-               p->SetVariableHeight();
+               parent->SetVariableHeight();
 
-            p->AdjustToContents();
+            parent->AdjustToContents();
 
             Module->ProcessEvents();
 
             if ( !fixedWidth )
-               p->SetVariableWidth();
+               parent->SetVariableWidth();
             if ( fixedHeight )
-               p->SetFixedHeight();
+               parent->SetFixedHeight();
 
-            p->EnableUpdates();
+            parent->EnableUpdates();
          }
       }
 }
@@ -349,4 +349,4 @@ void SectionBar::ControlHide( Control& sender )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/SectionBar.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/SectionBar.cpp - Released 2025-02-19T18:29:13Z

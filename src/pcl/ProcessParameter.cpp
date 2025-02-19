@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/ProcessParameter.cpp - Released 2025-01-09T18:44:07Z
+// pcl/ProcessParameter.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -540,4 +540,4 @@ const void* ProcessParameter::Handle() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/ProcessParameter.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/ProcessParameter.cpp - Released 2025-02-19T18:29:13Z

@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard SplitCFA Process Module Version 1.0.6
 // ----------------------------------------------------------------------------
-// SplitCFAInstance.cpp - Released 2025-01-09T18:44:32Z
+// SplitCFAInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard SplitCFA PixInsight module.
 //
@@ -699,9 +699,6 @@ void SplitCFAInstance::SaveImage( const SplitCFAThread* t )
    {
       AstrometricMetadata::RemoveKeywords( keywords, false/*removeCenterProperties*/, false/*removeScaleProperties*/ );
       AstrometricMetadata::RescalePixelSizeKeywords( keywords, 2.0/*scalingFactor*/ );
-      keywords << FITSHeaderKeyword( "COMMENT", IsoString(), PixInsightVersion::AsString() )
-               << FITSHeaderKeyword( "COMMENT", IsoString(), Module->ReadableVersion() )
-               << FITSHeaderKeyword( "HISTORY", IsoString(), "SplitCFA" );
    }
    else if ( !data.keywords.IsEmpty() )
    {
@@ -1038,4 +1035,4 @@ size_type SplitCFAInstance::ParameterLength( const MetaParameter* p, size_type t
 } // namespace pcl
 
 // ----------------------------------------------------------------------------
-// EOF SplitCFAInstance.cpp - Released 2025-01-09T18:44:32Z
+// EOF SplitCFAInstance.cpp - Released 2025-02-19T18:29:34Z

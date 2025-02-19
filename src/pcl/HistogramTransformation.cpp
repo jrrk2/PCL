@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/HistogramTransformation.cpp - Released 2025-01-09T18:44:07Z
+// pcl/HistogramTransformation.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -265,21 +265,28 @@ void HistogramTransformation::Make24BitLUT( uint8* lut ) const
    if ( lut == nullptr )
       return;
 
-   Array<size_type> L = Thread::OptimalThreadLoads( uint24_max+1,
-                                                    256/*overheadLimit*/,
-                                                    m_parallel ? int( m_maxProcessors ) : 1 );
-   int numberOfThreads = int( L.Length() );
+   Array<size_type> L;
+   {
+      pcl::Thread::PerformanceAnalysisData data;
+      data.algorithm = PerformanceAnalysisAlgorithm::HistogramTransformation;
+      data.length = uint24_max + 1;
+      data.overheadLimit = 32768;
+      data.itemSize = sizeof( double );
+      data.floatingPoint = true;
+      L = pcl::Thread::OptimalThreadLoads( data, m_parallel ? m_maxProcessors : 1 );
+   }
    bool useAffinity = m_parallel && Thread::IsRootThread();
 
    ReferenceArray<LUT2408Thread> threads;
-   for ( int i = 0, n = 0; i < numberOfThreads; n += int( L[i++] ) )
+   for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
       threads.Add( new LUT2408Thread( lut, *this, n, n + int( L[i] ) ) );
-   if ( numberOfThreads > 1 )
+   if ( threads.Length() > 1 )
    {
-      for ( int i = 0; i < numberOfThreads; ++i )
-         threads[i].Start( ThreadPriority::DefaultMax, useAffinity ? i : -1 );
-      for ( int i = 0; i < numberOfThreads; ++i )
-         threads[i].Wait();
+      int n = 0;
+      for ( LUT2408Thread& thread : threads )
+         thread.Start( ThreadPriority::DefaultMax, useAffinity ? n++ : -1 );
+      for ( LUT2408Thread& thread : threads )
+         thread.Wait();
    }
    else
       threads[0].Run();
@@ -333,21 +340,28 @@ void HistogramTransformation::Make24BitLUT( uint16* lut ) const
    if ( lut == nullptr )
       return;
 
-   Array<size_type> L = Thread::OptimalThreadLoads( uint24_max+1,
-                                                    256/*overheadLimit*/,
-                                                    m_parallel ? int( m_maxProcessors ) : 1 );
-   int numberOfThreads = int( L.Length() );
+   Array<size_type> L;
+   {
+      pcl::Thread::PerformanceAnalysisData data;
+      data.algorithm = PerformanceAnalysisAlgorithm::HistogramTransformation;
+      data.length = uint24_max + 1;
+      data.overheadLimit = 32768;
+      data.itemSize = sizeof( double );
+      data.floatingPoint = true;
+      L = pcl::Thread::OptimalThreadLoads( data, m_parallel ? m_maxProcessors : 1 );
+   }
    bool useAffinity = m_parallel && Thread::IsRootThread();
 
    ReferenceArray<LUT2416Thread> threads;
-   for ( int i = 0, n = 0; i < numberOfThreads; n += int( L[i++] ) )
+   for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
       threads.Add( new LUT2416Thread( lut, *this, n, n + int( L[i] ) ) );
-   if ( numberOfThreads > 1 )
+   if ( threads.Length() > 1 )
    {
-      for ( int i = 0; i < numberOfThreads; ++i )
-         threads[i].Start( ThreadPriority::DefaultMax, useAffinity ? i : -1 );
-      for ( int i = 0; i < numberOfThreads; ++i )
-         threads[i].Wait();
+      int n = 0;
+      for ( LUT2416Thread& thread : threads )
+         thread.Start( ThreadPriority::DefaultMax, useAffinity ? n++ : -1 );
+      for ( LUT2416Thread& thread : threads )
+         thread.Wait();
    }
    else
       threads[0].Run();
@@ -363,25 +377,39 @@ class PCL_HistogramTransformationEngine
 public:
 
    template <class P> static
-   void Apply( GenericImage<P>& image, const HistogramTransformation& H )
+   void Apply( GenericImage<P>& image, const HistogramTransformation& H, int maxThreads = 0 )
    {
       if ( image.IsEmptySelection() )
          return;
 
       image.EnsureUnique();
 
-      Rect r = image.SelectedRectangle();
-      int h = r.Height();
-
-      Array<size_type> L = pcl::Thread::OptimalThreadLoads( h,
-                                                            1/*overheadLimit*/,
-                                                            H.IsParallelProcessingEnabled() ? H.MaxProcessors() : 1 );
       size_type N = image.NumberOfSelectedSamples();
+      int height = image.SelectedRectangle().Height();
+
+      Array<size_type> L;
+      if ( maxThreads <= 0 )
+      {
+         pcl::Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::HistogramTransformation;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = image.BytesPerSample();
+         data.floatingPoint = image.IsFloatSample();
+         L = pcl::Thread::OptimalThreadLoads( height,
+                                              height/pcl::Thread::OptimalNumberOfThreads( data )/*overheadLimit*/,
+                                              H.IsParallelProcessingEnabled() ? H.MaxProcessors() : 1 );
+      }
+      else
+      {
+         // Performance analysis
+         L = pcl::Thread::OptimalThreadLoads( height, 1/*overheadLimit*/, maxThreads );
+      }
+
       if ( image.Status().IsInitializationEnabled() )
          image.Status().Initialize( "Histogram transformation", N );
 
       ThreadData<P> data( image, H, N );
-
       ReferenceArray<Thread<P> > threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
          threads.Add( new Thread<P>( data, n, n + int( L[i] ) ) );
@@ -500,7 +528,21 @@ void HistogramTransformation::Apply( pcl::UInt32Image& image ) const
 
 // ----------------------------------------------------------------------------
 
+/*
+ * Performance analysis
+ */
+void PCL_PA_HistogramTransformation_F32( pcl::Image& image, const HistogramTransformation& H, int maxThreads )
+{
+   PCL_HistogramTransformationEngine::Apply( image, H, maxThreads );
+}
+void PCL_PA_HistogramTransformation_F64( pcl::DImage& image, const HistogramTransformation& H, int maxThreads )
+{
+   PCL_HistogramTransformationEngine::Apply( image, H, maxThreads );
+}
+
+// ----------------------------------------------------------------------------
+
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/HistogramTransformation.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/HistogramTransformation.cpp - Released 2025-02-19T18:29:13Z

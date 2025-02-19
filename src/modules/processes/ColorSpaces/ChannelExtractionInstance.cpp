@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard ColorSpaces Process Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// ChannelExtractionInstance.cpp - Released 2025-01-09T18:44:31Z
+// ChannelExtractionInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard ColorSpaces PixInsight module.
 //
@@ -199,9 +199,9 @@ static void ExtractChannels( const GenericImage<P>& img, const View& view,
       FITSKeywordArray keywords = window.Keywords();
       PropertyArray properties = view.StorablePermanentProperties();
 
-      bool inheritAstrometricSolution = E.InheritAstrometricSolution()
-                                    && (view.IsMainView() || view.IsCompletePreview())
-                                    && window.HasAstrometricSolution();
+      bool propagateAstrometricSolution = E.IsInheritAstrometricSolutionEnabled()
+                                       && (view.IsMainView() || view.IsCompletePreview())
+                                       && window.HasAstrometricSolution();
 
       for ( int i = 0; i < 3; ++i )
          if ( E.IsChannelEnabled( i ) )
@@ -343,7 +343,7 @@ static void ExtractChannels( const GenericImage<P>& img, const View& view,
       for ( int i = 0; i < 3; ++i )
          if ( E.IsChannelEnabled( i ) )
          {
-            if ( inheritAstrometricSolution )
+            if ( propagateAstrometricSolution )
                if ( targetWindow[i].CopyAstrometricSolution( window ) )
                {
                   targetWindow[i].MainView().SetStorablePermanentPropertyValue( "PCL:AstrometricSolution:Information",
@@ -353,7 +353,7 @@ static void ExtractChannels( const GenericImage<P>& img, const View& view,
                }
                else
                {
-                  inheritAstrometricSolution = false;
+                  propagateAstrometricSolution = false;
                   Console().WarningLn( "<end><cbr>** Invalid astrometric solution ignored: " + window.MainView().Id() );
                }
 
@@ -529,4 +529,4 @@ size_type ChannelExtractionInstance::ParameterLength( const MetaParameter* p, si
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF ChannelExtractionInstance.cpp - Released 2025-01-09T18:44:31Z
+// EOF ChannelExtractionInstance.cpp - Released 2025-02-19T18:29:34Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/MetaModule.h - Released 2025-01-09T18:43:56Z
+// pcl/MetaModule.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -362,6 +362,25 @@ public:
    {
       year = month = day = 0; // unspecified
    }
+
+   /*!
+    * Returns the total number of processors available on the host machine.
+    *
+    * The returned value includes all physical and logical processor cores
+    * available. This value can also be obtained by calling:
+    *
+    * \code
+    * PixInsightSettings::GlobalInteger( "System/NumberOfProcessors" )
+    * \endcode
+    *
+    * However, this function stores the value of the System/NumberOfProcessors
+    * global variable on the first call and returns it directly in subsequent
+    * calls, so it is faster when the number of processors has to be used
+    * multiple times.
+    *
+    * \note This function is thread-safe.
+    */
+   int NumberOfProcessors() const;
 
    /*!
     * Acquires current physical memory statistics.
@@ -1046,4 +1065,4 @@ namespace InstallMode
 #endif   // __PCL_MetaModule_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/MetaModule.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/MetaModule.h - Released 2025-02-19T18:29:04Z

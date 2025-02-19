@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/AstrometricReprojection.cpp - Released 2025-01-09T18:44:07Z
+// pcl/AstrometricReprojection.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -135,7 +135,7 @@ class PCL_AstrometricReprojectionEngine
 public:
 
    template <class P2> static
-   void Apply( GenericImage<P2>& targetImage, const AstrometricReprojection& R )
+   void Apply( GenericImage<P2>& targetImage, const AstrometricReprojection& R, int maxThreads = 0 )
    {
       if ( R.SourceImage() )
          if ( !R.SourceImage()->IsEmpty() )
@@ -143,22 +143,22 @@ public:
                if ( R.SourceImage().IsFloatSample() )
                   switch ( R.SourceImage().BitsPerSample() )
                   {
-                  case 32: Apply( targetImage, static_cast<const Image&>( *R.SourceImage() ), R ); break;
-                  case 64: Apply( targetImage, static_cast<const DImage&>( *R.SourceImage() ), R ); break;
+                  case 32: Apply( targetImage, static_cast<const Image&>( *R.SourceImage() ), R, maxThreads ); break;
+                  case 64: Apply( targetImage, static_cast<const DImage&>( *R.SourceImage() ), R, maxThreads ); break;
                   }
                else
                   switch ( R.SourceImage().BitsPerSample() )
                   {
-                  case  8: Apply( targetImage, static_cast<const UInt8Image&>( *R.SourceImage() ), R ); break;
-                  case 16: Apply( targetImage, static_cast<const UInt16Image&>( *R.SourceImage() ), R ); break;
-                  case 32: Apply( targetImage, static_cast<const UInt32Image&>( *R.SourceImage() ), R ); break;
+                  case  8: Apply( targetImage, static_cast<const UInt8Image&>( *R.SourceImage() ), R, maxThreads ); break;
+                  case 16: Apply( targetImage, static_cast<const UInt16Image&>( *R.SourceImage() ), R, maxThreads ); break;
+                  case 32: Apply( targetImage, static_cast<const UInt32Image&>( *R.SourceImage() ), R, maxThreads ); break;
                   }
    }
 
 private:
 
    template <class P1, class P2> static
-   void Apply( GenericImage<P2>& targetImage, const GenericImage<P1>& sourceImage, const AstrometricReprojection& R )
+   void Apply( GenericImage<P2>& targetImage, const GenericImage<P1>& sourceImage, const AstrometricReprojection& R, int maxThreads )
    {
       Rect rect;
 
@@ -187,9 +187,24 @@ private:
             return;
       }
 
-      Array<size_type> L = Thread::OptimalThreadLoads( rect.Height(),
-                                                       1/*overheadLimit*/,
-                                                       R.IsParallelProcessingEnabled() ? R.MaxProcessors() : 1 );
+      Array<size_type> L;
+      if ( maxThreads <= 0 )
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::AstrometricReprojection;
+         data.length = rect.Height();
+         data.itemSize = P2::BytesPerSample();
+         data.floatingPoint = P2::IsFloatSample();
+         data.width = rect.Width();
+         data.height = rect.Height();
+         L = Thread::OptimalThreadLoads( data, R.IsParallelProcessingEnabled() ? R.MaxProcessors() : 1 );
+      }
+      else
+      {
+         // Performance analysis
+         L = Thread::OptimalThreadLoads( rect.Height(), 1/*overheadLimit*/, maxThreads );
+      }
+
       if ( targetImage.Status().IsInitializationEnabled() )
       {
          size_type N = size_type( rect.Width() ) * size_type( rect.Height() );
@@ -364,7 +379,21 @@ void AstrometricReprojection::Apply( pcl::UInt32Image& image ) const
 
 // ----------------------------------------------------------------------------
 
+/*
+ * Performance analysis
+ */
+void PCL_PA_AstrometricReprojection_F32( Image& image, const AstrometricReprojection& R, int maxThreads )
+{
+   PCL_AstrometricReprojectionEngine::Apply( image, R, maxThreads );
+}
+void PCL_PA_AstrometricReprojection_F64( DImage& image, const AstrometricReprojection& R, int maxThreads )
+{
+   PCL_AstrometricReprojectionEngine::Apply( image, R, maxThreads );
+}
+
+// ----------------------------------------------------------------------------
+
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/AstrometricReprojection.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/AstrometricReprojection.cpp - Released 2025-02-19T18:29:13Z

@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard SubframeSelector Process Module Version 1.9.1
+// Standard SubframeSelector Process Module Version 1.9.2
 // ----------------------------------------------------------------------------
-// SubframeSelectorInstance.cpp - Released 2025-01-09T18:44:32Z
+// SubframeSelectorInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard SubframeSelector PixInsight module.
 //
@@ -140,6 +140,7 @@ SubframeSelectorInstance::SubframeSelectorInstance( const MetaProcess* m )
    , p_outputPrefix( TheSSOutputPrefixParameter->DefaultValue() )
    , p_outputPostfix( TheSSOutputPostfixParameter->DefaultValue() )
    , p_outputKeyword( TheSSOutputKeywordParameter->DefaultValue() )
+   , p_generateHistoryProperties( TheSSGenerateHistoryPropertiesParameter->DefaultValue() )
    , p_overwriteExistingFiles( TheSSOverwriteExistingFilesParameter->DefaultValue() )
    , p_onError( SSOnError::Default )
    , p_sortingProperty( SSSortingProperty::Default )
@@ -221,6 +222,7 @@ void SubframeSelectorInstance::Assign( const ProcessImplementation& p )
       p_outputPrefix               = x->p_outputPrefix;
       p_outputPostfix              = x->p_outputPostfix;
       p_outputKeyword              = x->p_outputKeyword;
+      p_generateHistoryProperties  = x->p_generateHistoryProperties;
       p_overwriteExistingFiles     = x->p_overwriteExistingFiles;
       p_onError                    = x->p_onError;
       p_approvalExpression         = x->p_approvalExpression;
@@ -377,17 +379,19 @@ private:
          file.ReadFITSKeywords( keywords );
 
       PropertyArray properties;
-      if ( format.CanStoreImageProperties() )
-         properties = file.ReadImageProperties();
-
       int cfaSourceChannel = 0;
       if ( format.CanStoreImageProperties() )
+      {
+         properties = file.ReadImageProperties();
+         properties.Sort(); // for fast binary search
+
          if ( file.HasImageProperty( "PCL:CFASourceChannel" ) )
          {
             Variant v = file.ReadImageProperty( "PCL:CFASourceChannel" );
             if ( v.IsValid() )
                cfaSourceChannel = v.ToInt();
          }
+      }
 
       m_subframe.CreateSharedFloatImage( 32/*bitsPerSample*/ );
 
@@ -435,126 +439,189 @@ private:
          break;
       }
 
+      int numberOfChannels = m_subframe.NumberOfNominalChannels();
+
       /*
        * Get noise and signal estimates from available metadata.
        */
-      DVector noiseEstimates( 0.0, m_subframe.NumberOfNominalChannels() );
-      DVector noiseRatios( 0.0, m_subframe.NumberOfNominalChannels() );
-      DVector noiseScaleLows( 0.0, m_subframe.NumberOfNominalChannels() );
-      DVector noiseScaleHighs( 0.0, m_subframe.NumberOfNominalChannels() );
-      DVector psfTotalFluxEstimates( 0.0, m_subframe.NumberOfNominalChannels() );
-      DVector psfTotalPowerFluxEstimates( 0.0, m_subframe.NumberOfNominalChannels() );
-      DVector psfTotalMeanFluxEstimates( 0.0, m_subframe.NumberOfNominalChannels() );
-      DVector psfTotalMeanPowerFluxEstimates( 0.0, m_subframe.NumberOfNominalChannels() );
-      UIVector psfCounts( 0, m_subframe.NumberOfNominalChannels() );
-      DVector MStarEstimates( 0.0, m_subframe.NumberOfNominalChannels() );
-      DVector NStarEstimates( 0.0, m_subframe.NumberOfNominalChannels() );
+      DVector noiseEstimates( 0.0, numberOfChannels );
+      DVector noiseRatios( 0.0, numberOfChannels );
+      DVector noiseScaleLows( 0.0, numberOfChannels );
+      DVector noiseScaleHighs( 0.0, numberOfChannels );
+      DVector psfTotalFluxEstimates( 0.0, numberOfChannels );
+      DVector psfTotalPowerFluxEstimates( 0.0, numberOfChannels );
+      DVector psfTotalMeanFluxEstimates( 0.0, numberOfChannels );
+      DVector psfTotalMeanPowerFluxEstimates( 0.0, numberOfChannels );
+      UIVector psfCounts( 0, numberOfChannels );
+      DVector MStarEstimates( 0.0, numberOfChannels );
+      DVector NStarEstimates( 0.0, numberOfChannels );
 
-      for ( int c = 0; c < m_subframe.NumberOfNominalChannels(); ++c )
+      bool signalOk = false, noiseOk = false, noiseScaleOk = false;
+
+      if ( format.CanStoreImageProperties() )
       {
-         IsoString keyName = IsoString().Format( "NOISE%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
+         DVector psfTotalFluxEstimates_ = DVectorPropertyValue( properties, "PCL:Signal:PSFTotalFlux" );
+         DVector psfTotalPowerFluxEstimates_ = DVectorPropertyValue( properties, "PCL:Signal:PSFTotalPowerFlux" );
+         DVector psfTotalMeanFluxEstimates_ = DVectorPropertyValue( properties, "PCL:Signal:PSFTotalMeanFlux" );
+         DVector psfTotalMeanPowerFluxEstimates_ = DVectorPropertyValue( properties, "PCL:Signal:PSFTotalMeanPowerFlux" );
+         UIVector psfCounts_ = UIVectorPropertyValue( properties, "PCL:Signal:PSFCounts" );
+         DVector MStarEstimates_ = DVectorPropertyValue( properties, "PCL:Noise:MStar" );
+         DVector NStarEstimates_ = DVectorPropertyValue( properties, "PCL:Noise:NStar" );
+
+         if ( psfTotalFluxEstimates_.Length() == numberOfChannels &&
+              psfTotalPowerFluxEstimates_.Length() == numberOfChannels &&
+              psfTotalMeanFluxEstimates_.Length() == numberOfChannels &&
+              psfTotalMeanPowerFluxEstimates_.Length() == numberOfChannels &&
+              psfCounts_.Length() == numberOfChannels &&
+              MStarEstimates_.Length() == numberOfChannels &&
+              NStarEstimates_.Length() == numberOfChannels )
+         {
+            psfTotalFluxEstimates = psfTotalFluxEstimates_;
+            psfTotalPowerFluxEstimates = psfTotalPowerFluxEstimates_;
+            psfTotalMeanFluxEstimates = psfTotalMeanFluxEstimates_;
+            psfTotalMeanPowerFluxEstimates = psfTotalMeanPowerFluxEstimates_;
+            psfCounts = psfCounts_;
+            MStarEstimates = MStarEstimates_;
+            NStarEstimates = NStarEstimates_;
+            signalOk = true;
+         }
+
+         DVector noiseEstimates_ = DVectorPropertyValue( properties, "PCL:Noise:Sigmas" );
+         DVector noiseRatios_ = DVectorPropertyValue( properties, "PCL:Noise:Fractions" );
+         if ( noiseEstimates_.Length() == numberOfChannels &&
+              noiseRatios_.Length() == numberOfChannels )
+         {
+            noiseEstimates = noiseEstimates_;
+            noiseRatios = noiseRatios_;
+            noiseOk = true;
+
+            DVector noiseScaleLows_ = DVectorPropertyValue( properties, "PCL:Noise:ScaleLow" );
+            DVector noiseScaleHighs_ = DVectorPropertyValue( properties, "PCL:Noise:ScaleHigh" );
+            if ( noiseScaleLows_.Length() == numberOfChannels &&
+                 noiseScaleHighs_.Length() == numberOfChannels )
             {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( noiseEstimates[c] ); // GetNumericValue() sets d=0 if keyword cannot be converted
-               break;
+               noiseScaleLows = noiseScaleLows_;
+               noiseScaleHighs = noiseScaleHighs_;
+               noiseScaleOk = true;
+            }
+         }
+      } // if ( format.CanStoreImageProperties() )
+
+      if ( (!signalOk || !noiseOk || !noiseScaleOk) && format.CanStoreKeywords() )
+         for ( int c = 0; c < numberOfChannels; ++c )
+         {
+            if ( !signalOk )
+            {
+               IsoString keyName = IsoString().Format( "PSFFLX%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( psfTotalFluxEstimates[c] );
+                     break;
+                  }
+
+               keyName = IsoString().Format( "PSFFLP%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( psfTotalPowerFluxEstimates[c] );
+                     break;
+                  }
+
+               keyName = IsoString().Format( "PSFMFL%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( psfTotalMeanFluxEstimates[c] );
+                     break;
+                  }
+
+               keyName = IsoString().Format( "PSFMFP%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( psfTotalMeanPowerFluxEstimates[c] );
+                     break;
+                  }
+
+               keyName = IsoString().Format( "PSFSGN%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                     {
+                        double x;
+                        keyword.GetNumericValue( x );
+                        psfCounts[c] = unsigned( x );
+                     }
+                     break;
+                  }
+
+               keyName = IsoString().Format( "PSFMST%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( MStarEstimates[c] );
+                     break;
+                  }
+
+               keyName = IsoString().Format( "PSFNST%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( NStarEstimates[c] );
+                     break;
+                  }
             }
 
-         keyName = IsoString().Format( "NOISEF%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
+            if ( !noiseOk )
             {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( noiseRatios[c] );
-               break;
+               IsoString keyName = IsoString().Format( "NOISE%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( noiseEstimates[c] ); // GetNumericValue() sets d=0 if keyword cannot be converted
+                     break;
+                  }
+
+               keyName = IsoString().Format( "NOISEF%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( noiseRatios[c] );
+                     break;
+                  }
             }
 
-         keyName = IsoString().Format( "NOISEL%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
+            if ( !noiseScaleOk )
             {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( noiseScaleLows[c] );
-               break;
-            }
+               IsoString keyName = IsoString().Format( "NOISEL%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( noiseScaleLows[c] );
+                     break;
+                  }
 
-         keyName = IsoString().Format( "NOISEH%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
-            {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( noiseScaleHighs[c] );
-               break;
+               keyName = IsoString().Format( "NOISEH%02d", c + cfaSourceChannel );
+               for ( const FITSHeaderKeyword& keyword : keywords )
+                  if ( !keyword.name.CompareIC( keyName ) )
+                  {
+                     if ( keyword.IsNumeric() )
+                        keyword.GetNumericValue( noiseScaleHighs[c] );
+                     break;
+                  }
             }
-
-         keyName = IsoString().Format( "PSFFLX%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
-            {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( psfTotalFluxEstimates[c] );
-               break;
-            }
-
-         keyName = IsoString().Format( "PSFFLP%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
-            {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( psfTotalPowerFluxEstimates[c] );
-               break;
-            }
-
-         keyName = IsoString().Format( "PSFMFL%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
-            {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( psfTotalMeanFluxEstimates[c] );
-               break;
-            }
-
-         keyName = IsoString().Format( "PSFMFP%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
-            {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( psfTotalMeanPowerFluxEstimates[c] );
-               break;
-            }
-
-         keyName = IsoString().Format( "PSFSGN%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
-            {
-               if ( keyword.IsNumeric() )
-               {
-                  double x;
-                  keyword.GetNumericValue( x );
-                  psfCounts[c] = unsigned( x );
-               }
-               break;
-            }
-
-         keyName = IsoString().Format( "PSFMST%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
-            {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( MStarEstimates[c] );
-               break;
-            }
-
-         keyName = IsoString().Format( "PSFNST%02d", c + cfaSourceChannel );
-         for ( const FITSHeaderKeyword& keyword : keywords )
-            if ( !keyword.name.CompareIC( keyName ) )
-            {
-               if ( keyword.IsNumeric() )
-                  keyword.GetNumericValue( NStarEstimates[c] );
-               break;
-            }
-      }
+         }
 
       /*
        * For grayscale images, return the image just read and its signal and
@@ -564,7 +631,7 @@ private:
       double psfTotalFlux, psfTotalPowerFlux, psfTotalMeanFlux, psfTotalMeanPowerFlux,
              MStar, NStar, noiseScaleLow, noiseScaleHigh;
       unsigned psfCount;
-      if ( m_subframe.NumberOfNominalChannels() == 1 )
+      if ( numberOfChannels == 1 )
       {
          m_noise = noiseEstimates[0];
          m_noiseRatio = noiseRatios[0];
@@ -638,7 +705,7 @@ private:
          /*
           * Compute noise scaling factors if not available.
           */
-         if ( noiseScaleLow == 0 || noiseScaleHigh == 0 )
+         if ( noiseScaleLow <= 0 || noiseScaleHigh <= 0 )
          {
             if ( !m_instance.p_noNoiseAndSignalWarnings )
                Console().WarningLn( "<end><cbr>** Warning: Noise scaling factors are not available in the image metadata and are being "
@@ -1147,6 +1214,33 @@ private:
       RobustChauvenetRejection()( i, j, m_outputData.starResidual, m_outputData.starResidualMeanDev, residuals );
       m_outputData.starResidualMeanDev = AvgDev( residuals.At( i ), residuals.At( j ), m_outputData.starResidual );
    }
+
+   static Variant PropertyValue( const PropertyArray& properties, const IsoString& propertyId )
+   {
+      /*
+       * N.B. Assuming that properties has been sorted.
+       */
+      PropertyArray::const_iterator i = BinarySearch( properties.Begin(), properties.End(), Property( propertyId ) );
+      if ( i != properties.End() )
+         return i->Value();
+      return Variant();
+   }
+
+   static DVector DVectorPropertyValue( const PropertyArray& properties, const IsoString& propertyId )
+   {
+      Variant v = PropertyValue( properties, propertyId );
+      if ( v.CanConvertToDVector() )
+         return v.ToDVector();
+      return DVector();
+   }
+
+   UIVector UIVectorPropertyValue( const PropertyArray& properties, const IsoString& propertyId )
+   {
+      Variant v = PropertyValue( properties, propertyId );
+      if ( v.CanConvertToUIVector() )
+         return v.ToUIVector();
+      return UIVector();
+   }
 };
 
 // ----------------------------------------------------------------------------
@@ -1425,12 +1519,16 @@ void SubframeSelectorInstance::Measure()
                         /*
                          * Store output data.
                          */
+                        ++succeeded;
                         MeasureItem m( (*i)->Index() );
                         m.Input( (*i)->OutputData() );
                         o_measures << m;
                      }
                      else
+                     {
+                        ++failed;
                         errorInfo = (*i)->ErrorInfo();
+                     }
 
                      /*
                       * N.B.: IndirectArray<>::Delete() sets to zero the
@@ -1440,9 +1538,7 @@ void SubframeSelectorInstance::Measure()
                      runningThreads.Delete( i );
 
                      if ( !errorInfo.IsEmpty() )
-                        throw Error( errorInfo );
-
-                     ++succeeded;
+                        throw Error( errorInfo, true/*unformatted*/ );
                   }
 
                   /*
@@ -1479,7 +1575,6 @@ void SubframeSelectorInstance::Measure()
                if ( console.AbortRequested() )
                   throw ProcessAborted();
 
-               ++failed;
                try
                {
                   throw;
@@ -1513,10 +1608,15 @@ void SubframeSelectorInstance::Measure()
                                                   itemIndex,
                                                   !p_nonInteractive/*throwsOnMeasurementError*/ );
             thread.Run();
-            MeasureItem m( itemIndex );
-            m.Input( thread.OutputData() );
-            o_measures << m;
-            ++succeeded;
+            if ( thread.Succeeded() )
+            {
+               ++succeeded;
+               MeasureItem m( itemIndex );
+               m.Input( thread.OutputData() );
+               o_measures << m;
+            }
+            else
+               ++failed;
          }
          catch ( ProcessAborted& )
          {
@@ -1922,17 +2022,35 @@ private:
       /*
        * Set image properties.
        */
-      if ( inputFormat.CanStoreImageProperties() )
-         if ( !inputFile.ReadImageProperties().IsEmpty() )
-            if ( outputFormat.CanStoreImageProperties() && outputFormat.SupportsViewProperties() )
-               outputFile.WriteImageProperties( inputFile.ReadImageProperties() );
+      if ( outputFormat.CanStoreImageProperties() && outputFormat.SupportsViewProperties() )
+      {
+         PropertyArray properties;
+         if ( inputFormat.CanStoreImageProperties() )
+            properties = inputFile.ReadImageProperties();
+
+         properties << m_instance.ProcessSignatureProperty( "Selection" );
+
+         if ( m_instance.p_generateHistoryProperties )
+         {
+            PropertyArray::iterator i = properties.Search( Property( "PixInsight:ProcessingHistory" ) );
+            if ( i != properties.End() )
+               i->SetValue( m_instance.ToHistorySource( i->Value().ToString() ) );
             else
-               console.WarningLn( "** Warning: The output format cannot store image properties; existing properties will be lost." );
+               properties << Property( "PixInsight:ProcessingHistory", m_instance.ToHistorySource() );
+         }
+
+         /*
+          * N.B. Generate the following property when part of the XISF specification.
+          */
+//          properties << Property( "Image:Weight", m_weight );
+
+         outputFile.WriteImageProperties( properties );
+      }
+      else
+         console.WarningLn( "** Warning: The output format cannot store image properties - properties not embedded." );
 
       /*
        * Add FITS header keywords and preserve existing ones, if possible.
-       * N.B.: A COMMENT or HISTORY keyword cannot have a value; these keywords
-       * only have the name and comment components.
        */
       if ( outputFormat.CanStoreKeywords() )
       {
@@ -1946,10 +2064,6 @@ private:
             if ( keyword.name != IsoString( m_instance.p_outputKeyword ) )
                newKeywords << keyword;
 
-         newKeywords << FITSHeaderKeyword( "COMMENT", IsoString(), "Measured with " + PixInsightVersion::AsString() )
-                     << FITSHeaderKeyword( "HISTORY", IsoString(), "Measured with " + Module->ReadableVersion() )
-                     << FITSHeaderKeyword( "HISTORY", IsoString(), "Measured with SubframeSelector process" );
-
          if ( !m_instance.p_outputKeyword.IsEmpty() )
             newKeywords << FITSHeaderKeyword( m_instance.p_outputKeyword,
                                              String().Format( "%.6f", m_weight ),
@@ -1958,7 +2072,7 @@ private:
          outputFile.WriteFITSKeywords( newKeywords );
       }
       else
-         console.WarningLn( "** Warning: The output format cannot store FITS header keywords - subframe weight metadata not embedded" );
+         console.WarningLn( "** Warning: The output format cannot store FITS header keywords - subframe weight keyword not embedded" );
 
       /*
        * Preserve an existing ICC profile if possible.
@@ -2165,8 +2279,13 @@ void SubframeSelectorInstance::Output()
                       */
                      (*i)->FlushConsoleOutputText();
                      String errorInfo;
-                     if ( !(*i)->Succeeded() )
+                     if ( (*i)->Succeeded() )
+                        ++succeeded;
+                     else
+                     {
+                        ++failed;
                         errorInfo = (*i)->ErrorInfo();
+                     }
 
                      /*
                       * N.B.: IndirectArray<>::Delete() sets to zero the
@@ -2176,9 +2295,7 @@ void SubframeSelectorInstance::Output()
                      runningThreads.Delete( i );
 
                      if ( !errorInfo.IsEmpty() )
-                        throw Error( errorInfo );
-
-                     ++succeeded;
+                        throw Error( errorInfo, true/*unformatted*/ );
                   }
 
                   /*
@@ -2210,7 +2327,6 @@ void SubframeSelectorInstance::Output()
                if ( console.AbortRequested() )
                   throw ProcessAborted();
 
-               ++failed;
                try
                {
                   throw;
@@ -2242,7 +2358,10 @@ void SubframeSelectorInstance::Output()
          {
             SubframeSelectorOutputThread thread( *this, itemIndex );
             thread.Run();
-            ++succeeded;
+            if ( thread.Succeeded() )
+               ++succeeded;
+            else
+               ++failed;
          }
          catch ( ProcessAborted& )
          {
@@ -2499,6 +2618,8 @@ void* SubframeSelectorInstance::LockParameter( const MetaParameter* p, size_type
       return p_outputPostfix.Begin();
    if ( p == TheSSOutputKeywordParameter )
       return p_outputKeyword.Begin();
+   if ( p == TheSSGenerateHistoryPropertiesParameter )
+      return &p_generateHistoryProperties;
    if ( p == TheSSOverwriteExistingFilesParameter )
       return &p_overwriteExistingFiles;
    if ( p == TheSSOnErrorParameter )
@@ -2748,4 +2869,4 @@ size_type SubframeSelectorInstance::ParameterLength( const MetaParameter* p, siz
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF SubframeSelectorInstance.cpp - Released 2025-01-09T18:44:32Z
+// EOF SubframeSelectorInstance.cpp - Released 2025-02-19T18:29:34Z

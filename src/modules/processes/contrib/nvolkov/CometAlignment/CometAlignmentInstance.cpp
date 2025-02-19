@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard CometAlignment Process Module Version 1.3.8
+// Standard CometAlignment Process Module Version 1.3.9
 // ----------------------------------------------------------------------------
-// CometAlignmentInstance.cpp - Released 2025-01-09T18:44:32Z
+// CometAlignmentInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard CometAlignment PixInsight module.
 //
@@ -91,6 +91,7 @@ CometAlignmentInstance::CometAlignmentInstance( const MetaProcess* m )
    , p_outputExtension( TheCAOutputExtensionParameter->DefaultValue() ) // ### DEPRECATED
    , p_outputPrefix( TheCAOutputPrefixParameter->DefaultValue() )
    , p_outputPostfix( TheCAOutputPostfixParameter->DefaultValue() )
+   , p_generateHistoryProperties( TheCAGenerateHistoryPropertiesParameter->DefaultValue() )
    , p_overwriteExistingFiles( TheCAOverwriteExistingFilesParameter->DefaultValue() )
    , p_generateCometPathMap( TheCAGenerateCometPathMapParameter->DefaultValue() )
    , p_onError( CAOnError::Default )
@@ -135,6 +136,7 @@ void CometAlignmentInstance::Assign( const ProcessImplementation& p )
       p_outputExtension                = x->p_outputExtension;
       p_outputPrefix                   = x->p_outputPrefix;
       p_outputPostfix                  = x->p_outputPostfix;
+      p_generateHistoryProperties      = x->p_generateHistoryProperties;
       p_overwriteExistingFiles         = x->p_overwriteExistingFiles;
       p_generateCometPathMap           = x->p_generateCometPathMap;
       p_onError                        = x->p_onError;
@@ -711,23 +713,26 @@ private:
             if ( outputFormat.ValidateFormatSpecificData( m_fileData.fsData ) )
                outputFile.SetFormatSpecificData( m_fileData.fsData );
 
-      if ( !m_fileData.properties.IsEmpty() )
-         if ( outputFormat.CanStoreImageProperties() )
-            outputFile.WriteImageProperties( m_fileData.properties );
-         else
-            console.WarningLn( "** Warning: The output format cannot store image properties - existing properties not embedded" );
+      if ( outputFormat.CanStoreImageProperties() && outputFormat.SupportsViewProperties() )
+      {
+         m_fileData.properties << m_instance.ProcessSignatureProperty( "Registration" );
+
+         if ( m_instance.p_generateHistoryProperties )
+         {
+            PropertyArray::iterator i = m_fileData.properties.Search( Property( "PixInsight:ProcessingHistory" ) );
+            if ( i != m_fileData.properties.End() )
+               i->SetValue( m_instance.ToHistorySource( i->Value().ToString() ) );
+            else
+               m_fileData.properties << Property( "PixInsight:ProcessingHistory", m_instance.ToHistorySource() );
+         }
+
+         outputFile.WriteImageProperties( m_fileData.properties );
+      }
+      else
+         console.WarningLn( "** Warning: The output format cannot store image properties - properties not embedded." );
 
       if ( outputFormat.CanStoreKeywords() )
-      {
-         FITSKeywordArray keywords = m_fileData.keywords;
-         keywords << FITSHeaderKeyword( "COMMENT", IsoString(), "Registration with " + PixInsightVersion::AsString() )
-                  << FITSHeaderKeyword( "HISTORY", IsoString(), "Registration with " + Module->ReadableVersion() )
-                  << FITSHeaderKeyword( "HISTORY", IsoString(), "Registration with CometAlignment process" )
-                  << FITSHeaderKeyword( "HISTORY", IsoString(), IsoString().Format( "CometAlignment.delta.x: %+.2f", m_delta.x ) )
-                  << FITSHeaderKeyword( "HISTORY", IsoString(), IsoString().Format( "CometAlignment.delta.y: %+.2f", m_delta.y ) );
-
-         outputFile.WriteFITSKeywords( keywords );
-      }
+         outputFile.WriteFITSKeywords( m_fileData.keywords );
       else if ( !m_fileData.keywords.IsEmpty() )
          console.WarningLn( "** Warning: The output format cannot store FITS keywords - original keywords not embedded" );
 
@@ -1039,12 +1044,17 @@ bool CometAlignmentInstance::ExecuteGlobal()
                         console.WriteLn();
                      (*i)->FlushConsoleOutputText();
                      console.WriteLn();
-//                      if ( (*i)->Succeeded() )
-//                         (*i)->GetOutputData( o_output[(*i)->Index()] );
-
                      String errorInfo;
-                     if ( !(*i)->Succeeded() )
+                     if ( (*i)->Succeeded() )
+                     {
+                        ++succeeded;
+                        // (*i)->GetOutputData( o_output[(*i)->Index()] );
+                     }
+                     else
+                     {
+                        ++failed;
                         errorInfo = (*i)->ErrorInfo();
+                     }
 
                      positions[(*i)->Index()] = (*i)->Position();
 
@@ -1056,9 +1066,7 @@ bool CometAlignmentInstance::ExecuteGlobal()
                      runningThreads.Delete( i );
 
                      if ( !errorInfo.IsEmpty() )
-                        throw Error( errorInfo );
-
-                     ++succeeded;
+                        throw Error( errorInfo, true/*unformatted*/ );
                   }
 
                   /*
@@ -1092,7 +1100,6 @@ bool CometAlignmentInstance::ExecuteGlobal()
                if ( console.AbortRequested() )
                   throw ProcessAborted();
 
-               ++failed;
                try
                {
                   throw;
@@ -1125,9 +1132,15 @@ bool CometAlignmentInstance::ExecuteGlobal()
             console.WriteLn( "<end><cbr><br>" );
             CometAlignmentThread thread( *this, itemIndex, operandImage );
             thread.Run();
-//             thread.GetOutputData( o_output[itemIndex] );
+            if ( thread.Succeeded() )
+            {
+               ++succeeded;
+               // thread.GetOutputData( o_output[itemIndex] );
+            }
+            else
+               ++failed;
+
             positions[itemIndex] = thread.Position();
-            ++succeeded;
          }
          catch ( ProcessAborted& )
          {
@@ -1276,6 +1289,8 @@ void* CometAlignmentInstance::LockParameter( const MetaParameter* p, size_type t
       return p_outputPrefix.Begin();
    if ( p == TheCAOutputPostfixParameter )
       return p_outputPostfix.Begin();
+   if ( p == TheCAGenerateHistoryPropertiesParameter )
+      return &p_generateHistoryProperties;
    if ( p == TheCAOverwriteExistingFilesParameter )
       return &p_overwriteExistingFiles;
    if ( p == TheCAGenerateCometPathMapParameter )
@@ -1407,4 +1422,4 @@ size_type CometAlignmentInstance::ParameterLength( const MetaParameter* p, size_
 } // namespace pcl
 
 // ----------------------------------------------------------------------------
-// EOF CometAlignmentInstance.cpp - Released 2025-01-09T18:44:32Z
+// EOF CometAlignmentInstance.cpp - Released 2025-02-19T18:29:34Z

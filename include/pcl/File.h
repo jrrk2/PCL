@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/File.h - Released 2025-01-09T18:43:56Z
+// pcl/File.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -2200,6 +2200,33 @@ public:
    static String PrependToName( const String& filePath, const String& prefix );
 
    /*!
+    * Returns a sanitized version of the specified file \a name.
+    *
+    * Sanitization applies the following rules:
+    *
+    * \li Illegal and control characters are replaced with white space
+    * characters:
+    *
+    * Illegal characters: / ? < > \ : * | " $ \n
+    * Unicode C0 control characters: 0x00-0x1f 0x7f \n
+    * Unicode C1 control characters: 0x80-0x9f
+    *
+    * \li Any sequences of multiple consecutive white space characters are
+    * replaced by single white space characters.
+    *
+    * \li Sequences of multiple consecutive white space characters at the
+    * beginning and end of the file name (either those initially existing or
+    * resulting from illegal character replacement) are removed.
+    *
+    * \li The illegal names . and .. (after possible trimming) cause this
+    * function to return an empty string.\n
+    *
+    * \note This function can return an empty string if no legal sequence of
+    * characters can be found in the specified file \a name after sanitization.
+    */
+   static String SanitizedName( const String& name );
+
+   /*!
     * Returns a readable textual representation of a file size with automatic
     * units conversion.
     *
@@ -2244,4 +2271,4 @@ protected:
 #endif   // __PCL_File_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/File.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/File.h - Released 2025-02-19T18:29:04Z

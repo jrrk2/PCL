@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/ImageVariant.cpp - Released 2025-01-09T18:44:07Z
+// pcl/ImageVariant.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -919,7 +919,7 @@ void ImageVariant::WriteSwapFiles( const String& fileName, const StringList& dir
 
    if ( compressor )
    {
-      int numberOfSubthreads = Thread::NumberOfThreads( PCL_MAX_PROCESSORS, 1 );
+      int numberOfSubthreads = Thread::NumberOfThreads( PCL_MAX_PROCESSORS, 1/*overheadLimit*/ );
       compressor->SetSubblockSize( Range( ImageSize()/numberOfSubthreads,
                                           size_type( 0x100000u ), size_type( 0x80000000u ) ) );
       compressor->SetMaxProcessors( pcl::Max( 1, numberOfSubthreads/int( threads.Length() ) ) );
@@ -1374,4 +1374,4 @@ void ImageVariant::MaskImage( const ImageVariant& src, const ImageVariant& mask,
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/ImageVariant.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/ImageVariant.cpp - Released 2025-02-19T18:29:13Z

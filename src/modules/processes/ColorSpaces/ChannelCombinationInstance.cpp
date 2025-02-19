@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard ColorSpaces Process Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// ChannelCombinationInstance.cpp - Released 2025-01-09T18:44:31Z
+// ChannelCombinationInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard ColorSpaces PixInsight module.
 //
@@ -412,11 +412,126 @@ static void CombineChannels( GenericImage<P>& img, int colorSpace, const String&
 
 // ----------------------------------------------------------------------------
 
+static void GetVectorPropertyValue( Array<double>& values, const Property& property )
+{
+   if ( property.Value().IsValid() )
+      if ( property.Value().CanConvertToVector() )
+      {
+         Vector vec = property.Value().ToVector();
+         if ( !vec.IsEmpty() )
+            values << vec[0];
+      }
+}
+
+static void GetVectorPropertyValue( Array<float>& values, const Property& property )
+{
+   if ( property.Value().IsValid() )
+      if ( property.Value().CanConvertToFVector() )
+      {
+         FVector vec = property.Value().ToFVector();
+         if ( !vec.IsEmpty() )
+            values << vec[0];
+      }
+}
+
+static void GetVectorPropertyValue( Array<uint64>& values, const Property& property )
+{
+   if ( property.Value().IsValid() )
+      if ( property.Value().CanConvertToUI64Vector() )
+      {
+         UI64Vector vec = property.Value().ToUI64Vector();
+         if ( !vec.IsEmpty() )
+            values << vec[0];
+      }
+}
+
+static void GetVectorPropertyValue( Array<int>& values, const Property& property )
+{
+   if ( property.Value().IsValid() )
+      if ( property.Value().CanConvertToIVector() )
+      {
+         IVector vec = property.Value().ToIVector();
+         if ( !vec.IsEmpty() )
+            values << vec[0];
+      }
+}
+
+static void GetVectorPropertyValue( IsoStringList& values, const Property& property )
+{
+   if ( property.Value().IsValid() )
+      if ( property.Value().CanConvertToIsoString() )
+      {
+         IsoString str = property.Value().ToIsoString();
+         if ( !str.IsEmpty() )
+         {
+            IsoStringList list;
+            str.Break( list, ',' );
+            values << list[0];
+         }
+      }
+}
+
+template <typename T>
+static void AddPropertyIfDefinedForAllChannels( PropertyArray& properties, const IsoString& id, const Array<T>& values )
+{
+   if ( values.Length() == 3 )
+      properties << Property( id, GenericVector<typename Array<T>::item_type>( values.Begin(), 3 ) );
+}
+
+static void AddPropertyIfDefinedForAllChannels( PropertyArray& properties, const IsoString& id, const IsoStringList& values )
+{
+   if ( values.Length() == 3 )
+      properties << Property( id, IsoString().ToCommaSeparated( values ) );
+}
+
+template <typename T>
+static bool AddPropertyIfEqualForAllChannels( PropertyArray& properties, const IsoString& id, const Array<T>& values )
+{
+   if ( values.Length() == 3 )
+      if ( values[0] == values[1] )
+         if ( values[0] == values[2] )
+         {
+            properties << Property( id, values[0] );
+            return true;
+         }
+   return false;
+}
+
+// ----------------------------------------------------------------------------
+
 bool ChannelCombinationInstance::ExecuteOn( View& view )
 {
    ImageWindow sourceWindow[ 3 ];
    ImageVariant sourceImage[ 3 ];
+
    Array<IntegrationMetadata> sourceMetadata;
+
+   Array<double> darkOptimizationFactors;
+   Array<uint64> cosmeticCorrectionLowCounts;
+   Array<uint64> cosmeticCorrectionHighCounts;
+
+   Array<double> psfTotalFluxEstimates;
+   Array<double> psfTotalPowerFluxEstimates;
+   Array<double> psfTotalMeanFluxEstimates;
+   Array<double> psfTotalMeanPowerFluxEstimates;
+   Array<int>    psfCounts;
+   IsoStringList psfTypes;
+   Array<double> psfMStarEstimates;
+   Array<double> psfNStarEstimates;
+
+   Array<double> noiseEstimates;
+   Array<double> noiseFractions;
+   Array<double> noiseScaleLow;
+   Array<double> noiseScaleHigh;
+   IsoStringList noiseAlgorithms;
+
+   Array<double> spfcScaleFactors;
+   Array<double> spfcSigmas;
+   Array<float>  spfcFWHMx;
+   Array<float>  spfcFWHMy;
+   Array<int>    spfcCounts;
+   Array<double> spfcNormalizationFactors;
+   IsoStringList spfcVersions;
 
    AutoViewLock lock( view );
 
@@ -480,8 +595,62 @@ bool ChannelCombinationInstance::ExecuteOn( View& view )
             throw Error( "ChannelCombination: Incompatible source image dimensions: " + id );
 
          if ( !view.IsPreview() )
-            sourceMetadata << IntegrationMetadata( sourceWindow[i].MainView().StorableProperties(),
-                                                   sourceWindow[i].Keywords() );
+            if ( p_colorSpace == ColorSpaceId::RGB )
+            {
+               PropertyArray properties = sourceWindow[i].MainView().StorableProperties();
+
+               sourceMetadata << IntegrationMetadata( properties, sourceWindow[i].Keywords(), true/*getSignatures*/ );
+
+               for ( const Property& property : properties )
+                  if ( property.Id().StartsWith( "PCL:" ) )
+                     if ( property.Id() == "PCL:Calibration:DarkOptimizationFactors" )
+                        GetVectorPropertyValue( darkOptimizationFactors, property );
+                     else if ( property.Id() == "PCL:Calibration:CosmeticCorrection:LowCounts" )
+                        GetVectorPropertyValue( cosmeticCorrectionLowCounts, property );
+                     else if ( property.Id() == "PCL:Calibration:CosmeticCorrection:HighCounts" )
+                        GetVectorPropertyValue( cosmeticCorrectionHighCounts, property );
+                     else if ( property.Id() == "PCL:Signal:PSFTotalFlux" )
+                        GetVectorPropertyValue( psfTotalFluxEstimates, property );
+                     else if ( property.Id() == "PCL:Signal:PSFTotalPowerFlux" )
+                        GetVectorPropertyValue( psfTotalPowerFluxEstimates, property );
+                     else if ( property.Id() == "PCL:Signal:PSFTotalMeanFlux" )
+                        GetVectorPropertyValue( psfTotalMeanFluxEstimates, property );
+                     else if ( property.Id() == "PCL:Signal:PSFTotalMeanPowerFlux" )
+                        GetVectorPropertyValue( psfTotalMeanPowerFluxEstimates, property );
+                     else if ( property.Id() == "PCL:Signal:PSFCounts" )
+                        GetVectorPropertyValue( psfCounts, property );
+                     else if ( property.Id() == "PCL:Signal:PSFType" )
+                        GetVectorPropertyValue( psfTypes, property );
+                     else if ( property.Id() == "PCL:Noise:MStar" )
+                        GetVectorPropertyValue( psfMStarEstimates, property );
+                     else if ( property.Id() == "PCL:Noise:NStar" )
+                        GetVectorPropertyValue( psfNStarEstimates, property );
+                     else if ( property.Id() == "PCL:Noise:Sigmas" )
+                        GetVectorPropertyValue( noiseEstimates, property );
+                     else if ( property.Id() == "PCL:Noise:Fractions" )
+                        GetVectorPropertyValue( noiseFractions, property );
+                     else if ( property.Id() == "PCL:Noise:ScaleLow" )
+                        GetVectorPropertyValue( noiseScaleLow, property );
+                     else if ( property.Id() == "PCL:Noise:ScaleHigh" )
+                        GetVectorPropertyValue( noiseScaleHigh, property );
+                     else if ( property.Id() == "PCL:Noise:Algorithms" )
+                        GetVectorPropertyValue( noiseAlgorithms, property );
+                     else if ( property.Id() == "PCL:SPFC:ScaleFactors" )
+                        GetVectorPropertyValue( spfcScaleFactors, property );
+                     else if ( property.Id() == "PCL:SPFC:Sigmas" )
+                        GetVectorPropertyValue( spfcSigmas, property );
+                     else if ( property.Id() == "PCL:SPFC:FWHMx" )
+                        GetVectorPropertyValue( spfcFWHMx, property );
+                     else if ( property.Id() == "PCL:SPFC:FWHMy" )
+                        GetVectorPropertyValue( spfcFWHMy, property );
+                     else if ( property.Id() == "PCL:SPFC:Counts" )
+                        GetVectorPropertyValue( spfcCounts, property );
+                     else if ( property.Id() == "PCL:SPFC:NormalizationFactor" )
+                        GetVectorPropertyValue( spfcNormalizationFactors, property );
+                     else if ( property.Id() == "PCL:SPFC:Version" )
+                        GetVectorPropertyValue( spfcVersions, property );
+            }
+
          ++numberOfSources;
       }
 
@@ -551,14 +720,47 @@ bool ChannelCombinationInstance::ExecuteOn( View& view )
 
    if ( !view.IsPreview() )
    {
-      PropertyArray properties;
-      FITSKeywordArray keywords = window.Keywords();
+      if ( p_colorSpace == ColorSpaceId::RGB )
+      {
+         PropertyArray properties;
+         FITSKeywordArray keywords = window.Keywords();
 
-      IntegrationMetadata metadata = IntegrationMetadata::Summary( sourceMetadata );
-      metadata.UpdatePropertiesAndKeywords( properties, keywords );
+         IntegrationMetadata metadata = IntegrationMetadata::Summary( sourceMetadata );
+         metadata.UpdatePropertiesAndKeywords( properties, keywords );
 
-      view.SetStorablePermanentProperties( properties );
-      window.SetKeywords( keywords );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Calibration:DarkOptimizationFactors", darkOptimizationFactors );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Calibration:CosmeticCorrection:LowCounts", cosmeticCorrectionLowCounts );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Calibration:CosmeticCorrection:HighCounts", cosmeticCorrectionHighCounts );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFTotalFlux", psfTotalFluxEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFTotalPowerFlux", psfTotalPowerFluxEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFTotalMeanFlux", psfTotalMeanFluxEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFTotalMeanPowerFlux", psfTotalMeanPowerFluxEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFCounts", psfCounts );
+         AddPropertyIfEqualForAllChannels  ( properties, "PCL:Signal:PSFType", psfTypes );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:MStar", psfMStarEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:NStar", psfNStarEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:Sigmas", noiseEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:Fractions", noiseFractions );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:ScaleLow", noiseScaleLow );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:ScaleHigh", noiseScaleHigh );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:Algorithms", noiseAlgorithms );
+
+         if ( AddPropertyIfEqualForAllChannels( properties, "PCL:SPFC:NormalizationFactor", spfcNormalizationFactors ) )
+            if ( AddPropertyIfEqualForAllChannels( properties, "PCL:SPFC:Version", spfcVersions ) )
+            {
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:ScaleFactors", spfcScaleFactors );
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:Sigmas", spfcSigmas );
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:FWHMx", spfcFWHMx );
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:FWHMy", spfcFWHMy );
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:Counts", spfcCounts );
+            }
+
+         view.SetStorablePermanentProperties( properties );
+         window.SetKeywords( keywords );
+
+         if ( metadata.imageType.IsConsistentlyDefined() )
+            window.SetImageType( (ImageWindow::image_type)metadata.imageType() );
+      }
 
       if ( p_inheritAstrometricSolution )
       {
@@ -605,9 +807,35 @@ bool ChannelCombinationInstance::ExecuteGlobal()
 {
    ImageWindow sourceWindow[ 3 ];
    ImageVariant sourceImage[ 3 ];
+
    Array<IntegrationMetadata> sourceMetadata;
-   int sourcePCLCalibrationPropertyCount = 0;
-   int sourcePCLIntegrationPropertyCount = 0;
+
+   Array<double> darkOptimizationFactors;
+   Array<uint64> cosmeticCorrectionLowCounts;
+   Array<uint64> cosmeticCorrectionHighCounts;
+
+   Array<double> psfTotalFluxEstimates;
+   Array<double> psfTotalPowerFluxEstimates;
+   Array<double> psfTotalMeanFluxEstimates;
+   Array<double> psfTotalMeanPowerFluxEstimates;
+   Array<int>    psfCounts;
+   IsoStringList psfTypes;
+   Array<double> psfMStarEstimates;
+   Array<double> psfNStarEstimates;
+
+   Array<double> noiseEstimates;
+   Array<double> noiseFractions;
+   Array<double> noiseScaleLow;
+   Array<double> noiseScaleHigh;
+   IsoStringList noiseAlgorithms;
+
+   Array<double> spfcScaleFactors;
+   Array<double> spfcSigmas;
+   Array<float>  spfcFWHMx;
+   Array<float>  spfcFWHMy;
+   Array<int>    spfcCounts;
+   Array<double> spfcNormalizationFactors;
+   IsoStringList spfcVersions;
 
    int numberOfSources = 0;
    int width = 0, height = 0;
@@ -645,14 +873,61 @@ bool ChannelCombinationInstance::ExecuteGlobal()
                throw Error( "ChannelCombination: Incompatible source image dimensions: " + p_channelId[i] );
          }
 
-         PropertyArray properties = sourceWindow[i].MainView().StorableProperties();
-         for ( const auto& p : properties )
-            if ( p.Id() == "PCL:Calibration" )
-               ++sourcePCLCalibrationPropertyCount;
-            else if ( p.Id() == "PCL:Integration" )
-               ++sourcePCLIntegrationPropertyCount;
+         if ( p_colorSpace == ColorSpaceId::RGB )
+         {
+            PropertyArray properties = sourceWindow[i].MainView().StorableProperties();
 
-         sourceMetadata << IntegrationMetadata( properties, sourceWindow[i].Keywords() );
+            sourceMetadata << IntegrationMetadata( properties, sourceWindow[i].Keywords(), true/*getSignatures*/ );
+
+            for ( const Property& property : properties )
+               if ( property.Id().StartsWith( "PCL:" ) )
+                  if ( property.Id() == "PCL:Calibration:DarkOptimizationFactors" )
+                     GetVectorPropertyValue( darkOptimizationFactors, property );
+                  else if ( property.Id() == "PCL:Calibration:CosmeticCorrection:LowCounts" )
+                     GetVectorPropertyValue( cosmeticCorrectionLowCounts, property );
+                  else if ( property.Id() == "PCL:Calibration:CosmeticCorrection:HighCounts" )
+                     GetVectorPropertyValue( cosmeticCorrectionHighCounts, property );
+                  else if ( property.Id() == "PCL:Signal:PSFTotalFlux" )
+                     GetVectorPropertyValue( psfTotalFluxEstimates, property );
+                  else if ( property.Id() == "PCL:Signal:PSFTotalPowerFlux" )
+                     GetVectorPropertyValue( psfTotalPowerFluxEstimates, property );
+                  else if ( property.Id() == "PCL:Signal:PSFTotalMeanFlux" )
+                     GetVectorPropertyValue( psfTotalMeanFluxEstimates, property );
+                  else if ( property.Id() == "PCL:Signal:PSFTotalMeanPowerFlux" )
+                     GetVectorPropertyValue( psfTotalMeanPowerFluxEstimates, property );
+                  else if ( property.Id() == "PCL:Signal:PSFCounts" )
+                     GetVectorPropertyValue( psfCounts, property );
+                  else if ( property.Id() == "PCL:Signal:PSFType" )
+                     GetVectorPropertyValue( psfTypes, property );
+                  else if ( property.Id() == "PCL:Noise:MStar" )
+                     GetVectorPropertyValue( psfMStarEstimates, property );
+                  else if ( property.Id() == "PCL:Noise:NStar" )
+                     GetVectorPropertyValue( psfNStarEstimates, property );
+                  else if ( property.Id() == "PCL:Noise:Sigmas" )
+                     GetVectorPropertyValue( noiseEstimates, property );
+                  else if ( property.Id() == "PCL:Noise:Fractions" )
+                     GetVectorPropertyValue( noiseFractions, property );
+                  else if ( property.Id() == "PCL:Noise:ScaleLow" )
+                     GetVectorPropertyValue( noiseScaleLow, property );
+                  else if ( property.Id() == "PCL:Noise:ScaleHigh" )
+                     GetVectorPropertyValue( noiseScaleHigh, property );
+                  else if ( property.Id() == "PCL:Noise:Algorithms" )
+                     GetVectorPropertyValue( noiseAlgorithms, property );
+                  else if ( property.Id() == "PCL:SPFC:ScaleFactors" )
+                     GetVectorPropertyValue( spfcScaleFactors, property );
+                  else if ( property.Id() == "PCL:SPFC:Sigmas" )
+                     GetVectorPropertyValue( spfcSigmas, property );
+                  else if ( property.Id() == "PCL:SPFC:FWHMx" )
+                     GetVectorPropertyValue( spfcFWHMx, property );
+                  else if ( property.Id() == "PCL:SPFC:FWHMy" )
+                     GetVectorPropertyValue( spfcFWHMy, property );
+                  else if ( property.Id() == "PCL:SPFC:Counts" )
+                     GetVectorPropertyValue( spfcCounts, property );
+                  else if ( property.Id() == "PCL:SPFC:NormalizationFactor" )
+                     GetVectorPropertyValue( spfcNormalizationFactors, property );
+                  else if ( property.Id() == "PCL:SPFC:Version" )
+                     GetVectorPropertyValue( spfcVersions, property );
+         }
 
          ++numberOfSources;
       }
@@ -740,29 +1015,48 @@ bool ChannelCombinationInstance::ExecuteGlobal()
             break;
          }
 
-      PropertyArray properties;
-      FITSKeywordArray keywords = outputWindow.Keywords();
 
-      IntegrationMetadata metadata = IntegrationMetadata::Summary( sourceMetadata );
-      metadata.UpdatePropertiesAndKeywords( properties, keywords );
-
-      /*
-       * Signature property
-       */
-      if ( sourcePCLCalibrationPropertyCount == numberOfSources
-        || sourcePCLIntegrationPropertyCount == numberOfSources )
+      if ( p_colorSpace == ColorSpaceId::RGB )
       {
-         int major, minor, release, build;
-         IsoString dum1, dum2;
-         Module->GetVersion( major, minor, release, build, dum1, dum2 );
-         IsoString info = IsoString().Format( "process=ChannelCombination,version=%d.%d.%d", major, minor, release );
-         if ( build > 0 )
-            info.AppendFormat( "-%d", build );
-         properties << Property( "PCL:Integration", info );
-      }
+         PropertyArray properties;
+         FITSKeywordArray keywords = outputWindow.Keywords();
 
-      outputView.SetStorablePermanentProperties( properties );
-      outputWindow.SetKeywords( keywords );
+         IntegrationMetadata metadata = IntegrationMetadata::Summary( sourceMetadata );
+         metadata.UpdatePropertiesAndKeywords( properties, keywords );
+
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Calibration:DarkOptimizationFactors", darkOptimizationFactors );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Calibration:CosmeticCorrection:LowCounts", cosmeticCorrectionLowCounts );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Calibration:CosmeticCorrection:HighCounts", cosmeticCorrectionHighCounts );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFTotalFlux", psfTotalFluxEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFTotalPowerFlux", psfTotalPowerFluxEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFTotalMeanFlux", psfTotalMeanFluxEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFTotalMeanPowerFlux", psfTotalMeanPowerFluxEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Signal:PSFCounts", psfCounts );
+         AddPropertyIfEqualForAllChannels(   properties, "PCL:Signal:PSFType", psfTypes );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:MStar", psfMStarEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:NStar", psfNStarEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:Sigmas", noiseEstimates );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:Fractions", noiseFractions );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:ScaleLow", noiseScaleLow );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:ScaleHigh", noiseScaleHigh );
+         AddPropertyIfDefinedForAllChannels( properties, "PCL:Noise:Algorithms", noiseAlgorithms );
+
+         if ( AddPropertyIfEqualForAllChannels( properties, "PCL:SPFC:NormalizationFactor", spfcNormalizationFactors ) )
+            if ( AddPropertyIfEqualForAllChannels( properties, "PCL:SPFC:Version", spfcVersions ) )
+            {
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:ScaleFactors", spfcScaleFactors );
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:Sigmas", spfcSigmas );
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:FWHMx", spfcFWHMx );
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:FWHMy", spfcFWHMy );
+               AddPropertyIfDefinedForAllChannels( properties, "PCL:SPFC:Counts", spfcCounts );
+            }
+
+         outputView.SetStorablePermanentProperties( properties );
+         outputWindow.SetKeywords( keywords );
+
+         if ( metadata.imageType.IsConsistentlyDefined() )
+            outputWindow.SetImageType( (ImageWindow::image_type)metadata.imageType() );
+      }
 
       if ( p_inheritAstrometricSolution )
       {
@@ -854,4 +1148,4 @@ size_type ChannelCombinationInstance::ParameterLength( const MetaParameter* p, s
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF ChannelCombinationInstance.cpp - Released 2025-01-09T18:44:31Z
+// EOF ChannelCombinationInstance.cpp - Released 2025-02-19T18:29:34Z

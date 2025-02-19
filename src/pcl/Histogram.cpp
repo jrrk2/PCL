@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Histogram.cpp - Released 2025-01-09T18:44:07Z
+// pcl/Histogram.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -61,16 +61,12 @@ class PCL_HistogramEngine
 {
 public:
 
-   static
-   void Compute( Histogram::histogram_type& histogram,
-                 const ImageVariant& image, const Rect& rect, int channel, bool parallel, int maxProcessors )
+   static void Compute( Histogram& H, const ImageVariant& image, int maxThreads = 0 )
    {
-      if ( histogram.IsEmpty() ) // ?!
-         return;
+      H.Allocate();
+      H.m_histogram = 0;
 
-      histogram = 0;
-
-      Rect r = rect;
+      Rect r = H.m_rect;
       if ( !r.IsRect() )
          r = image.SelectedRectangle();
       else if ( !image.Clip( r ) )
@@ -78,9 +74,9 @@ public:
       int width = r.Width();
       int height = r.Height();
 
-      if ( channel < 0 )
-         channel = image.SelectedChannel();
-      else if ( !image.IsValidChannelIndex( channel ) )
+      if ( H.m_channel < 0 )
+         H.m_channel = image.SelectedChannel();
+      else if ( !image.IsValidChannelIndex( H.m_channel ) )
          return;
 
       size_type N = size_type( width ) * size_type( height );
@@ -92,32 +88,40 @@ public:
       if ( image->Status().IsInitializationEnabled() )
          image->Status().Initialize( "Histogram generation", N );
 
-      Array<size_type> L = Thread::OptimalThreadLoads( height,
-                                                       Max( 1, 1024/width )/*overheadLimit*/,
-                                                       parallel ? maxProcessors : 1 );
-      int numberOfThreads = int( L.Length() );
-      bool useAffinity = numberOfThreads > 1 && Thread::IsRootThread();
-
       double min = 0, max = 1;
       if ( image.IsFloatSample() )
       {
-         ReferenceArray<RealMinMaxThread> threads;
-         for ( int i = 0, n = 0; i < numberOfThreads; n += int( L[i++] ) )
-            threads.Add( new RealMinMaxThread( image, r, channel, n, n + int( L[i] ) ) );
-
-         if ( numberOfThreads > 1 )
+         Array<size_type> L1;
          {
-            for ( int i = 0; i < numberOfThreads; ++i )
-               threads[i].Start( ThreadPriority::DefaultMax, useAffinity ? i : -1 );
-            for ( int i = 0; i < numberOfThreads; ++i )
-               threads[i].Wait();
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = image.BytesPerSample();
+            data.floatingPoint = image.IsFloatSample();
+            L1 = Thread::OptimalThreadLoads( height,
+                                             height/Thread::OptimalNumberOfThreads( data )/*overheadLimit*/,
+                                             H.m_parallel ? H.m_maxProcessors : 1 );
+         }
+         bool useAffinity = L1.Length() > 1 && Thread::IsRootThread();
+         ReferenceArray<RealMinMaxThread> threads;
+         for ( int i = 0, n = 0; i < int( L1.Length() ); n += int( L1[i++] ) )
+            threads.Add( new RealMinMaxThread( image, r, H.m_channel, n, n + int( L1[i] ) ) );
+
+         if ( threads.Length() > 1 )
+         {
+            int n = 0;
+            for ( RealMinMaxThread& thread : threads )
+               thread.Start( ThreadPriority::DefaultMax, useAffinity ? n++ : -1 );
+            for ( RealMinMaxThread& thread : threads )
+               thread.Wait();
          }
          else
             threads[0].Run();
 
          min = threads[0].min;
          max = threads[0].max;
-         for ( int i = 1; i < numberOfThreads; ++i )
+         for ( int i = 1; i < int( L1.Length() ); ++i )
          {
             if ( threads[i].min < min )
                min = threads[i].min;
@@ -136,25 +140,48 @@ public:
 
       image->Status() += N1;
 
-      ReferenceArray<HistogramThread> threads;
-      for ( int i = 0, n = 0; i < numberOfThreads; n += int( L[i++] ) )
-         threads.Add( new HistogramThread( image, r, channel, histogram.Length(), min, max, n, n + int( L[i] ) ) );
-      if ( numberOfThreads > 1 )
+      Array<size_type> L2;
+      if ( maxThreads <= 0 )
       {
-         for ( int i = 0; i < numberOfThreads; ++i )
-            threads[i].Start( ThreadPriority::DefaultMax, useAffinity ? i : -1 );
-         for ( int i = 0; i < numberOfThreads; ++i )
-            threads[i].Wait();
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::HistogramGeneration;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = image.BytesPerSample();
+         data.floatingPoint = image.IsFloatSample();
+         L2 = Thread::OptimalThreadLoads( height,
+                                          height/Thread::OptimalNumberOfThreads( data )/*overheadLimit*/,
+                                          H.m_parallel ? H.m_maxProcessors : 1 );
+      }
+      else
+      {
+         // Performance analysis
+         L2 = Thread::OptimalThreadLoads( height, 1/*overheadLimit*/, maxThreads );
+      }
+
+      bool useAffinity = L2.Length() > 1 && Thread::IsRootThread();
+      ReferenceArray<HistogramThread> threads;
+      for ( int i = 0, n = 0; i < int( L2.Length() ); n += int( L2[i++] ) )
+         threads.Add( new HistogramThread( image, r, H.m_channel, H.m_histogram.Length(), min, max, n, n + int( L2[i] ) ) );
+      if ( L2.Length() > 1 )
+      {
+         int n = 0;
+         for ( HistogramThread& thread : threads )
+            thread.Start( ThreadPriority::DefaultMax, useAffinity ? n++ : -1 );
+         for ( HistogramThread& thread : threads )
+            thread.Wait();
       }
       else
          threads[0].Run();
 
-      for ( int i = 0; i < numberOfThreads; ++i )
-         histogram += threads[i].histogram;
+      for ( int i = 0; i < int( L2.Length() ); ++i )
+         H.m_histogram += threads[i].histogram;
 
       threads.Destroy();
 
       image->Status() += N2;
+
+      H.UpdatePeakLevel();
    }
 
 private:
@@ -304,50 +331,61 @@ private:
 
 // ----------------------------------------------------------------------------
 
-#define IMPLEMENT_HISTOGRAM_GENERATION                                                             \
-   Allocate();                                                                                     \
-   PCL_HistogramEngine::Compute( m_histogram, v, m_rect, m_channel, m_parallel, m_maxProcessors ); \
-   UpdatePeakLevel();
-
 const pcl::Image& Histogram::operator <<( const pcl::Image& image )
 {
    ImageVariant v( const_cast<pcl::Image*>( &image ) );
-   IMPLEMENT_HISTOGRAM_GENERATION
+   PCL_HistogramEngine::Compute( *this, v );
    return image;
 }
 
 const pcl::DImage& Histogram::operator <<( const pcl::DImage& image )
 {
    ImageVariant v( const_cast<pcl::DImage*>( &image ) );
-   IMPLEMENT_HISTOGRAM_GENERATION
+   PCL_HistogramEngine::Compute( *this, v );
    return image;
 }
 
 const pcl::UInt8Image& Histogram::operator <<( const pcl::UInt8Image& image )
 {
    ImageVariant v( const_cast<pcl::UInt8Image*>( &image ) );
-   IMPLEMENT_HISTOGRAM_GENERATION
+   PCL_HistogramEngine::Compute( *this, v );
    return image;
 }
 
 const pcl::UInt16Image& Histogram::operator <<( const pcl::UInt16Image& image )
 {
    ImageVariant v( const_cast<pcl::UInt16Image*>( &image ) );
-   IMPLEMENT_HISTOGRAM_GENERATION
+   PCL_HistogramEngine::Compute( *this, v );
    return image;
 }
 
 const pcl::UInt32Image& Histogram::operator <<( const pcl::UInt32Image& image )
 {
    ImageVariant v( const_cast<pcl::UInt32Image*>( &image ) );
-   IMPLEMENT_HISTOGRAM_GENERATION
+   PCL_HistogramEngine::Compute( *this, v );
    return image;
 }
 
 const pcl::ImageVariant& Histogram::operator <<( const pcl::ImageVariant& v )
 {
-   IMPLEMENT_HISTOGRAM_GENERATION
+   PCL_HistogramEngine::Compute( *this, v );
    return v;
+}
+
+// ----------------------------------------------------------------------------
+
+/*
+ * Performance analysis
+ */
+void PCL_PA_HistogramGeneration_F32( const Image& image, Histogram& H, int maxThreads )
+{
+   ImageVariant v( const_cast<pcl::Image*>( &image ) );
+   PCL_HistogramEngine::Compute( H, v, maxThreads );
+}
+void PCL_PA_HistogramGeneration_F64( const DImage& image, Histogram& H, int maxThreads )
+{
+   ImageVariant v( const_cast<pcl::DImage*>( &image ) );
+   PCL_HistogramEngine::Compute( H, v, maxThreads );
 }
 
 // ----------------------------------------------------------------------------
@@ -355,4 +393,4 @@ const pcl::ImageVariant& Histogram::operator <<( const pcl::ImageVariant& v )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Histogram.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/Histogram.cpp - Released 2025-02-19T18:29:13Z

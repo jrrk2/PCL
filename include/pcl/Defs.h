@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Defs.h - Released 2025-01-09T18:43:56Z
+// pcl/Defs.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -1191,14 +1191,13 @@ using fsize_type = int64;
 #endif   // !__PCL_NO_PORTABLE_INTEGER_TYPES
 
 /*
- * Maximum number of processors allowed.
+ * The maximum number of processors allowed.
  */
-#define PCL_MAX_PROCESSORS          1023
-#define PCL_MAX_PROCESSORS_BITCOUNT 10
+#define PCL_MAX_PROCESSORS    65535
 
 // ----------------------------------------------------------------------------
 
 #endif   // __PCL_Defs_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Defs.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/Defs.h - Released 2025-02-19T18:29:04Z

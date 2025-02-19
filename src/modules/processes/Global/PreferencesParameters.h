@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard Global Process Module Version 1.6.2
+// Standard Global Process Module Version 1.6.4
 // ----------------------------------------------------------------------------
-// PreferencesParameters.h - Released 2025-01-09T18:44:32Z
+// PreferencesParameters.h - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Global PixInsight module.
 //
@@ -402,10 +402,14 @@ DECLARE_BOOLEAN_METAPARAMETER ( Process, enableParallelCoreRendering,          t
 DECLARE_BOOLEAN_METAPARAMETER ( Process, enableParallelCoreColorManagement,    true )
 DECLARE_BOOLEAN_METAPARAMETER ( Process, enableParallelModuleProcessing,       true )
 DECLARE_BOOLEAN_METAPARAMETER ( Process, enableThreadCPUAffinity,              false )
-DECLARE_INT32_METAPARAMETER   ( Process, maxModuleThreadPriority,              ThreadPriority::TimeCritical, ThreadPriority::Lowest, ThreadPriority::TimeCritical ) // ### Warning: DO NOT change these numbers
+#ifdef __PCL_WINDOWS
+DECLARE_INT32_METAPARAMETER   ( Process, maxModuleThreadPriority,              ThreadPriority::Normal, ThreadPriority::Lowest, ThreadPriority::TimeCritical )
+#else
+DECLARE_INT32_METAPARAMETER   ( Process, maxModuleThreadPriority,              ThreadPriority::TimeCritical, ThreadPriority::Lowest, ThreadPriority::TimeCritical )
+#endif
 DECLARE_INT32_METAPARAMETER   ( Process, maxProcessors,                        int_max, 1, int_max )
-DECLARE_INT32_METAPARAMETER   ( Process, maxFileReadThreads,                   8, 1, 1024 )
-DECLARE_INT32_METAPARAMETER   ( Process, maxFileWriteThreads,                  8, 1, 1024 )
+DECLARE_INT32_METAPARAMETER   ( Process, maxFileReadThreads,                   8, 1, int_max )
+DECLARE_INT32_METAPARAMETER   ( Process, maxFileWriteThreads,                  8, 1, int_max )
 DECLARE_BOOLEAN_METAPARAMETER ( Process, enableCUDAAcceleration,               true )
 DECLARE_BOOLEAN_METAPARAMETER ( Process, initCUDARuntimeAtStartup,             true )
 DECLARE_BOOLEAN_METAPARAMETER ( Process, backupFiles,                          false )
@@ -437,4 +441,4 @@ PCL_END_LOCAL
 #endif   // __PreferencesParameters_h
 
 // ----------------------------------------------------------------------------
-// EOF PreferencesParameters.h - Released 2025-01-09T18:44:32Z
+// EOF PreferencesParameters.h - Released 2025-02-19T18:29:34Z

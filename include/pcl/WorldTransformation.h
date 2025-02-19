@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/WorldTransformation.h - Released 2025-01-09T18:43:56Z
+// pcl/WorldTransformation.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -232,8 +232,8 @@ public:
 
 private:
 
-   LinearTransformation m_transWI; // world -> image
-   LinearTransformation m_transIW; // image -> world
+   LinearTransformation m_transWI; // native -> image
+   LinearTransformation m_transIW; // image -> native
 };
 
 // ----------------------------------------------------------------------------
@@ -872,4 +872,4 @@ private:
 #endif   // __PCL_WorldTransformation_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/WorldTransformation.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/WorldTransformation.h - Released 2025-02-19T18:29:04Z

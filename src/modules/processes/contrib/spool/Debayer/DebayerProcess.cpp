@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard Debayer Process Module Version 1.12.0
+// Standard Debayer Process Module Version 1.12.1
 // ----------------------------------------------------------------------------
-// DebayerProcess.cpp - Released 2025-01-09T18:44:32Z
+// DebayerProcess.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Debayer PixInsight module.
 //
@@ -103,6 +103,8 @@ DebayerProcess::DebayerProcess()
    new DebayerOutputExtension( this );
    new DebayerOutputPrefix( this );
    new DebayerOutputPostfix( this );
+   new DebayerGenerateHistoryProperties( this );
+   new DebayerGenerateFITSKeywords( this );
    new DebayerOverwriteExistingFiles( this );
    new DebayerOnError( this );
    new DebayerUseFileThreads( this );
@@ -357,4 +359,4 @@ int DebayerProcess::ProcessCommandLine( const StringList& argv ) const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF DebayerProcess.cpp - Released 2025-01-09T18:44:32Z
+// EOF DebayerProcess.cpp - Released 2025-02-19T18:29:34Z

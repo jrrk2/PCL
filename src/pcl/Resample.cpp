@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Resample.cpp - Released 2025-01-09T18:44:07Z
+// pcl/Resample.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -147,7 +147,7 @@ class PCL_ResampleEngine
 public:
 
    template <class P> static
-   void Apply( GenericImage<P>& image, const Resample& R )
+   void Apply( GenericImage<P>& image, const Resample& R, int maxThreads = 0 )
    {
       int width = image.Width();
       int srcWidth = width;
@@ -178,9 +178,24 @@ public:
 
       StatusMonitor status = image.Status();
 
-      Array<size_type> L = Thread::OptimalThreadLoads( height,
-                                                       1/*overheadLimit*/,
-                                                       R.IsParallelProcessingEnabled() ? R.MaxProcessors() : 1 );
+      Array<size_type> L;
+      if ( maxThreads <= 0 )
+      {
+         pcl::Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Resample;
+         data.length = height;
+         data.itemSize = P::BytesPerSample();
+         data.floatingPoint = P::IsFloatSample();
+         data.width = width;
+         data.height = height;
+         L = pcl::Thread::OptimalThreadLoads( data, R.IsParallelProcessingEnabled() ? R.MaxProcessors() : 1 );
+      }
+      else
+      {
+         // Performance analysis
+         L = pcl::Thread::OptimalThreadLoads( height, 1/*overheadLimit*/, maxThreads );
+      }
+
       try
       {
          size_type N = size_type( width ) * size_type( height );
@@ -338,7 +353,21 @@ void Resample::Apply( pcl::UInt32Image& image ) const
 
 // ----------------------------------------------------------------------------
 
+/*
+ * Performance analysis
+ */
+void PCL_PA_Resample_F32( Image& image, const Resample& R, int maxThreads )
+{
+   PCL_ResampleEngine::Apply( image, R, maxThreads );
+}
+void PCL_PA_Resample_F64( DImage& image, const Resample& R, int maxThreads )
+{
+   PCL_ResampleEngine::Apply( image, R, maxThreads );
+}
+
+// ----------------------------------------------------------------------------
+
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Resample.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/Resample.cpp - Released 2025-02-19T18:29:13Z

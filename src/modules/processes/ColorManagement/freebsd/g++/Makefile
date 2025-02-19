@@ -2,7 +2,7 @@
 # PixInsight Makefile Generator Script v1.143
 # Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2025-01-09T20:21:14.872Z
+# Generated on .... 2025-02-19T21:24:38.736Z
 # Project id ...... ColorManagement
 # Project type .... Module
 # Platform ........ FreeBSD/g++

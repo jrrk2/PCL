@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/WinsorizedSigmaClippingRejection.h - Released 2025-01-09T18:43:56Z
+// pcl/WinsorizedSigmaClippingRejection.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -421,4 +421,4 @@ private:
 #endif   // __PCL_WinsorizedSigmaClippingRejection_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/WinsorizedSigmaClippingRejection.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/WinsorizedSigmaClippingRejection.h - Released 2025-02-19T18:29:04Z

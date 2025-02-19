@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard CosmeticCorrection Process Module Version 1.4.0
+// Standard CosmeticCorrection Process Module Version 1.4.1
 // ----------------------------------------------------------------------------
-// CosmeticCorrectionInstance.cpp - Released 2025-01-09T18:44:32Z
+// CosmeticCorrectionInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard CosmeticCorrection PixInsight module.
 //
@@ -71,6 +71,7 @@ CosmeticCorrectionInstance::CosmeticCorrectionInstance( const MetaProcess* m )
    : ProcessImplementation( m )
    , p_outputDir( TheOutputDir->DefaultValue() )
    , p_outputExtension( TheOutputExtension->DefaultValue() ) // ### DEPRECATED
+   , p_generateHistoryProperties( TheGenerateHistoryProperties->DefaultValue() )
    , p_overwrite( TheOverwrite->DefaultValue() )
    , p_prefix( ThePrefix->DefaultValue() )
    , p_postfix( ThePostfix->DefaultValue() )
@@ -110,6 +111,7 @@ void CosmeticCorrectionInstance::Assign( const ProcessImplementation& p )
       p_masterDark = x->p_masterDark;
       p_outputDir = x->p_outputDir;
       p_outputExtension = x->p_outputExtension;
+      p_generateHistoryProperties = x->p_generateHistoryProperties;
       p_overwrite = x->p_overwrite;
       p_prefix = x->p_prefix;
       p_postfix = x->p_postfix;
@@ -937,20 +939,27 @@ void CosmeticCorrectionInstance::SaveImage( const CCThread* t )
          if ( outputFormat.ValidateFormatSpecificData( inputData.fsData ) )
             outputFile.SetFormatSpecificData( inputData.fsData );
 
-   if ( !inputData.properties.IsEmpty() )
-      if ( outputFormat.CanStoreImageProperties() )
-         outputFile.WriteImageProperties( inputData.properties );
-      else
-         console.WarningLn( "** Warning: The output format cannot store image properties - existing properties not embedded" );
+   if ( outputFormat.CanStoreImageProperties() && outputFormat.SupportsViewProperties() )
+   {
+      PropertyArray properties = inputData.properties;
+      properties << ProcessSignatureProperty( "CosmeticCorrection" );
+
+      if ( p_generateHistoryProperties )
+      {
+         PropertyArray::iterator i = properties.Search( Property( "PixInsight:ProcessingHistory" ) );
+         if ( i != properties.End() )
+            i->SetValue( ToHistorySource( i->Value().ToString() ) );
+         else
+            properties << Property( "PixInsight:ProcessingHistory", ToHistorySource() );
+      }
+
+      outputFile.WriteImageProperties( properties );
+   }
+   else
+      console.WarningLn( "** Warning: The output format cannot store image properties - properties not embedded" );
 
    if ( outputFormat.CanStoreKeywords() )
-   {
-      FITSKeywordArray keywords = inputData.keywords;
-      keywords << FITSHeaderKeyword( "COMMENT", IsoString(), "CosmeticCorrection with " + PixInsightVersion::AsString() )
-               << FITSHeaderKeyword( "HISTORY", IsoString(), Module->ReadableVersion() )
-               << FITSHeaderKeyword( "HISTORY", IsoString(), "CosmeticCorrection: Total corrected pixels = " + IsoString( t->Count() ) );
-      outputFile.WriteFITSKeywords( keywords );
-   }
+      outputFile.WriteFITSKeywords( inputData.keywords );
    else if ( !inputData.keywords.IsEmpty() )
       console.WarningLn( "** Warning: The output format cannot store FITS keywords - existing keywords not embedded" );
 
@@ -1098,7 +1107,8 @@ bool CosmeticCorrectionInstance::ExecuteGlobal()
                (*i)->Start( ThreadPriority::DefaultMax, i - runningThreads.Begin() );
                running++;
             }
-         } while ( running > 0 || !targets.IsEmpty() );
+         }
+         while ( running > 0 || !targets.IsEmpty() );
       }
       catch ( ... )
       {
@@ -1160,6 +1170,8 @@ void* CosmeticCorrectionInstance::LockParameter( const MetaParameter* p, size_ty
       return p_prefix.Begin();
    if ( p == ThePostfix )
       return p_postfix.Begin();
+   if ( p == TheGenerateHistoryProperties )
+      return &p_generateHistoryProperties;
    if ( p == TheOverwrite )
       return &p_overwrite;
 
@@ -1297,4 +1309,4 @@ size_type CosmeticCorrectionInstance::ParameterLength( const MetaParameter* p, s
 } // namespace pcl
 
 // ----------------------------------------------------------------------------
-// EOF CosmeticCorrectionInstance.cpp - Released 2025-01-09T18:44:32Z
+// EOF CosmeticCorrectionInstance.cpp - Released 2025-02-19T18:29:34Z

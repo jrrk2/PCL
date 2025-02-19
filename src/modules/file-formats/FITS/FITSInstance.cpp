@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard FITS File Format Module Version 1.2.1
+// Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// FITSInstance.cpp - Released 2025-01-09T18:44:23Z
+// FITSInstance.cpp - Released 2025-02-19T18:29:25Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -74,6 +74,7 @@ public:
    bool                              useRowOrderKeywords;
    bool                              signedIntegersArePhysical;
    bool                              fixNonFinite;
+   bool                              onlyFirstImage;
    int                               verbosity;
 
    FITSReadHints( const IsoString& hints )
@@ -88,6 +89,7 @@ public:
       useRowOrderKeywords = fitsOptions.useRowOrderKeywords;
       signedIntegersArePhysical = fitsOptions.signedIntegersArePhysical;
       fixNonFinite = true;
+      onlyFirstImage = false;
       verbosity = 1;
 
       IsoStringList theHints;
@@ -129,6 +131,10 @@ public:
             fixNonFinite = true;
          else if ( *i == "ignore-non-finite" )
             fixNonFinite = false;
+         else if ( *i == "only-first-image" )
+            onlyFirstImage = true;
+         else if ( *i == "no-only-first-image" )
+            onlyFirstImage = false;
          else if ( *i == "verbosity" )
          {
             if ( ++i == theHints.End() )
@@ -180,6 +186,8 @@ ImageDescriptionArray FITSInstance::Open( const String& filePath, const IsoStrin
 
       FITSImageOptions options = FITSFormat::DefaultOptions();
 
+      bool onlyFirstImage = false;
+
       if ( !hints.IsEmpty() )
       {
          m_readHints = new FITSReadHints( hints );
@@ -187,10 +195,10 @@ ImageDescriptionArray FITSInstance::Open( const String& filePath, const IsoStrin
          options.useRowOrderKeywords = m_readHints->useRowOrderKeywords;
          options.signedIntegersArePhysical = m_readHints->signedIntegersArePhysical;
          options.verbosity = m_readHints->verbosity;
+         onlyFirstImage = m_readHints->onlyFirstImage;
       }
 
-      ImageDescriptionArray a;
-
+      ImageDescriptionArray images;
       for ( int i = 0; i < int( m_reader->NumberOfImages() ); ++i )
       {
          m_reader->SetIndex( i );
@@ -200,19 +208,20 @@ ImageDescriptionArray FITSInstance::Open( const String& filePath, const IsoStrin
          IsoString id = m_reader->Id();
          if ( !id.IsEmpty() )
          {
-            for ( IsoString::iterator i = id.Begin(); i != id.End(); ++i )
-               if ( (*i < 'A' || *i > 'Z') && (*i < 'a' || *i > 'z') && (*i < '0' || *i > '9') && *i != '_' )
-                  *i = '_';
+            for ( char& c : id )
+               if ( (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '_' )
+                  c = '_';
             if ( *id >= '0' && *id <= '9' )
                id.Prepend( '_' );
          }
 
-         a.Add( ImageDescription( m_reader->Info(), m_reader->Options(), id ) );
+         images << ImageDescription( m_reader->Info(), m_reader->Options(), id );
+         if ( onlyFirstImage )
+            break;
       }
-
       m_reader->SetIndex( 0 );
 
-      return a;
+      return images;
    }
    catch ( ... )
    {
@@ -848,4 +857,4 @@ void FITSInstance::CloseImage()
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF FITSInstance.cpp - Released 2025-01-09T18:44:23Z
+// EOF FITSInstance.cpp - Released 2025-02-19T18:29:25Z

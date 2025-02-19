@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/FFT2D.cpp - Released 2025-01-09T18:44:07Z
+// pcl/FFT2D.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -94,7 +94,7 @@ protected:
          int            m_dir;
          StatusMonitor* m_monitor;
          bool           m_parallel;
-         unsigned       m_maxProcessors;
+         int            m_maxProcessors;
 
    void RunThreads( thread_list& threads, int count )
    {
@@ -125,7 +125,8 @@ public:
    using base        = PCL_FFT2DEngineBase<complex,complex>;
    using thread_list = typename base::thread_list;
 
-   PCL_FFT2DEngine( int rows, int cols, complex* output, const complex* input, int dir, StatusMonitor* monitor, bool parallel, int maxProcessors )
+   PCL_FFT2DEngine( int rows, int cols, complex* output, const complex* input, int dir, StatusMonitor* monitor,
+                    bool parallel, int maxProcessors, bool __performanceAnalysis__ = false )
       : base( rows, cols, output, input, dir, monitor, parallel, maxProcessors )
    {
       size_type N = size_type( this->m_rows )*size_type( this->m_cols );
@@ -138,9 +139,22 @@ public:
       for ( int direction = 0; direction < 2; ++direction ) // FFT of m_rows, m_cols
       {
          int numberOfItems = (direction == 0) ? this->m_rows : this->m_cols;
-         Array<size_type> L = Thread::OptimalThreadLoads( numberOfItems,
-                                                          1/*overheadLimit*/,
-                                                          this->m_parallel ? int( this->m_maxProcessors ) : 1 );
+
+         Array<size_type> L;
+         if ( likely( !__performanceAnalysis__ ) )
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::FFT2D;
+            data.length = numberOfItems;
+            data.itemSize = sizeof( T );
+            data.floatingPoint = std::is_floating_point_v<T>;
+            data.width = cols;
+            data.height = rows;
+            L = Thread::OptimalThreadLoads( data, this->m_parallel ? this->m_maxProcessors : 1 );
+         }
+         else
+            L = pcl::Thread::OptimalThreadLoads( numberOfItems, 1/*overheadLimit*/, maxProcessors );
+
          thread_list threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
             threads.Add( (direction == 0) ? static_cast<Thread*>( new RowThread( *this, n, n + int( L[i] ) ) ) :
@@ -297,15 +311,29 @@ public:
    using base        = PCL_FFT2DRealEngineBase<complex,scalar>;
    using thread_list = typename base::thread_list;
 
-   PCL_FFT2DRealEngine( int rows, int cols, complex* output, const scalar* input, StatusMonitor* monitor, bool parallel, int maxProcessors )
+   PCL_FFT2DRealEngine( int rows, int cols, complex* output, const scalar* input, StatusMonitor* monitor,
+                        bool parallel, int maxProcessors, bool __performanceAnalysis__ = false )
       : base( rows, cols, output, input, PCL_FFT_FORWARD, monitor, parallel, maxProcessors )
    {
       for ( int direction = 0; direction < 2; ++direction ) // FFT of m_rows, m_cols
       {
          int numberOfItems = (direction == 0) ? this->m_rows : this->m_transformCols;
-         Array<size_type> L = Thread::OptimalThreadLoads( numberOfItems,
-                                                          1/*overheadLimit*/,
-                                                          this->m_parallel ? int( this->m_maxProcessors ) : 1 );
+
+         Array<size_type> L;
+         if ( likely( !__performanceAnalysis__ ) )
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::FFT2D_Real;
+            data.length = numberOfItems;
+            data.itemSize = sizeof( T );
+            data.floatingPoint = std::is_floating_point_v<T>;
+            data.width = cols;
+            data.height = rows;
+            L = Thread::OptimalThreadLoads( data, this->m_parallel ? this->m_maxProcessors : 1 );
+         }
+         else
+            L = pcl::Thread::OptimalThreadLoads( numberOfItems, 1/*overheadLimit*/, maxProcessors );
+
          thread_list threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
             threads.Add( (direction == 0) ? static_cast<Thread*>( new RowThread( *this, n, n + int( L[i] ) ) ) :
@@ -413,9 +441,19 @@ public:
       for ( int direction = 0; direction < 2; ++direction ) // FFT of m_cols, m_rows
       {
          int numberOfItems = (direction == 0) ? this->m_transformCols : this->m_rows;
-         Array<size_type> L = Thread::OptimalThreadLoads( numberOfItems,
-                                                          1/*overheadLimit*/,
-                                                          this->m_parallel ? int( this->m_maxProcessors ) : 1 );
+
+         Array<size_type> L;
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::FFT2D_Real;
+            data.length = numberOfItems;
+            data.itemSize = sizeof( T );
+            data.floatingPoint = std::is_floating_point_v<T>;
+            data.width = cols;
+            data.height = rows;
+            L = Thread::OptimalThreadLoads( data, this->m_parallel ? this->m_maxProcessors : 1 );
+         }
+
          thread_list threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
             threads.Add( (direction == 0) ? static_cast<Thread*>( new ColThread( *this, n, n + int( L[i] ) ) ) :
@@ -535,8 +573,31 @@ void FFT2DBase::InverseTransform( int rows, int cols, double* y, const dcomplex*
 }
 
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/*
+ * Performance analysis
+ */
+void PCL_PA_FFT2D_F32( int rows, int cols, fcomplex* y, const fcomplex* x, int maxThreads )
+{
+   PCL_FFT2DEngine<float>( rows, cols, y, x, PCL_FFT_FORWARD, nullptr/*monitor*/, true/*parallel*/, maxThreads, true/*__performanceAnalysis__*/ );
+}
+void PCL_PA_FFT2D_F64( int rows, int cols, dcomplex* y, const dcomplex* x, int maxThreads )
+{
+   PCL_FFT2DEngine<double>( rows, cols, y, x, PCL_FFT_FORWARD, nullptr/*monitor*/, true/*parallel*/, maxThreads, true/*__performanceAnalysis__*/ );
+}
+void PCL_PA_FFT2D_Real_F32( int rows, int cols, fcomplex* y, const float* x, int maxThreads )
+{
+   PCL_FFT2DRealEngine<float>( rows, cols, y, x, nullptr/*monitor*/, true/*parallel*/, maxThreads, true/*__performanceAnalysis__*/ );
+}
+void PCL_PA_FFT2D_Real_F64( int rows, int cols, dcomplex* y, const double* x, int maxThreads )
+{
+   PCL_FFT2DRealEngine<double>( rows, cols, y, x, nullptr/*monitor*/, true/*parallel*/, maxThreads, true/*__performanceAnalysis__*/ );
+}
+
+// ----------------------------------------------------------------------------
 
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/FFT2D.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/FFT2D.cpp - Released 2025-02-19T18:29:13Z

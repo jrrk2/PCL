@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/PolarTransform.cpp - Released 2025-01-09T18:44:07Z
+// pcl/PolarTransform.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -124,9 +124,17 @@ public:
       /*
        * In-place polar or log-polar transform.
        */
-      Array<size_type> L = pcl::Thread::OptimalThreadLoads( height,
-                                                            1/*overheadLimit*/,
-                                                            T.IsParallelProcessingEnabled() ? T.MaxProcessors() : 1 );
+      Array<size_type> L;
+      {
+         pcl::Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Rotation;
+         data.length = height;
+         data.itemSize = P::BytesPerSample();
+         data.floatingPoint = P::IsFloatSample();
+         data.width = width;
+         data.height = height;
+         L = pcl::Thread::OptimalThreadLoads( data, T.IsParallelProcessingEnabled() ? T.MaxProcessors() : 1 );
+      }
       size_type N = size_type( width )*size_type( height );
       if ( image.Status().IsInitializationEnabled() )
          image.Status().Initialize( String( "In-place " )
@@ -301,4 +309,4 @@ void LogPolarTransform::Apply( pcl::UInt32Image& image ) const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/PolarTransform.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/PolarTransform.cpp - Released 2025-02-19T18:29:13Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/MultiscaleLinearTransform.cpp - Released 2025-01-09T18:44:07Z
+// pcl/MultiscaleLinearTransform.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -53,7 +53,6 @@
 #include <pcl/AutoPointer.h>
 #include <pcl/Convolution.h>
 #include <pcl/Exception.h>
-#include <pcl/FFTConvolution.h>
 #include <pcl/GaussianFilter.h>
 #include <pcl/MeanFilter.h>
 #include <pcl/MultiscaleLinearTransform.h>
@@ -136,15 +135,7 @@ private:
          static_cast<KernelFilter*>( new MeanFilter( n ) ) :
          static_cast<KernelFilter*>( new GaussianFilter( n ) ) );
 
-      int nofThreads = Thread::NumberOfThreads( maxProcessors );
-
-      if ( n >= FFTConvolution::FasterThanSeparableFilterSize( nofThreads ) || cj.Width() < n || cj.Height() < n )
-      {
-         FFTConvolution Z( *H );
-         Z.EnableParallelProcessing( parallel, maxProcessors );
-         Z >> cj;
-      }
-      else if ( n >= SeparableConvolution::FasterThanNonseparableFilterSize( nofThreads ) )
+      if ( n >= SeparableConvolution::FasterThanNonseparableFilterSize( cj.Width(), cj.Height() ) )
       {
          SeparableFilter S( H->AsSeparableFilter() );
          SeparableConvolution C( S );
@@ -219,4 +210,4 @@ void MultiscaleLinearTransform::Transform( const UInt32Image& image )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/MultiscaleLinearTransform.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/MultiscaleLinearTransform.cpp - Released 2025-02-19T18:29:13Z

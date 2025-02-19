@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard JPEG File Format Module Version 1.0.5
 // ----------------------------------------------------------------------------
-// jerror.h - Released 2025-01-09T18:44:23Z
+// jerror.h - Released 2025-02-19T18:29:25Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard JPEG PixInsight module.
 //
@@ -356,4 +356,4 @@ JMESSAGE(JWRN_TOO_MUCH_DATA, "Application transferred too many scanlines")
 #endif /* JERROR_H */
 
 // ----------------------------------------------------------------------------
-// EOF jerror.h - Released 2025-01-09T18:44:23Z
+// EOF jerror.h - Released 2025-02-19T18:29:25Z

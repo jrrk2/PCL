@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard INDIClient Process Module Version 1.2.3
 // ----------------------------------------------------------------------------
-// INDICCDFrameInstance.cpp - Released 2025-01-09T18:44:32Z
+// INDICCDFrameInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard INDIClient PixInsight module.
 //
@@ -1708,11 +1708,6 @@ void AbstractINDICCDFrameExecution::Perform()
                   timeStamp + " Acquired with " + PixInsightVersion::AsString() + '\n' + timeStamp + " Acquired with " + Module->ReadableVersion() + '\n' + timeStamp + " Acquired with " + m_instance.Meta()->Id() + " process\n" );
             }
 
-            // Generate FITS COMMENT and HISTORY records
-            keywords << FITSHeaderKeyword( "COMMENT", IsoString(), "Acquired with " + PixInsightVersion::AsString() )
-                     << FITSHeaderKeyword( "HISTORY", IsoString(), "Acquired with " + Module->ReadableVersion() )
-                     << FITSHeaderKeyword( "HISTORY", IsoString(), "Acquired with " + m_instance.Meta()->Id() + " process" );
-
             ICCProfile iccProfile;
             if ( inputFormat.CanStoreICCProfiles() )
                inputFile.ReadICCProfile( iccProfile );
@@ -2014,4 +2009,4 @@ int AbstractINDICCDFrameExecution::s_numberOfChannels = 0;
 } // namespace pcl
 
 // ----------------------------------------------------------------------------
-// EOF INDICCDFrameInstance.cpp - Released 2025-01-09T18:44:32Z
+// EOF INDICCDFrameInstance.cpp - Released 2025-02-19T18:29:34Z

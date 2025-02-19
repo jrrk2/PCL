@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/MetaModule.cpp - Released 2025-01-09T18:44:07Z
+// pcl/MetaModule.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -71,7 +71,10 @@
 # include <pcl/Thread.h>
 #endif
 
+#include <pcl/Atomic.h>
+#include <pcl/AutoLock.h>
 #include <pcl/ErrorHandler.h>
+#include <pcl/GlobalSettings.h>
 #include <pcl/MetaModule.h>
 #include <pcl/ProcessInterface.h>
 #include <pcl/Version.h>
@@ -201,6 +204,23 @@ IsoString MetaModule::ReadableVersion() const
    if ( build > 0 )
       version.AppendFormat( "-%d", build );
    return version;
+}
+
+// ----------------------------------------------------------------------------
+
+int MetaModule::NumberOfProcessors() const
+{
+   static AtomicInt numberOfProcessors;
+   static Mutex mutex;
+
+   if ( numberOfProcessors.Load() == 0 )
+   {
+      volatile AutoLock lock( mutex );
+      if ( numberOfProcessors.Load() == 0 )
+         numberOfProcessors.Store( pcl::Max( 1, PixInsightSettings::GlobalInteger( "System/NumberOfProcessors" ) ) );
+   }
+
+   return numberOfProcessors;
 }
 
 // ----------------------------------------------------------------------------
@@ -452,4 +472,4 @@ void MetaModule::PerformAPIDefinitions() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/MetaModule.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/MetaModule.cpp - Released 2025-02-19T18:29:13Z

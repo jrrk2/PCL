@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/IntegrationMetadata.h - Released 2025-01-09T18:43:56Z
+// pcl/IntegrationMetadata.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -343,7 +343,7 @@ private:
 
 // ----------------------------------------------------------------------------
 
-#define __PCL_INTEGRATION_METADATA_VERSION   "1.2"
+#define __PCL_INTEGRATION_METADATA_VERSION   "1.3"
 
 /*
  * Optional, consistently defined metadata of an integrable image.
@@ -355,10 +355,10 @@ class IntegrationMetadata
 public:
 
    String                         version = __PCL_INTEGRATION_METADATA_VERSION;
+   ConsistentlyDefined<int>       imageType;
    ConsistentlyDefined<String>    author;
    ConsistentlyDefined<String>    observer;
    ConsistentlyDefined<String>    instrumentName;
-   ConsistentlyDefined<String>    frameType;
    ConsistentlyDefined<String>    filterName;
    ConsistentlyDefined<IsoString> cfaPatternName;
    ConsistentlyDefined<IsoString> cfaPattern;
@@ -389,11 +389,14 @@ public:
    ConsistentlyDefined<double>    longObs;       // deg (-180,+180]
    ConsistentlyDefined<double>    latObs;        // deg [-90,+90]
    ConsistentlyDefined<double>    altObs;        // m
+   SortedIsoStringList            signatures;    // unique process signatures
+
+   size_type count = 1;
 
    IntegrationMetadata() = default;
    IntegrationMetadata( const IntegrationMetadata& ) = default;
 
-   IntegrationMetadata( const PropertyArray&, const FITSKeywordArray& );
+   IntegrationMetadata( const PropertyArray&, const FITSKeywordArray&, bool getSignatures = false );
    IntegrationMetadata( const String& serialization );
 
    String Serialize() const;
@@ -403,6 +406,17 @@ public:
       return m_valid;
    }
 
+   bool SignaturesEnabled() const
+   {
+      return m_getSignatures;
+   }
+
+   void EnableSignatures( bool enable = true )
+   {
+      m_getSignatures = enable;
+   }
+
+   void UpdateProperties( PropertyArray& ) const;
    void UpdatePropertiesAndKeywords( PropertyArray&, FITSKeywordArray& ) const;
 
    static IntegrationMetadata Summary( const Array<IntegrationMetadata>& );
@@ -410,6 +424,9 @@ public:
 private:
 
    bool m_valid = false;
+   bool m_getSignatures = false;
+
+   void DoUpdatePropertiesAndKeywords( PropertyArray&, FITSKeywordArray&, bool ) const;
 
    // Block separators for text metadata serialization (UTF-16).
    constexpr static char16_type ItemSeparator = char16_type( 0x2028 );  // Unicode Line Separator
@@ -423,4 +440,4 @@ private:
 #endif   // __PCL_IntegrationMetadata_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/IntegrationMetadata.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/IntegrationMetadata.h - Released 2025-02-19T18:29:04Z

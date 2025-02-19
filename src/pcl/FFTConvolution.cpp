@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/FFTConvolution.cpp - Released 2025-01-09T18:44:07Z
+// pcl/FFTConvolution.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -51,6 +51,8 @@
 
 #include <pcl/FFTConvolution.h>
 #include <pcl/FourierTransform.h>
+
+#include <pcl/api/APIInterface.h>
 
 namespace pcl
 {
@@ -564,7 +566,24 @@ void FFTConvolution::ValidateFilter() const
 
 // ----------------------------------------------------------------------------
 
+int FFTConvolution::FasterThanNonseparableFilterSize( int width, int height )
+{
+   if ( API != nullptr )
+   {
+      int kernelSize = (*API->Thread->PerformanceAnalysisValue)( PerformanceAnalysisAlgorithm::FFTConvolutionFasterThanNonseparable,
+                                                                 0/*length*/,
+                                                                 4/*itemSize*/, api_true/*floatingPoint*/,
+                                                                 0/*kernelSize*/, width, height );
+      if ( kernelSize > 0 )
+         return kernelSize;
+   }
+
+   return 45;
+}
+
+// ----------------------------------------------------------------------------
+
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/FFTConvolution.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/FFTConvolution.cpp - Released 2025-02-19T18:29:13Z

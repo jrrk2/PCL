@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard FITS File Format Module Version 1.2.1
+// Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// imcompress.c - Released 2025-01-09T18:44:23Z
+// imcompress.c - Released 2025-02-19T18:29:25Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -9999,4 +9999,4 @@ int fits_calc_tile_rows(long *tlpixel, long *tfpixel, int ndim, long *trowsize, 
 }
 
 // ----------------------------------------------------------------------------
-// EOF imcompress.c - Released 2025-01-09T18:44:23Z
+// EOF imcompress.c - Released 2025-02-19T18:29:25Z

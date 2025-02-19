@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard PixelMath Process Module Version 1.9.3
 // ----------------------------------------------------------------------------
-// Generators.cpp - Released 2025-01-09T18:44:32Z
+// Generators.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard PixelMath PixInsight module.
 //
@@ -258,22 +258,12 @@ IsoString GaussianConvolutionFunction::GenerateImage( ExpressionList::const_iter
       ImageVariant result = NewGeneratorResult( ref );
 
       GaussianFilter H( sigma, eps, rho, Rad( theta ) );
-      int nofThreads = Thread::NumberOfThreads( PCL_MAX_PROCESSORS );
-      if (  H.Size() >= FFTConvolution::FasterThanSeparableFilterSize( nofThreads )
-         || !H.IsSeparable() && H.Size() >= FFTConvolution::FasterThanNonseparableFilterSize( nofThreads )
-         || H.Size() > result->Width()
-         || H.Size() > result->Height() )
-      {
+      if ( H.Size() > result->Width() || H.Size() > result->Height() )
          FFTConvolution( H ) >> result;
-      }
-      else if ( H.IsSeparable() && H.Size() >= SeparableConvolution::FasterThanNonseparableFilterSize( nofThreads ) )
-      {
+      else if ( H.Size() >= SeparableConvolution::FasterThanNonseparableFilterSize( result.Width(), result.Height() ) )
          SeparableConvolution( H.AsSeparableFilter() ) >> result;
-      }
       else
-      {
          Convolution( H ) >> result;
-      }
 
       TheImageCache->AddImage( key, result );
    }
@@ -373,15 +363,12 @@ IsoString BoxConvolutionFunction::GenerateImage( ExpressionList::const_iterator 
    {
       ImageVariant result = NewGeneratorResult( ref );
 
-      int nofThreads = Thread::NumberOfThreads( PCL_MAX_PROCESSORS );
-      if (  n >= FFTConvolution::FasterThanSeparableFilterSize( nofThreads )
-         || n > result->Width()
-         || n > result->Height() )
+      if ( n > result->Width() || n > result->Height() )
       {
          KernelFilter H( n, 1.0 );
          FFTConvolution( H ) >> result;
       }
-      else if ( n >= SeparableConvolution::FasterThanNonseparableFilterSize( nofThreads ) )
+      else if ( n >= SeparableConvolution::FasterThanNonseparableFilterSize( result.Width(), result.Height() ) )
       {
          SeparableFilter H( n, 1.0 );
          SeparableConvolution( H ) >> result;
@@ -479,9 +466,7 @@ IsoString KernelConvolutionFunction::GenerateImage( ExpressionList::const_iterat
       ImageVariant result = NewGeneratorResult( ref );
 
       KernelFilter H( K.Begin(), n );
-      int nofThreads = Thread::NumberOfThreads( PCL_MAX_PROCESSORS );
-
-      if (  H.Size() < FFTConvolution::FasterThanNonseparableFilterSize( nofThreads )
+      if (  H.Size() < FFTConvolution::FasterThanNonseparableFilterSize( result.Width(), result.Height() )
          || H.IsHighPassFilter() )
       {
          Convolution C( H );
@@ -1647,17 +1632,14 @@ IsoString LocalVarianceFunction::GenerateImage( ExpressionList::const_iterator i
       ImageVariant X; X.CopyImage( result );
       result.Raise( 2.0 );
 
-      int nofThreads = Thread::NumberOfThreads( PCL_MAX_PROCESSORS );
-      if (  d >= FFTConvolution::FasterThanSeparableFilterSize( nofThreads )
-         || d > ref->Image()->Width()
-         || d > ref->Image()->Height() )
+      if ( d > ref->Image()->Width() || d > ref->Image()->Height() )
       {
          KernelFilter H = LVarKernelFunction( d, k );
          FFTConvolution Z( H );
          Z >> result;
          Z >> X;
       }
-      else if ( d >= SeparableConvolution::FasterThanNonseparableFilterSize( nofThreads ) )
+      else if ( d >= SeparableConvolution::FasterThanNonseparableFilterSize( result.Width(), result.Height() ) )
       {
          SeparableFilter H = LVarKernelFunctionSeparable( d, k );
          SeparableConvolution C( H );
@@ -2289,4 +2271,4 @@ void OpExclusionFunction::operator()( Pixel& r, ExpressionList::const_iterator, 
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF Generators.cpp - Released 2025-01-09T18:44:32Z
+// EOF Generators.cpp - Released 2025-02-19T18:29:34Z

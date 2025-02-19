@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Thread.cpp - Released 2025-01-09T18:44:07Z
+// pcl/Thread.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -54,6 +54,7 @@
 #include <pcl/Console.h>
 #include <pcl/GlobalSettings.h>
 #include <pcl/Math.h>
+#include <pcl/MetaModule.h>
 #include <pcl/Thread.h>
 
 #include <pcl/api/APIException.h>
@@ -458,26 +459,12 @@ int Thread::NumberOfThreads( size_type N, size_type overheadLimit )
    if ( N > overheadLimit )
       if ( API != nullptr )
       {
-         static AtomicInt numberOfProcessors;
-         int processorsAvailable = numberOfProcessors.Load();
-         if ( processorsAvailable == 0 )
-         {
-            static Mutex mutex;
-            volatile AutoLock lock( mutex );
-            processorsAvailable = numberOfProcessors.Load();
-            if ( processorsAvailable == 0 )
-            {
-               processorsAvailable = Max( 1, PixInsightSettings::GlobalInteger( "System/NumberOfProcessors" ) );
-               numberOfProcessors.Store( processorsAvailable );
-            }
-         }
-
-         processorsAvailable -= NumberOfRunningThreads();
+         int processorsAvailable = Module->NumberOfProcessors() - NumberOfRunningThreads();
          if ( processorsAvailable > 1 )
          {
-            int threadsAvailable = Min( processorsAvailable, (*API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
-            if ( overheadLimit < 2 || N/threadsAvailable >= overheadLimit )
-               return threadsAvailable;
+            int threadsAllowed = Min( processorsAvailable, (*API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
+            if ( overheadLimit < 2 || N/threadsAllowed >= overheadLimit )
+               return threadsAllowed;
             return Max( 1, int( N/overheadLimit ) );
          }
 
@@ -488,9 +475,9 @@ int Thread::NumberOfThreads( size_type N, size_type overheadLimit )
 //             if ( PixInsightSettings::GlobalFlag( "Process/EnableParallelModuleProcessing" ) )
 //                if ( PixInsightSettings::GlobalFlag( "Process/EnableParallelProcessing" ) )
 //                {
-//                   int threadsAvailable = Min( processorsAvailable, PixInsightSettings::GlobalInteger( "Process/MaxProcessors" ) );
-//                   if ( overheadLimit < 2 || N/threadsAvailable >= overheadLimit )
-//                      return threadsAvailable;
+//                   int threadsAllowed = Min( processorsAvailable, PixInsightSettings::GlobalInteger( "Process/MaxProcessors" ) );
+//                   if ( overheadLimit < 2 || N/threadsAllowed >= overheadLimit )
+//                      return threadsAllowed;
 //                   return Max( 1, int( N/overheadLimit ) );
 //                }
       }
@@ -502,11 +489,10 @@ int Thread::NumberOfThreads( size_type N, size_type overheadLimit )
 
 Array<size_type> Thread::OptimalThreadLoads( size_type N, size_type overheadLimit, int maxThreads )
 {
-   size_type numberOfThreads = Min( NumberOfThreads( N, overheadLimit ), Max( 1, maxThreads ) );
+   size_type numberOfThreads = (maxThreads > 1) ? Min( NumberOfThreads( N, overheadLimit ), maxThreads ) : 1;
    size_type itemsPerThread = N/numberOfThreads;
-   size_type remainderItems = N - itemsPerThread*numberOfThreads;
    Array<size_type> L( numberOfThreads, itemsPerThread );
-   for ( size_type i = 0; remainderItems > 0; ++i, --remainderItems )
+   for ( size_type i = 0, r = N - itemsPerThread*numberOfThreads; r > 0; ++i, --r )
       ++L[i];
    return L;
 }
@@ -535,6 +521,49 @@ Array<size_type> Thread::OptimalThreadLoadsAligned( size_type N, int align, size
 
 // ----------------------------------------------------------------------------
 
+int Thread::OptimalNumberOfThreads( const Thread::PerformanceAnalysisData& data )
+{
+   if ( API != nullptr )
+   {
+      int processorsAvailable = Module->NumberOfProcessors() - NumberOfRunningThreads();
+      if ( processorsAvailable > 1 )
+      {
+         int optimalThreads = (*API->Thread->PerformanceAnalysisValue)( data.algorithm, data.length,
+                                                                        data.itemSize, data.floatingPoint,
+                                                                        data.kernelSize, data.width, data.height );
+         if ( optimalThreads <= 0 )
+            return NumberOfThreads( data.length, Max( data.minimumLength, data.overheadLimit ) );
+
+         int threadsAllowed = Min( processorsAvailable, (*API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
+         return Min( optimalThreads, threadsAllowed );
+      }
+   }
+
+   return 1;
+}
+
+// ----------------------------------------------------------------------------
+
+Array<size_type> Thread::OptimalThreadLoads( const Thread::PerformanceAnalysisData& data, int maxThreads )
+{
+   int numberOfThreads = (maxThreads > 1) ? Min( OptimalNumberOfThreads( data ), maxThreads ) : 1;
+
+   size_type itemsPerThread = Max( size_type( 1 ), data.length/numberOfThreads );
+   size_type minimumLength = Max( size_type( 1 ), data.minimumLength );
+   if ( itemsPerThread < minimumLength )
+   {
+      numberOfThreads = Max( 1, int( data.length/minimumLength ) );
+      itemsPerThread = data.length/numberOfThreads;
+   }
+
+   Array<size_type> L( size_type( numberOfThreads ), itemsPerThread );
+   for ( size_type i = 0, r = data.length - itemsPerThread*numberOfThreads; r > 0; ++i, --r )
+      ++L[i];
+   return L;
+}
+
+// ----------------------------------------------------------------------------
+
 void PCL_FUNC Sleep( unsigned ms )
 {
    //(*API->Thread->SleepThread)( 0, ms );
@@ -546,4 +575,4 @@ void PCL_FUNC Sleep( unsigned ms )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Thread.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/Thread.cpp - Released 2025-02-19T18:29:13Z

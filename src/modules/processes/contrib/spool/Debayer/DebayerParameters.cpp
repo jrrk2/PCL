@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard Debayer Process Module Version 1.12.0
+// Standard Debayer Process Module Version 1.12.1
 // ----------------------------------------------------------------------------
-// DebayerParameters.cpp - Released 2025-01-09T18:44:32Z
+// DebayerParameters.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Debayer PixInsight module.
 //
@@ -90,6 +90,8 @@ DebayerOutputDirectory*                          TheDebayerOutputDirectoryParame
 DebayerOutputExtension*                          TheDebayerOutputExtensionParameter = nullptr;
 DebayerOutputPrefix*                             TheDebayerOutputPrefixParameter = nullptr;
 DebayerOutputPostfix*                            TheDebayerOutputPostfixParameter = nullptr;
+DebayerGenerateHistoryProperties*                TheDebayerGenerateHistoryPropertiesParameter = nullptr;
+DebayerGenerateFITSKeywords*                     TheDebayerGenerateFITSKeywordsParameter = nullptr;
 DebayerOverwriteExistingFiles*                   TheDebayerOverwriteExistingFilesParameter = nullptr;
 DebayerOnError*                                  TheDebayerOnErrorParameter = nullptr;
 DebayerUseFileThreads*                           TheDebayerUseFileThreadsParameter = nullptr;
@@ -886,6 +888,40 @@ IsoString DebayerOutputPostfix::Id() const
 String DebayerOutputPostfix::DefaultValue() const
 {
    return "_d";
+}
+
+// ----------------------------------------------------------------------------
+
+DebayerGenerateHistoryProperties::DebayerGenerateHistoryProperties( MetaProcess* P ) : MetaBoolean( P )
+{
+   TheDebayerGenerateHistoryPropertiesParameter = this;
+}
+
+IsoString DebayerGenerateHistoryProperties::Id() const
+{
+   return "generateHistoryProperties";
+}
+
+bool DebayerGenerateHistoryProperties::DefaultValue() const
+{
+   return true;
+}
+
+// ----------------------------------------------------------------------------
+
+DebayerGenerateFITSKeywords::DebayerGenerateFITSKeywords( MetaProcess* P ) : MetaBoolean( P )
+{
+   TheDebayerGenerateFITSKeywordsParameter = this;
+}
+
+IsoString DebayerGenerateFITSKeywords::Id() const
+{
+   return "generateFITSKeywords";
+}
+
+bool DebayerGenerateFITSKeywords::DefaultValue() const
+{
+   return true;
 }
 
 // ----------------------------------------------------------------------------
@@ -3047,4 +3083,4 @@ bool DebayerOutputFileNoiseAlgorithmB::IsReadOnly() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF DebayerParameters.cpp - Released 2025-01-09T18:44:32Z
+// EOF DebayerParameters.cpp - Released 2025-02-19T18:29:34Z

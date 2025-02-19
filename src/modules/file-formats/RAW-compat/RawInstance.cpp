@@ -871,16 +871,6 @@ FITSKeywordArray RawInstance::ReadFITSKeywords()
 
    FITSKeywordArray keywords;
 
-   keywords << FITSHeaderKeyword( "COMMENT",
-                                  IsoString(),
-                                  "Decoded with " + PixInsightVersion::AsString().ToIsoString() )
-            << FITSHeaderKeyword( "COMMENT",
-                                  IsoString(),
-                                  "Decoded with " + Module->ReadableVersion() )
-            << FITSHeaderKeyword( "COMMENT",
-                                  IsoString(),
-                                  IsoString( "Decoded with LibRaw version " ) + LibRaw::version() );
-
    if ( !m_cameraModel.IsEmpty() )
       keywords << FITSHeaderKeyword( "INSTRUME", '\'' + m_cameraManufacturer + ' ' + m_cameraModel + '\'', "Camera model" );
 

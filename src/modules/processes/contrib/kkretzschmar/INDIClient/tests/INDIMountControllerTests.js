@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
 // PixInsight JavaScript Runtime API - PJSR Version 1.0
 // ----------------------------------------------------------------------------
-// INDIMountControllerTests.js - Released 2025-01-09T18:44:32Z
+// INDIMountControllerTests.js - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 //
 //
@@ -270,4 +270,4 @@ function INDIMountControllerTests( parent )
 INDIMountControllerTests.prototype = new Test;
 
 // ----------------------------------------------------------------------------
-// EOF INDIMountControllerTests.js - Released 2025-01-09T18:44:32Z
+// EOF INDIMountControllerTests.js - Released 2025-02-19T18:29:34Z

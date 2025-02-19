@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/ProcessInstance.cpp - Released 2025-01-09T18:44:07Z
+// pcl/ProcessInstance.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -285,6 +285,23 @@ String ProcessInstance::ToSource( const IsoString& language, const IsoString& va
    return source;
 }
 
+String ProcessInstance::ToHistorySource( const String& xmlSource ) const
+{
+   String source = ToSource( "XPSM 1.0[no-read-only-parameters,no-execution-time,no-description]" );
+
+   if ( !xmlSource.IsEmpty() )
+   {
+      size_type p = xmlSource.Find( "</ProcessingHistory>" );
+      if ( p != String::notFound )
+         return xmlSource.Left( p ) << source << "</ProcessingHistory>";
+   }
+
+   return String( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                  "<ProcessingHistory version=\"1.0\">" )
+               << source
+               << "</ProcessingHistory>";
+}
+
 ProcessInstance ProcessInstance::FromSource( const String& source, const IsoString& language )
 {
    return ProcessInstance( (*API->Process->CreateProcessInstanceFromSourceCode)( source.c_str(), language.c_str() ) );
@@ -551,4 +568,4 @@ void* ProcessInstance::CloneHandle() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/ProcessInstance.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/ProcessInstance.cpp - Released 2025-02-19T18:29:13Z

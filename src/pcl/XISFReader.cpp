@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/XISFReader.cpp - Released 2025-01-09T18:44:07Z
+// pcl/XISFReader.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -691,7 +691,20 @@ public:
                   s = element.AttributeValue( "imageType" );
                   if ( !s.IsEmpty() )
                   {
-                     // ### TODO
+                     data.options.imageType = XISF::ImageTypeFromId( s );
+                     if ( data.options.imageType != ImageType::Unknown )
+                     {
+                        // Generate the reserved image property Image:Type
+                        XISFInputPropertyBlock property;
+                        property.id = "Image:Type";
+                        property.type = VariantType::IsoString;
+                        property.value = XISF::ImageTypeId( (XISF::image_type)data.options.imageType );
+                        AddPropertyBlock( data.properties, property, element );
+                     }
+                     else
+                     {
+                        HeaderWarning( element, "Ignoring invalid/unknown image type '" + s + "'" );
+                     }
                   }
 
                   // id="<image-id>"
@@ -699,8 +712,9 @@ public:
                   if ( !data.id.IsEmpty() )
                      if ( data.id.IsValidIdentifier() )
                      {
+                        // Generate the reserved image property Image:Id
                         XISFInputPropertyBlock property;
-                        property.id = XISF::InternalPropertyId( "ImageIdentifier" );
+                        property.id = "Image:Id";
                         property.type = VariantType::IsoString;
                         property.value = data.id;
                         AddPropertyBlock( data.properties, property, element );
@@ -3098,4 +3112,4 @@ XMLDocument* XISFReader::ExtractHeader( const String& path, XMLParserOptions opt
 } //pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/XISFReader.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/XISFReader.cpp - Released 2025-02-19T18:29:13Z

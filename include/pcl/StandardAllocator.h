@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/StandardAllocator.h - Released 2025-01-09T18:43:56Z
+// pcl/StandardAllocator.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -149,7 +149,7 @@ public:
 
       // Grow exponentially by doubling container capacity if fast growing is
       // enabled or n < 64 KiB.
-      if ( IsFastGrowthEnabled() || n < 65536 )
+      if ( m_fastGrowth || n < 65536 )
       {
          size_type nn = 64;
          while ( nn < n )
@@ -311,8 +311,8 @@ public:
 
 private:
 
-   bool m_fastGrowth : 1;
-   bool m_canShrink  : 1;
+   bool m_fastGrowth = true;
+   bool m_canShrink = true;
 };
 
 } // pcl
@@ -346,4 +346,4 @@ inline void operator delete( void* p, void*, pcl::StandardAllocator& )
 #endif  // __PCL_StandardAllocator_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/StandardAllocator.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/StandardAllocator.h - Released 2025-02-19T18:29:04Z

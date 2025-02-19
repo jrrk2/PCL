@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard CosmeticCorrection Process Module Version 1.4.0
+// Standard CosmeticCorrection Process Module Version 1.4.1
 // ----------------------------------------------------------------------------
-// CosmeticCorrectionParameters.cpp - Released 2025-01-09T18:44:32Z
+// CosmeticCorrectionParameters.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard CosmeticCorrection PixInsight module.
 //
@@ -66,6 +66,7 @@ CCOutputDir* TheOutputDir = nullptr;
 CCOutputExtension* TheOutputExtension = nullptr;
 CCPrefix* ThePrefix = nullptr;
 CCPostfix* ThePostfix = nullptr;
+CCGenerateHistoryProperties* TheGenerateHistoryProperties = nullptr;
 CCOverwrite* TheOverwrite = nullptr;
 
 CCCFA* TheCFA = nullptr;
@@ -202,6 +203,24 @@ IsoString CCPostfix::Id() const
 String CCPostfix::DefaultValue() const
 {
    return "_cc";
+}
+
+// ----------------------------------------------------------------------------
+
+CCGenerateHistoryProperties::CCGenerateHistoryProperties( MetaProcess* P )
+   : MetaBoolean( P )
+{
+   TheGenerateHistoryProperties = this;
+}
+
+IsoString CCGenerateHistoryProperties::Id() const
+{
+   return "generateHistoryProperties";
+}
+
+bool CCGenerateHistoryProperties::DefaultValue() const
+{
+   return false;
 }
 
 // ----------------------------------------------------------------------------
@@ -640,4 +659,4 @@ IsoString CCDefectEnd::Id() const
 } // namespace pcl
 
 // ----------------------------------------------------------------------------
-// EOF CosmeticCorrectionParameters.cpp - Released 2025-01-09T18:44:32Z
+// EOF CosmeticCorrectionParameters.cpp - Released 2025-02-19T18:29:34Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/SeparableConvolution.cpp - Released 2025-01-09T18:44:07Z
+// pcl/SeparableConvolution.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -51,6 +51,8 @@
 
 #include <pcl/SeparableConvolution.h>
 #include <pcl/Thread.h>
+
+#include <pcl/api/APIInterface.h>
 
 namespace pcl
 {
@@ -136,6 +138,22 @@ double __pcl_dp_i( const T* __restrict__ x, const T* __restrict__ y, const int* 
       r += double( x[index[i]] ) * double( y[i] );
    return r;
 }
+
+/*
+template <typename T> inline static
+void __pcl_ldc( T* __restrict__ y, const T* __restrict__ x, int width, int height )
+{
+   for ( size_type i = 0, j = 0; i < size_type( height ); ++i, j += width )
+      y[i] = x[j];
+}
+
+template <typename T> inline static
+void __pcl_stc( T* __restrict__ x, const T* __restrict__ y, int width, int height )
+{
+   for ( size_type i = 0, j = 0; i < size_type( height ); ++i, j += width )
+      x[j] = y[i];
+}
+*/
 
 #ifdef __PCL_AVX2
 
@@ -235,6 +253,32 @@ double __pcl_dp_i( const double* __restrict__ x, const double* __restrict__ y, c
    return r;
 }
 
+/*
+inline static
+void __pcl_ldc( float* __restrict__ y, const float* __restrict__ x, int width, int height )
+{
+   const int h8 = height >> 3;
+   const int w8 = width << 3;
+   const __m256i index = _mm256_set_epi32( 7*width, 6*width, 5*width, 4*width, 3*width, 2*width, width, 0 );
+   for ( int i = 0; i < h8; ++i, x += w8, y += 8 )
+      _mm256_storeu_ps( y, _mm256_i32gather_ps( x, index, 4 ) ) ;
+   for ( int i = h8 << 3; i < height; ++i, x += width )
+      y[i] = *x;
+}
+
+inline static
+void __pcl_ldc( double* __restrict__ y, const double* __restrict__ x, int width, int height )
+{
+   const int h4 = height >> 2;
+   const int w4 = width << 2;
+   const __m128i index = _mm_set_epi32( 3*width, 2*width, width, 0 );
+   for ( int i = 0; i < h4; ++i, x += w4, y += 4 )
+      _mm256_storeu_pd( y, _mm256_i32gather_pd( x, index, 8 ) ) ;
+   for ( int i = h4 << 2; i < height; ++i, x += width )
+      y[i] = *x;
+}
+*/
+
 #endif
 
 // ----------------------------------------------------------------------------
@@ -244,28 +288,28 @@ class PCL_SeparableConvolutionEngine
 public:
 
    template <class P> static
-   void Apply( GenericImage<P>& image, const SeparableConvolution& convolution )
+   void Apply( GenericImage<P>& image, const SeparableConvolution& convolution, int maxThreads = 0 )
    {
       if ( P::BitsPerSample() < 32 )
-         ConvolveIntegerImage( image, convolution, reinterpret_cast<Image*>( 0 ) );
+         ConvolveIntegerImage( image, convolution, reinterpret_cast<Image*>( 0 ), maxThreads );
       else
-         ConvolveIntegerImage( image, convolution, reinterpret_cast<DImage*>( 0 ) );
+         ConvolveIntegerImage( image, convolution, reinterpret_cast<DImage*>( 0 ), maxThreads );
    }
 
-   static void Apply( Image& image, const SeparableConvolution& convolution )
+   static void Apply( Image& image, const SeparableConvolution& convolution, int maxThreads = 0 )
    {
-      DoApply( image, convolution );
+      DoApply( image, convolution, maxThreads );
    }
 
-   static void Apply( DImage& image, const SeparableConvolution& convolution )
+   static void Apply( DImage& image, const SeparableConvolution& convolution, int maxThreads = 0 )
    {
-      DoApply( image, convolution );
+      DoApply( image, convolution, maxThreads );
    }
 
 private:
 
    template <class P> static
-   void DoApply( GenericImage<P>& image, const SeparableConvolution& convolution )
+   void DoApply( GenericImage<P>& image, const SeparableConvolution& convolution, int maxThreads )
    {
       if ( image.IsEmptySelection() )
          return;
@@ -295,11 +339,26 @@ private:
 
       if ( convolution.IsRowConvolutionEnabled() )
       {
+         Array<size_type> L;
+         if ( maxThreads <= 0 )
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::SeparableConvolution_Rows;
+            data.length = image.SelectedRectangle().Height();
+            data.itemSize = P::BytesPerSample();
+            data.floatingPoint = P::IsFloatSample();
+            data.kernelSize = convolution.Filter().Size();
+            data.width = image.SelectedRectangle().Width();
+            data.height = image.SelectedRectangle().Height();
+            L = Thread::OptimalThreadLoads( data, convolution.IsParallelProcessingEnabled() ? convolution.MaxProcessors() : 1 );
+         }
+         else
+         {
+            // Performance analysis
+            L = Thread::OptimalThreadLoads( image.SelectedRectangle().Height(), 1/*overheadLimit*/, maxThreads );
+         }
+
          ThreadData<P> data( image, convolution, N1 );
-         int numberOfRows = image.SelectedRectangle().Height();
-         Array<size_type> L = Thread::OptimalThreadLoads( numberOfRows,
-                                          1/*overheadLimit*/,
-                                          convolution.IsParallelProcessingEnabled() ? convolution.MaxProcessors() : 1 );
          ReferenceArray<RowThread<P> > threads;
          for ( int i = 0, n = 0, y0 = image.SelectedRectangle().y0; i < int( L.Length() ); n += int( L[i++] ) )
             threads.Add( new RowThread<P>( data, y0 + n, y0 + n + int( L[i] ) ) );
@@ -311,11 +370,26 @@ private:
 
       if ( convolution.IsColumnConvolutionEnabled() )
       {
+         Array<size_type> L;
+         if ( maxThreads <= 0 )
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::SeparableConvolution_Cols;
+            data.length = image.SelectedRectangle().Width();
+            data.itemSize = P::BytesPerSample();
+            data.floatingPoint = P::IsFloatSample();
+            data.kernelSize = convolution.Filter().Size();
+            data.width = image.SelectedRectangle().Width();
+            data.height = image.SelectedRectangle().Height();
+            L = Thread::OptimalThreadLoads( data, convolution.IsParallelProcessingEnabled() ? convolution.MaxProcessors() : 1 );
+         }
+         else
+         {
+            // Performance analysis
+            L = Thread::OptimalThreadLoads( image.SelectedRectangle().Height(), 1/*overheadLimit*/, maxThreads );
+         }
+
          ThreadData<P> data( image, convolution, N2 );
-         int numberOfCols = image.SelectedRectangle().Width();
-         Array<size_type> L = Thread::OptimalThreadLoads( numberOfCols,
-                                          1/*overheadLimit*/,
-                                          convolution.IsParallelProcessingEnabled() ? convolution.MaxProcessors() : 1 );
          ReferenceArray<ColThread<P> > threads;
          for ( int i = 0, n = 0, x0 = image.SelectedRectangle().x0; i < int( L.Length() ); n += int( L[i++] ) )
             threads.Add( new ColThread<P>( data, x0 + n, x0 + n + int( L[i] ) ) );
@@ -346,10 +420,10 @@ private:
    }
 
    template <class P, class P1> static
-   void ConvolveIntegerImage( GenericImage<P>& image, const SeparableConvolution& convolution, GenericImage<P1>* )
+   void ConvolveIntegerImage( GenericImage<P>& image, const SeparableConvolution& convolution, GenericImage<P1>*, int maxThreads )
    {
       GenericImage<P1> tmp( image );
-      DoApply( tmp, convolution );
+      DoApply( tmp, convolution, maxThreads );
 
       StatusMonitor monitor = tmp.Status();
       image.SetStatusCallback( nullptr );
@@ -534,13 +608,19 @@ private:
             typename P::sample* __restrict__ f = m_data.image.PixelAddress( m_firstCol, rect.y0, c );
             for ( int i = m_firstCol; i < m_endCol; ++i, ++f )
             {
-               for ( int i = 0, j = 0; i < height; ++i, j += width )
-                  g[i] = f[j];
+               {
+                  distance_type j = 0;
+                  for ( int i = 0; i < height; ++i, j += width )
+                     g[i] = f[j];
+               }
 
                this->Convolve1D( g, t, height, d, dn2, h, m_data.index.Begin(), n );
 
-               for ( int i = 0, j = 0; i < height; ++i, j += width )
-                  f[j] = g[i];
+               {
+                  distance_type j = 0;
+                  for ( int i = 0; i < height; ++i, j += width )
+                     f[j] = g[i];
+               }
 
                UPDATE_THREAD_MONITOR_CHUNK( 65536, height )
             }
@@ -602,7 +682,39 @@ void SeparableConvolution::ValidateFilter() const
 
 // ----------------------------------------------------------------------------
 
+int SeparableConvolution::FasterThanNonseparableFilterSize( int width, int height )
+{
+   if ( API != nullptr )
+   {
+      int kernelSize = (*API->Thread->PerformanceAnalysisValue)( PerformanceAnalysisAlgorithm::SeparableConvolutionFasterThanNonseparable,
+                                                                 0/*length*/,
+                                                                 4/*itemSize*/, api_true/*floatingPoint*/,
+                                                                 0/*kernelSize*/, width, height );
+      if ( kernelSize > 0 )
+         return kernelSize;
+   }
+
+   return 5;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/*
+ * Performance analysis
+ */
+void PCL_PA_SeparableConvolution_F32( Image& image, const SeparableConvolution& convolution, int maxThreads )
+{
+   PCL_SeparableConvolutionEngine::Apply( image, convolution, maxThreads );
+}
+void PCL_PA_SeparableConvolution_F64( DImage& image, const SeparableConvolution& convolution, int maxThreads )
+{
+   PCL_SeparableConvolutionEngine::Apply( image, convolution, maxThreads );
+}
+
+// ----------------------------------------------------------------------------
+
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/SeparableConvolution.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/SeparableConvolution.cpp - Released 2025-02-19T18:29:13Z

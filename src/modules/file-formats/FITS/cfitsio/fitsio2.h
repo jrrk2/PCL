@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard FITS File Format Module Version 1.2.1
+// Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// fitsio2.h - Released 2025-01-09T18:44:23Z
+// fitsio2.h - Released 2025-02-19T18:29:25Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -1350,4 +1350,4 @@ int fits_strncasecmp(const char *s1, const char *s2, size_t n);
 #endif
 
 // ----------------------------------------------------------------------------
-// EOF fitsio2.h - Released 2025-01-09T18:44:23Z
+// EOF fitsio2.h - Released 2025-02-19T18:29:25Z

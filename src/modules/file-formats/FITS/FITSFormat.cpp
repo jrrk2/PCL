@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard FITS File Format Module Version 1.2.1
+// Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// FITSFormat.cpp - Released 2025-01-09T18:44:23Z
+// FITSFormat.cpp - Released 2025-02-19T18:29:25Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -171,6 +171,12 @@ String FITSFormat::Implementation() const
 "\n-------------------------------------------------------------------------------"
 "\nignore-non-finite        (r )  Do not replace NaNs, infinities and negative"
 "\n                               zeros with zeros in floating-point images."
+"\n-------------------------------------------------------------------------------"
+"\nonly-first-image         (r )  Only report information on the first image HDU"
+"\n                               in the FITS file. Ignore any additional images."
+"\n-------------------------------------------------------------------------------"
+"\nno-only-first-image      (r )  Report information on all image HDUs stored in"
+"\n                               the FITS file (default = true)."
 "\n-------------------------------------------------------------------------------"
 "\nbottom-up                (rw)  Follow the lower left origin, bottom to top"
 "\n                               convention of image coordinates."
@@ -481,4 +487,4 @@ FITSFormat::FormatOptions* FITSFormat::FormatOptions::FromGenericDataBlock( cons
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF FITSFormat.cpp - Released 2025-01-09T18:44:23Z
+// EOF FITSFormat.cpp - Released 2025-02-19T18:29:25Z

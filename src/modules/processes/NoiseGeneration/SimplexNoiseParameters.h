@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard NoiseGeneration Process Module Version 1.0.2
 // ----------------------------------------------------------------------------
-// SimplexNoiseParameters.h - Released 2025-01-09T18:44:32Z
+// SimplexNoiseParameters.h - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard NoiseGeneration PixInsight module.
 //
@@ -168,4 +168,4 @@ PCL_END_LOCAL
 #endif   // __SimplexNoiseParameters_h
 
 // ----------------------------------------------------------------------------
-// EOF SimplexNoiseParameters.h - Released 2025-01-09T18:44:32Z
+// EOF SimplexNoiseParameters.h - Released 2025-02-19T18:29:34Z

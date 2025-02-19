@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Exception.h - Released 2025-01-09T18:43:56Z
+// pcl/Exception.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -139,6 +139,23 @@ public:
    virtual void Show() const;
 
    /*!
+    * Returns true if the exception information must be represented verbatim on
+    * the console (when console output is enabled) without inserting any
+    * prefixes, captions, and indicators.
+    *
+    * Derived classes can reimplement this function to prevent duplicate
+    * decorations on the console when the exception information already
+    * includes all the necessary formatting elements. For example, this happens
+    * with exceptions generated within running threads, which are already
+    * represented as formatted console text that can be retrieved using
+    * Thread::ConsoleOutputText() to write it to the Process Console interface.
+    */
+   virtual bool ShowUnformatted() const
+   {
+      return false;
+   }
+
+   /*!
     * Prints a representation of the information transported by this exception
     * exclusively as plain text on the platform console.
     *
@@ -250,10 +267,19 @@ public:
    Error( const Error& ) = default;
 
    /*!
-    * Constructs an %Error object with the specified error \a message.
+    * Constructs an %Error object.
+    *
+    * \param message The error message that will be shown for this exception.
+    *                See the Message() member function for more information.
+    *
+    * \param unformatted   If true, the specified \a message will be shown
+    *                verbatim on the console (when console output is enabled)
+    *                without inserting any prefixes and captions. This
+    *                parameter is false by default.
     */
-   Error( const String& message )
+   Error( const String& message, bool unformatted = false )
       : m_message( message )
+      , m_unformatted( unformatted )
    {
    }
 
@@ -276,9 +302,17 @@ public:
       return "Error";
    }
 
+   /*!
+    */
+   bool ShowUnformatted() const override
+   {
+      return m_unformatted;
+   }
+
 protected:
 
    String m_message;
+   bool   m_unformatted = false;
 };
 
 // ----------------------------------------------------------------------------
@@ -302,10 +336,17 @@ public:
    FatalError() = default;
 
    /*!
-    * Constructs a %FatalError object with the specified \a message.
+    * Constructs a %FatalError object.
+    *
+    * \param message The error message that will be shown for this exception.
+    *
+    * \param unformatted   If true, the specified \a message will be shown
+    *                verbatim on the console (when console output is enabled)
+    *                without inserting any prefixes and captions. This
+    *                parameter is false by default.
     */
-   FatalError( const String& message )
-      : Error( message )
+   FatalError( const String& message, bool unformatted = false )
+      : Error( message, unformatted )
    {
    }
 
@@ -347,7 +388,7 @@ public:
    /*!
     * Constructs a %NotImplemented instance.
     *
-    * \param object           The object that does not implement something
+    * \param object           The object that does not implement something.
     *
     * \param notImplemented   A description of what \a object does not
     *                         implement.
@@ -668,4 +709,4 @@ PCL_DECLARE_EXCEPTION_CLASS( ProcessAborted, "Process aborted", String() );
 #endif   // __PCL_Exception_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Exception.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/Exception.h - Released 2025-02-19T18:29:04Z

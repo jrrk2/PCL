@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard Blink Process Module Version 1.2.5
 // ----------------------------------------------------------------------------
-// BlinkInterface.cpp - Released 2025-01-09T18:44:32Z
+// BlinkInterface.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Blink PixInsight module.
 //
@@ -1274,7 +1274,7 @@ void BlinkInterface::FileCropTo()
          if ( GUI->Files_TreeBox.Child( row )->IsSelected() )
          {
             const int fileNumber = FileNumberGet( row );
-            FileFormatInstance outputFile( CreateImageFile( fileNumber, "CropTo", dir ) );
+            FileFormatInstance outputFile( CreateImageFile( fileNumber, dir ) );
 
             FileData& fd = m_blink.m_filesData[fileNumber];
 
@@ -1898,7 +1898,7 @@ String BlinkInterface::RowToStringFileNumber( const int row ) //Convert fileNumb
 
 // ----------------------------------------------------------------------------
 
-FileFormatInstance BlinkInterface::CreateImageFile( int index, const String& history, const String& dir )
+FileFormatInstance BlinkInterface::CreateImageFile( int index, const String& dir )
 {
    const FileData& fd = m_blink.m_filesData[index];
 
@@ -1923,16 +1923,7 @@ FileFormatInstance BlinkInterface::CreateImageFile( int index, const String& his
       outputFile.SetFormatSpecificData( fd.m_fsData );
 
    if ( fd.m_format->CanStoreKeywords() )
-   {
-      FITSKeywordArray keywords( fd.m_keywords );
-      if ( !history.IsEmpty() )
-      {
-         keywords.Add( FITSHeaderKeyword( "COMMENT", IsoString(), "Processed with " + PixInsightVersion::AsString() ) );
-         keywords.Add( FITSHeaderKeyword( "COMMENT", IsoString(), "Processed with " + Module->ReadableVersion() ) );
-         keywords.Add( FITSHeaderKeyword( "HISTORY", IsoString(), history ) );
-      }
-      outputFile.WriteFITSKeywords( keywords );
-   }
+      outputFile.WriteFITSKeywords( fd.m_keywords );
 
    if ( fd.m_format->CanStoreICCProfiles() )
       outputFile.WriteICCProfile( fd.m_profile );
@@ -2180,4 +2171,4 @@ BlinkInterface::GUIData::GUIData( BlinkInterface& w )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF BlinkInterface.cpp - Released 2025-01-09T18:44:32Z
+// EOF BlinkInterface.cpp - Released 2025-02-19T18:29:34Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/String.h - Released 2025-01-09T18:43:56Z
+// pcl/String.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -2545,7 +2545,7 @@ public:
                   R::Copy( t.m_data->string, l, m );
                }
             }
-            list.Add( t );
+            list.Add( typename C::item_type( t ) );
             ++count;
 
             if ( j == len )
@@ -2613,7 +2613,7 @@ __Break_1:
                      R::Copy( t.m_data->string, l, m );
                   }
                }
-               list.Add( t );
+               list.Add( typename C::item_type( t ) );
                ++count;
 
                if ( j == len )
@@ -2677,7 +2677,7 @@ __Break_1:
                      R::Copy( t.m_data->string, l, m );
                   }
                }
-               list.Add( t );
+               list.Add( typename C::item_type( t ) );
                ++count;
 
                if ( j == len )
@@ -2743,7 +2743,7 @@ __Break_1:
                      R::Copy( t.m_data->string, l, m );
                   }
                }
-               list.Add( t );
+               list.Add( typename C::item_type( t ) );
                ++count;
 
                if ( j == len )
@@ -2809,7 +2809,7 @@ __Break_1:
                   R::Copy( t.m_data->string, l, m );
                }
             }
-            list.Add( t );
+            list.Add( typename C::item_type( t ) );
             ++count;
 
             if ( j == len )
@@ -3655,7 +3655,8 @@ __Break_1:
    }
 
    /*!
-    * Compares numeric character values a string and a null-terminated string.
+    * Compares numeric character values between a string and a null-terminated
+    * string.
     *
     * \param t                The starting address of a null-terminated string
     *                         to which this string will be compared.
@@ -3684,7 +3685,8 @@ __Break_1:
    }
 
    /*!
-    * Compares numeric character values a string and a null-terminated string.
+    * Compares numeric character values between a string and a null-terminated
+    * string.
     *
     * \param c                A single character to which this string will be
     *                         compared.
@@ -14034,4 +14036,4 @@ inline std::ostream& operator <<( std::ostream& o, const String& s )
 #endif   // __PCL_String_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/String.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/String.h - Released 2025-02-19T18:29:04Z

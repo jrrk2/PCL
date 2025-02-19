@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/ATrousWaveletTransform.h - Released 2025-01-09T18:43:56Z
+// pcl/ATrousWaveletTransform.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -61,6 +61,13 @@
 #include <pcl/KernelFilter.h>
 #include <pcl/RedundantMultiscaleTransform.h>
 #include <pcl/SeparableFilter.h>
+
+#ifdef __PCL_BUILDING_PIXINSIGHT_APPLICATION
+namespace pi
+{
+   class PixInsightPerformanceAnalyzer;
+}
+#endif
 
 namespace pcl
 {
@@ -658,7 +665,14 @@ private:
 
    void ValidateScalingFunction() const;
 
+   double PCL_PA_NoiseMRS_F32( const Image&, const float [], double, int ) const;
+   double PCL_PA_NoiseMRS_F64( const DImage&, const float [], double, int ) const;
+
    friend class ATWTDecomposition;
+
+#ifdef __PCL_BUILDING_PIXINSIGHT_APPLICATION
+   friend class pi::PixInsightPerformanceAnalyzer;
+#endif
 };
 
 // ----------------------------------------------------------------------------
@@ -683,4 +697,4 @@ using StarletTransform = ATrousWaveletTransform;
 #endif   // __PCL_ATrousWaveletTransform_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/ATrousWaveletTransform.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/ATrousWaveletTransform.h - Released 2025-02-19T18:29:04Z

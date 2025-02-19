@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/StarDetector.cpp - Released 2025-01-09T18:44:07Z
+// pcl/StarDetector.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -116,7 +116,7 @@ static void NoiseLayersFilter( Image& image, int noiseLayers )
    if ( noiseLayers > 0 ) // N
    {
       GaussianFilter G( 1 + (1 << noiseLayers) );
-      if ( G.Size() < SeparableConvolution::FasterThanNonseparableFilterSize( Thread::NumberOfThreads( PCL_MAX_PROCESSORS ) ) )
+      if ( G.Size() < SeparableConvolution::FasterThanNonseparableFilterSize( image.Width(), image.Height() ) )
          Convolution( G ) >> image;
       else
          SeparableConvolution( G.AsSeparableFilter() ) >> image;
@@ -153,7 +153,7 @@ static void GetStructureMap( Image& map, int structureLayers, int noiseLayers, i
    {
       Image s( map );
       GaussianFilter G( 1 + (1 << structureLayers) );
-      if ( G.Size() < SeparableConvolution::FasterThanNonseparableFilterSize( Thread::NumberOfThreads( PCL_MAX_PROCESSORS ) ) )
+      if ( G.Size() < SeparableConvolution::FasterThanNonseparableFilterSize( s.Width(), s.Height() ) )
          Convolution( G ) >> s;  // N
       else
          SeparableConvolution( G.AsSeparableFilter() ) >> s;
@@ -183,22 +183,9 @@ static void GetStructureMap( Image& map, int structureLayers, int noiseLayers, i
    else
    {
       // A "natural" image - binarize at 3*noise_stdDev
-      static const float B3[] =
-      {
-         0.003906F, 0.015625F, 0.023438F, 0.015625F, 0.003906F,
-         0.015625F, 0.062500F, 0.093750F, 0.062500F, 0.015625F,
-         0.023438F, 0.093750F, 0.140625F, 0.093750F, 0.023438F,
-         0.015625F, 0.062500F, 0.093750F, 0.062500F, 0.015625F,
-         0.003906F, 0.015625F, 0.023438F, 0.015625F, 0.003906F
-      };
       static const float B3v[] = { 0.0625F, 0.25F, 0.375F, 0.25F, 0.0625F };
       static const float B3k[] = { 0.8907F, 0.2007F, 0.0856F };
-
-      ATrousWaveletTransform::WaveletScalingFunction H;
-      if ( SeparableConvolution::FasterThanNonseparableFilterSize( Thread::NumberOfThreads( PCL_MAX_PROCESSORS ) ) > 5 )
-         H.Set( KernelFilter( B3, 5 ) );
-      else
-         H.Set( SeparableFilter( B3v, B3v, 5 ) );
+      ATrousWaveletTransform::WaveletScalingFunction H( SeparableFilter( B3v, B3v, 5 ) );
       ATrousWaveletTransform W( H, 2 );
       W << map; // 2*N
       float noise = W.NoiseKSigma( 1/*j*/, 3/*k*/, 0.01F/*eps*/, 10/*nit*/ )/B3k[1];
@@ -526,7 +513,7 @@ StarDetector::star_list StarDetector::DetectStars( Image& image ) const
       HotPixelFilter( image, m_hotPixelFilterRadius ); // N
 
       GaussianFilter G( (m_noiseReductionFilterRadius << 1)|1 );
-      if ( G.Size() < SeparableConvolution::FasterThanNonseparableFilterSize( Thread::NumberOfThreads( PCL_MAX_PROCESSORS ) ) )
+      if ( G.Size() < SeparableConvolution::FasterThanNonseparableFilterSize( image.Width(), image.Height() ) )
          Convolution( G ) >> image;  // N
       else
          SeparableConvolution( G.AsSeparableFilter() ) >> image;
@@ -733,9 +720,16 @@ StarDetector::star_list StarDetector::DetectStars( Image& image ) const
          image.Status().DisableInitialization();
       }
 
-      Array<size_type> L = Thread::OptimalThreadLoads( psfData.Length(),
-                                          1/*overheadLimit*/,
-                                          IsParallelProcessingEnabled() ? MaxProcessors() : 1 );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::PSFFit;
+         data.length = psfData.Length();
+         data.overheadLimit = 1;
+         data.itemSize = image.BytesPerSample();
+         data.floatingPoint = image.IsFloatSample();
+         L = Thread::OptimalThreadLoads( data, IsParallelProcessingEnabled() ? MaxProcessors() : 1 );
+      }
       ReferenceArray<PCL_SD_PSFFitThread> threads;
       AbstractImage::ThreadData data( image, psfData.Length() );
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -927,4 +921,4 @@ Image StarDetector::Structures( const ImageVariant& image ) const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/StarDetector.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/StarDetector.cpp - Released 2025-02-19T18:29:13Z

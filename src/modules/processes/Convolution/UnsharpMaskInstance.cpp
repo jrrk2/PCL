@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard Convolution Process Module Version 1.1.3
 // ----------------------------------------------------------------------------
-// UnsharpMaskInstance.cpp - Released 2025-01-09T18:44:31Z
+// UnsharpMaskInstance.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Convolution PixInsight module.
 //
@@ -59,7 +59,6 @@
 #include <pcl/StandardStatus.h>
 #include <pcl/Console.h>
 #include <pcl/SeparableConvolution.h>
-#include <pcl/FFTConvolution.h>
 #include <pcl/GaussianFilter.h>
 #include <pcl/MuteStatus.h>
 #include <pcl/Selection.h>
@@ -220,11 +219,7 @@ private:
    void Apply( GenericImage<P>& image )
    {
       GaussianFilter G( instance.sigma, 0.05F );
-      AutoPointer<ImageTransformation> T;
-      if ( G.Size() < FFTConvolution::FasterThanSeparableFilterSize( Thread::NumberOfThreads( PCL_MAX_PROCESSORS ) ) )
-         T = new SeparableConvolution( G.AsSeparableFilter() );
-      else
-         T = new FFTConvolution( G );
+      SeparableConvolution T( G.AsSeparableFilter() );
 
       double a = 1 - 0.499*instance.amount;
       double a1 = a/(a+a - 1);
@@ -255,7 +250,7 @@ private:
          mask.Status().Initialize( useConsole ? String( "Generating USM mask" ) : String(),
                                    mask.NumberOfPixels() );
          mask.Status().DisableInitialization();
-         *T >> mask;
+         T >> mask;
 
          image.Status().Initialize( useConsole ? String( "Applying unsharp mask filter" ) : String(), N );
 
@@ -511,4 +506,4 @@ void* UnsharpMaskInstance::LockParameter( const MetaParameter* p, size_type /*ta
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF UnsharpMaskInstance.cpp - Released 2025-01-09T18:44:31Z
+// EOF UnsharpMaskInstance.cpp - Released 2025-02-19T18:29:34Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Image.h - Released 2025-01-09T18:43:56Z
+// pcl/Image.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -7886,7 +7886,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Filling image", N*(1 + lastChannel - firstChannel) );
 
@@ -7934,7 +7934,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Filling image", N*(1 + lastChannel - firstChannel) );
 
@@ -8094,7 +8094,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Inverting pixel samples", N*(1 + lastChannel - firstChannel) );
 
@@ -8214,7 +8214,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Bitwise Not", N*(1 + lastChannel - firstChannel) );
 
@@ -8268,7 +8268,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Truncating pixel samples", N*(1 + lastChannel - firstChannel) );
 
@@ -8408,7 +8408,7 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return *this;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       size_type Ns = N*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Rescaling pixel samples", Ns );
@@ -8612,7 +8612,7 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return *this;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       size_type Ns = N*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Normalizing pixel samples", Ns );
@@ -8814,7 +8814,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Binarizing pixel samples", N*(1 + lastChannel - firstChannel) );
 
@@ -8923,7 +8923,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing absolute value", N*(1 + lastChannel - firstChannel) );
 
@@ -8997,7 +8997,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Applying scalar: "
                               + ImageOp::Id( op )
@@ -9268,7 +9268,7 @@ public:
 
       EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Applying image, op=" + ImageOp::Id( op ), N*(1 + lastChannel - firstChannel) );
 
@@ -10750,7 +10750,7 @@ public:
       EnsureUnique();
       image.EnsureUnique();
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Exchanging pixel samples", N*(1 + lastChannel - firstChannel) );
 
@@ -10802,6 +10802,88 @@ public:
    // -------------------------------------------------------------------------
 
    /*!
+    * Returns a subset of pixel sample values in normalized double-precision
+    * floating point format.
+    *
+    * \param maxProcessors    If a value greater than zero is specified, it is
+    *          the maximum number of concurrent threads that this function can
+    *          execute. If zero or a negative value is specified, the current
+    *          thread limit for this image will be used instead (see
+    *          AbstractImage::SetMaxProcessors()). The default value is zero.
+    *
+    * For information on the rest of parameters of this member function, see
+    * the documentation for Fill().
+    *
+    * This function returns a dynamic array of double-precision floating point
+    * pixel sample values in the normalized range [0,1] irrespective of the
+    * sample data type of the image. An empty array is returned if no pixel
+    * samples have been selected.
+    *
+    * For complex-valued images, this function returns the magnitudes (or
+    * absolute values) of all selected samples.
+    *
+    * If range clipping is enabled for this image, only pixel samples within
+    * the current clipping range will be returned.
+    *
+    * \note Increments the status monitoring object by the number of selected
+    * pixel samples.
+    */
+   Array<double> PixelSamples( const Rect& rect = Rect( 0 ), int firstChannel = -1, int lastChannel = -1,
+                               int maxProcessors = 0, bool __performanceAnalysis__ = false )
+   {
+      Rect r = rect;
+      if ( !ParseSelection( r, firstChannel, lastChannel ) )
+         return Array<double>();
+
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
+      if ( m_status.IsInitializationEnabled() )
+         m_status.Initialize( "Sampling pixel values", N );
+
+      Array<size_type> L;
+      if ( likely( !__performanceAnalysis__ ) )
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sampling;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
+      else
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, 1/*overheadLimitPx*/ );
+
+      bool useAffinity = m_parallel && Thread::IsRootThread();
+      ReferenceArray<DSmpThread> threads;
+      for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
+         threads.Add( new DSmpThread( *this, r, firstChannel, lastChannel, n, n + int( L[i] ) ) );
+      if ( threads.Length() > 1 )
+      {
+         int n = 0;
+         for ( DSmpThread& thread : threads )
+            thread.Start( ThreadPriority::DefaultMax, useAffinity ? n++ : -1 );
+         for ( DSmpThread& thread : threads )
+            thread.Wait();
+      }
+      else
+         threads[0].Run();
+
+      Array<double> values;
+      for ( DSmpThread& thread : threads )
+         if ( thread.n > 0 )
+         {
+            values.Add( thread.values.Begin(), thread.values.At( thread.n ) );
+            thread.values.Clear();
+         }
+
+      threads.Destroy();
+      m_status += N;
+      return values;
+   }
+
+   // -------------------------------------------------------------------------
+
+   /*!
     * Returns the minimum value among a subset of pixel samples of this image.
     *
     * \param maxProcessors    If a value greater than zero is specified, it is
@@ -10827,11 +10909,20 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing minimum pixel sample value", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<MinThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -10901,11 +10992,20 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing maximum pixel sample value", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<MaxThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -10978,7 +11078,7 @@ public:
    template <typename T>
    void GetExtremeSampleValues( T& min, T& max,
                                 const Rect& rect = Rect( 0 ), int firstChannel = -1, int lastChannel = -1,
-                                int maxProcessors = 0 ) const
+                                int maxProcessors = 0, bool __performanceAnalysis__ = false ) const
    {
       Rect r = rect;
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
@@ -10989,11 +11089,24 @@ public:
          return;
       }
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing extreme pixel sample values", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      if ( likely( !__performanceAnalysis__ ) )
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
+      else
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, 1/*overheadLimitPx*/ );
+
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<MinMaxThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -11083,11 +11196,20 @@ public:
          return P::MinSampleValue();
       }
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Locating minimum pixel sample value", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<MinPosThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -11218,11 +11340,20 @@ public:
          return P::MaxSampleValue();
       }
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Locating maximum pixel sample value", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<MaxPosThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -11367,11 +11498,20 @@ public:
          return;
       }
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Locating extreme pixel sample values", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<MinMaxPosThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -11494,7 +11634,7 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Counting pixel samples", N );
 
@@ -11504,7 +11644,16 @@ public:
          return size_type( r.Width() ) * size_type( r.Height() ) * size_type( 1 + lastChannel - firstChannel );
       }
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<CountThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -11558,17 +11707,30 @@ public:
     * pixel samples.
     */
    double Mean( const Rect& rect = Rect( 0 ), int firstChannel = -1, int lastChannel = -1,
-                int maxProcessors = 0 ) const
+                int maxProcessors = 0, bool __performanceAnalysis__ = false ) const
    {
       Rect r = rect;
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing mean pixel sample value", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      if ( likely( !__performanceAnalysis__ ) )
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
+      else
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, 1/*overheadLimitPx*/ );
+
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<SumThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -11637,11 +11799,11 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing median pixel sample value", N );
 
-      if ( N <= __PCL_MEDIAN_HISTOGRAM_OVERHEAD )
+      if ( N <= 4096 )
       {
          SmpThread S( *this, r, firstChannel, lastChannel, 0, r.Height() );
          S.Run();
@@ -11661,12 +11823,21 @@ public:
          return m;
       }
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, __PCL_MEDIAN_HISTOGRAM_OVERHEAD );
       bool useAffinity = m_parallel && Thread::IsRootThread();
 
       double low, high;
       size_type count = 0;
       {
+         Array<size_type> L;
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
          ReferenceArray<MinMaxThread> threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
             threads << new MinMaxThread( *this, r, firstChannel, lastChannel, n, n + int( L[i] ) );
@@ -11707,20 +11878,31 @@ public:
          high = double( shigh );
       }
 
-      const double eps = P::IsComplexSample() ? 2*std::numeric_limits<double>::epsilon() :
-                           (P::IsFloatSample() ? 2*std::numeric_limits<typename P::component>::epsilon() :
-                              0.5/Pow2( double( P::BitsPerSample() ) ));
       if ( count == 0 )
       {
          m_status += N;
          return 0;
       }
+
+      const double eps = P::IsComplexSample() ? 2*std::numeric_limits<double>::epsilon() :
+                           (P::IsFloatSample() ? 2*std::numeric_limits<typename P::component>::epsilon() :
+                              0.5/Pow2( double( P::BitsPerSample() ) ));
       if ( high - low < eps )
       {
          m_status += N;
          return low/double( P::MaxSampleValue() );
       }
 
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::FastMedian;
+         data.length = N;
+         data.overheadLimit = __PCL_MEDIAN_HISTOGRAM_OVERHEAD;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       ReferenceArray<HistogramThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
          threads << new HistogramThread( *this, r, firstChannel, lastChannel, n, n + int( L[i] ), low, high );
@@ -11828,11 +12010,11 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing order statistic", N );
 
-      if ( N <= __PCL_MEDIAN_HISTOGRAM_OVERHEAD )
+      if ( N <= 4096 )
       {
          SmpThread S( *this, r, firstChannel, lastChannel, 0, r.Height() );
          S.Run();
@@ -11842,12 +12024,21 @@ public:
          return double( *pcl::Select( S.samples.Begin(), S.samples.At( S.n ), distance_type( k*(S.n - 1) ) ) )/double( P::MaxSampleValue() );
       }
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, __PCL_MEDIAN_HISTOGRAM_OVERHEAD/*overheadLimitPx*/ );
       bool useAffinity = m_parallel && Thread::IsRootThread();
 
       double low, high;
       size_type count = 0;
       {
+         Array<size_type> L;
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
          ReferenceArray<MinMaxThread> threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
             threads << new MinMaxThread( *this, r, firstChannel, lastChannel, n, n + int( L[i] ) );
@@ -11888,27 +12079,39 @@ public:
          high = double( shigh );
       }
 
-      const double eps = P::IsComplexSample() ? 2*std::numeric_limits<double>::epsilon() :
-                           (P::IsFloatSample() ? 2*std::numeric_limits<typename P::component>::epsilon() :
-                              0.5/Pow2( double( P::BitsPerSample() ) ));
       if ( count == 0 )
       {
          m_status += N;
          return 0;
       }
-      if ( k == 0 || high - low < eps )
-      {
-         m_status += N;
-         return low/double( P::MaxSampleValue() );
-      }
+
       if ( k == 1 )
       {
          m_status += N;
          return high/double( P::MaxSampleValue() );
       }
 
+      const double eps = P::IsComplexSample() ? 2*std::numeric_limits<double>::epsilon() :
+                           (P::IsFloatSample() ? 2*std::numeric_limits<typename P::component>::epsilon() :
+                              0.5/Pow2( double( P::BitsPerSample() ) ));
+      if ( k == 0 || high - low < eps )
+      {
+         m_status += N;
+         return low/double( P::MaxSampleValue() );
+      }
+
       size_type index = size_type( k*(count - 1) );
 
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::FastMedian;
+         data.length = N;
+         data.overheadLimit = __PCL_MEDIAN_HISTOGRAM_OVERHEAD;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       ReferenceArray<HistogramThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
          threads << new HistogramThread( *this, r, firstChannel, lastChannel, n, n + int( L[i] ), low, high );
@@ -11988,11 +12191,20 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing variance", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<SumThread> sumThreads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -12134,11 +12346,20 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing average absolute deviation", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<SumAbsDevThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -12203,11 +12424,20 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing two-sided average absolute deviation", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<TwoSidedSumAbsDevThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -12290,11 +12520,11 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing median absolute deviation", N );
 
-      if ( N <= __PCL_MEDIAN_HISTOGRAM_OVERHEAD )
+      if ( N <= 4096 )
       {
          AbsDevSmpThread S( *this, center, r, firstChannel, lastChannel, 0, r.Height() );
          S.Run();
@@ -12314,12 +12544,21 @@ public:
          return m;
       }
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, __PCL_MEDIAN_HISTOGRAM_OVERHEAD/*overheadLimitPx*/ );
       bool useAffinity = m_parallel && Thread::IsRootThread();
 
       double low, high;
       size_type count = 0;
       {
+         Array<size_type> L;
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
          ReferenceArray<ExtremeAbsDevThread> threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
             threads << new ExtremeAbsDevThread( *this, r, firstChannel, lastChannel, n, n + int( L[i] ), center );
@@ -12363,6 +12602,16 @@ public:
          return 0;
       }
 
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::FastMedian;
+         data.length = N;
+         data.overheadLimit = __PCL_MEDIAN_HISTOGRAM_OVERHEAD;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       ReferenceArray<AbsDevHistogramThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
          threads << new AbsDevHistogramThread( *this, r, firstChannel, lastChannel, n, n + int( L[i] ), center, low, high );
@@ -12456,11 +12705,11 @@ public:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing two-sided median absolute deviation", N );
 
-      if ( N <= __PCL_MEDIAN_HISTOGRAM_OVERHEAD )
+      if ( N <= 4096 )
       {
          TwoSidedAbsDevSmpThread S( *this, center, r, firstChannel, lastChannel, 0, r.Height() );
          S.Run();
@@ -12469,12 +12718,21 @@ public:
                   pcl::Median( S.q, S.values.End() ) };
       }
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, __PCL_MEDIAN_HISTOGRAM_OVERHEAD/*overheadLimitPx*/ );
       bool useAffinity = m_parallel && Thread::IsRootThread();
 
       double minLow = 0, minHigh = 0, maxLow = 0, maxHigh = 0;
       size_type nLow = 0, nHigh = 0;
       {
+         Array<size_type> L;
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::MinMax;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
          ReferenceArray<TwoSidedExtremeAbsDevThread> threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
             threads << new TwoSidedExtremeAbsDevThread( *this, r, firstChannel, lastChannel, n, n + int( L[i] ), center );
@@ -12529,6 +12787,16 @@ public:
          threads.Destroy();
       }
 
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::FastMedian;
+         data.length = N;
+         data.overheadLimit = __PCL_MEDIAN_HISTOGRAM_OVERHEAD;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       int side;
       double sideLow, sideHigh;
       ReferenceArray<TwoSidedAbsDevHistogramThread> threads;
@@ -12668,13 +12936,13 @@ __madNextSide:
     */
    double BiweightMidvariance( double center, double sigma, int k = 9, bool reducedLength = false,
                                const Rect& rect = Rect( 0 ), int firstChannel = -1, int lastChannel = -1,
-                               int maxProcessors = 0 ) const
+                               int maxProcessors = 0, bool __performanceAnalysis__ = false ) const
    {
       Rect r = rect;
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       double kd = k * sigma;
       if ( kd < 0 || 1 + kd == 1 )
       {
@@ -12685,7 +12953,20 @@ __madNextSide:
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing biweight midvariance", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      if ( likely( !__performanceAnalysis__ ) )
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::BiweightMidvariance;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
+      else
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, 1/*overheadLimitPx*/ );
+
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<BWMVThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -12754,7 +13035,7 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       double kd0 = k * sigma.low;
       double kd1 = k * sigma.high;
       if ( kd0 < 0 || 1 + kd0 == 1 || kd1 < 0 || 1 + kd1 == 1 )
@@ -12766,7 +13047,16 @@ __madNextSide:
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing two-sided biweight midvariance", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::BiweightMidvariance;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<TwoSidedBWMVThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -12857,11 +13147,20 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing percentage bend midvariance", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sampling;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<DSmpThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -12879,7 +13178,7 @@ __madNextSide:
 
       Array<double> values;
       for ( DSmpThread& thread : threads )
-         if ( !thread.values.IsEmpty() )
+         if ( thread.n > 0 )
          {
             values.Add( thread.values.Begin(), thread.values.At( thread.n ) );
             thread.values.Clear();
@@ -12941,11 +13240,20 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing Sn scale estimate", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sampling;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<DSmpThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -12963,7 +13271,7 @@ __madNextSide:
 
       Array<double> values;
       for ( DSmpThread& thread : threads )
-         if ( !thread.values.IsEmpty() )
+         if ( thread.n > 0 )
          {
             values.Add( thread.values.Begin(), thread.values.At( thread.n ) );
             thread.values.Clear();
@@ -13024,11 +13332,20 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing Qn scale estimate", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sampling;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<DSmpThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -13046,7 +13363,7 @@ __madNextSide:
 
       Array<double> values;
       for ( DSmpThread& thread : threads )
-         if ( !thread.values.IsEmpty() )
+         if ( thread.n > 0 )
          {
             values.Add( thread.values.Begin(), thread.values.At( thread.n ) );
             thread.values.Clear();
@@ -13103,11 +13420,20 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing norm", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<SumThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -13175,11 +13501,20 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing modulus", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<SumAbsThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -13245,11 +13580,20 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing sum of squares", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<SumSqrThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -13315,11 +13659,20 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing mean of squares", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<SumSqrThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -13403,11 +13756,20 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return 0;
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() )*(1 + lastChannel - firstChannel);
+      size_type N = r.IntegerArea()*(1 + lastChannel - firstChannel);
       if ( m_status.IsInitializationEnabled() )
          m_status.Initialize( "Computing norms", N );
 
-      Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+      Array<size_type> L;
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Sum;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+      }
       bool useAffinity = m_parallel && Thread::IsRootThread();
       ReferenceArray<NormThread> threads;
       for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -13514,7 +13876,7 @@ __madNextSide:
       if ( !ParseSelection( r, firstChannel, lastChannel ) )
          return const_cast<GenericImage&>( *this );
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
       int numberOfChannels = 1 + lastChannel - firstChannel;
 
       if ( m_status.IsInitializationEnabled() )
@@ -14205,7 +14567,7 @@ __madNextSide:
     * \note Increments the status monitoring object by the number of pixels
     * (\e not samples) in the image.
     */
-   GenericImage& SetColorSpace( color_space colorSpace, int maxProcessors = 0 )
+   GenericImage& SetColorSpace( color_space colorSpace, int maxProcessors = 0, bool __performanceAnalysis__ = false )
    {
       size_type N = NumberOfPixels();
       if ( N == 0 )
@@ -14292,9 +14654,21 @@ __madNextSide:
          n += 2;
       }
 
-      Array<size_type> L = Thread::OptimalThreadLoads( N,
-                                       16u/*overheadLimit*/,
-                                       m_parallel ? ((maxProcessors > 0) ? maxProcessors : m_maxProcessors) : 1 );
+      Array<size_type> L;
+      if ( likely( !__performanceAnalysis__ ) )
+      {
+         Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::ColorSpaceConversion;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = BytesPerSample();
+         data.floatingPoint = IsFloatSample();
+         L = Thread::OptimalThreadLoads( N, N/Thread::OptimalNumberOfThreads( data )/*overheadLimit*/,
+                                         m_parallel ? ((maxProcessors > 0) ? maxProcessors : m_maxProcessors) : 1 );
+      }
+      else
+         L = Thread::OptimalThreadLoads( N, 1/*overheadLimit*/, maxProcessors );
+
       ThreadData data( *this, N );
       ReferenceArray<ColorSpaceConversionThread> threads;
       for ( size_type i = 0, n = 0; i < L.Length(); n += L[i++] )
@@ -14454,9 +14828,18 @@ __madNextSide:
          if ( m_status.IsInitializationEnabled() )
             m_status.Initialize( "Computing CIE Y component", N );
 
-         Array<size_type> L = OptimalThreadRows( Y.Height(), Y.Width(), maxProcessors );
+         Array<size_type> L;
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::GetLightness;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            L = OptimalThreadRows( Y.Height(), Y.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
          ThreadData data( *this, N );
-         ReferenceArray<GetLuminanceThread<P1> > threads;
+         ReferenceArray<GetLuminanceThread<P1>> threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
             threads.Add( new GetLuminanceThread<P1>( Y, *this, data, r, n, n + int( L[i] ) ) );
          RunThreads( threads, data );
@@ -14545,7 +14928,8 @@ __madNextSide:
     * \e exclusively in the RGB working space of this image.
     */
    template <class P1>
-   void GetLightness( GenericImage<P1>& L, const Rect& rect = Rect( 0 ), int maxProcessors = 0 ) const
+   void GetLightness( GenericImage<P1>& L, const Rect& rect = Rect( 0 ), int maxProcessors = 0,
+                      bool __performanceAnalysis__ = false ) const
    {
       Rect r = rect;
       if ( !ParseRect( r ) )
@@ -14585,7 +14969,20 @@ __madNextSide:
          if ( m_status.IsInitializationEnabled() )
             m_status.Initialize( "Computing CIE L* component", N );
 
-         Array<size_type> R = OptimalThreadRows( L.Height(), L.Width(), maxProcessors );
+         Array<size_type> R;
+         if ( likely( !__performanceAnalysis__ ) )
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::GetLightness;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            R = OptimalThreadRows( L.Height(), L.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
+         else
+            R = OptimalThreadRows( L.Height(), L.Width(), maxProcessors, 1/*overheadLimitPx*/ );
+
          ThreadData data( *this, N );
          ReferenceArray<GetLightnessThread<P1> > threads;
          for ( int i = 0, n = 0; i < int( R.Length() ); n += int( R[i++] ) )
@@ -14668,7 +15065,8 @@ __madNextSide:
     * pixels (\e not samples).
     */
    template <class P1>
-   void GetIntensity( GenericImage<P1>& I, const Rect& rect = Rect( 0 ), int maxProcessors = 0 ) const
+   void GetIntensity( GenericImage<P1>& I, const Rect& rect = Rect( 0 ), int maxProcessors = 0,
+                      bool __performanceAnalysis__ = false ) const
    {
       Rect r = rect;
       if ( !ParseRect( r ) )
@@ -14709,7 +15107,20 @@ __madNextSide:
          if ( m_status.IsInitializationEnabled() )
             m_status.Initialize( "Computing intensity component", N );
 
-         Array<size_type> L = OptimalThreadRows( I.Height(), I.Width(), maxProcessors );
+         Array<size_type> L;
+         if ( likely( !__performanceAnalysis__ ) )
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::GetIntensity;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            L = OptimalThreadRows( I.Height(), I.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
+         else
+            L = OptimalThreadRows( I.Height(), I.Width(), maxProcessors, 1/*overheadLimitPx*/ );
+
          ThreadData data( *this, N );
          ReferenceArray<GetIntensityThread<P1> > threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -14827,7 +15238,7 @@ __madNextSide:
       r.ResizeTo( pcl::Min( m_width - p.x, r.Width() ),
                   pcl::Min( m_height - p.y, r.Height() ) );
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
 
       EnsureUnique();
 
@@ -14848,7 +15259,16 @@ __madNextSide:
          if ( m_status.IsInitializationEnabled() )
             m_status.Initialize( "Importing CIE Y component", N );
 
-         Array<size_type> L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+         Array<size_type> L;
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::GetLightness;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            L = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
          ThreadData data( *this, N );
          ReferenceArray<SetLuminanceThread<P1> > threads;
          for ( int i = 0, n = 0; i < int( L.Length() ); n += int( L[i++] ) )
@@ -14968,7 +15388,7 @@ __madNextSide:
       r.ResizeTo( pcl::Min( m_width - p.x, r.Width() ),
                   pcl::Min( m_height - p.y, r.Height() ) );
 
-      size_type N = size_type( r.Width() )*size_type( r.Height() );
+      size_type N = r.IntegerArea();
 
       EnsureUnique();
 
@@ -14989,7 +15409,16 @@ __madNextSide:
          if ( m_status.IsInitializationEnabled() )
             m_status.Initialize( "Importing CIE L* component", N );
 
-         Array<size_type> R = OptimalThreadRows( r.Height(), r.Width(), maxProcessors );
+         Array<size_type> R;
+         {
+            Thread::PerformanceAnalysisData data;
+            data.algorithm = PerformanceAnalysisAlgorithm::GetLightness;
+            data.length = N;
+            data.overheadLimit = 32768;
+            data.itemSize = BytesPerSample();
+            data.floatingPoint = IsFloatSample();
+            R = OptimalThreadRows( r.Height(), r.Width(), maxProcessors, N/Thread::OptimalNumberOfThreads( data )/*overheadLimitPx*/ );
+         }
          ThreadData data( *this, N );
          ReferenceArray<SetLightnessThread<P1> > threads;
          for ( int i = 0, n = 0; i < int( R.Length() ); n += int( R[i++] ) )
@@ -15660,7 +16089,7 @@ private:
    public:
 
       sample min;
-      size_type count;
+      size_type count = 0;
 
       MinThread( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -15687,7 +16116,7 @@ private:
    public:
 
       sample max;
-      size_type count;
+      size_type count = 0;
 
       MaxThread( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -15715,7 +16144,7 @@ private:
 
       sample min;
       sample max;
-      size_type count;
+      size_type count = 0;
 
       MinMaxThread( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -15746,7 +16175,7 @@ private:
 
       int cmin, cmax;
       Point pmin, pmax;
-      size_type count;
+      size_type count = 0;
 
       ExtremePosThreadBase( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -15880,8 +16309,8 @@ private:
    {
    public:
 
-      double s;
-      size_type n;
+      double s = 0;
+      size_type n = 0;
 
       SumThread( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -15897,7 +16326,7 @@ private:
 
    protected:
 
-      double e;
+      double e = 0;
 
       void SumStep( double x ) noexcept
       {
@@ -15971,7 +16400,7 @@ private:
    public:
 
       Vector R;
-      size_type n;
+      size_type n = 0;
 
       NormThread( const GenericImage& image, int degree, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -16191,8 +16620,8 @@ private:
    {
    public:
 
-      double minAbsDev, maxAbsDev;
-      size_type count;
+      double minAbsDev = 0, maxAbsDev = 0;
+      size_type count = 0;
 
       ExtremeAbsDevThread( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow, double center )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -16228,9 +16657,9 @@ private:
    {
    public:
 
-      double minAbsDevLow, minAbsDevHigh;
-      double maxAbsDevLow, maxAbsDevHigh;
-      size_type nLow, nHigh;
+      double minAbsDevLow = 0, minAbsDevHigh = 0;
+      double maxAbsDevLow = 0, maxAbsDevHigh = 0;
+      size_type nLow = 0, nHigh = 0;
 
       TwoSidedExtremeAbsDevThread( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow, double center )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -16373,7 +16802,7 @@ private:
    {
    public:
 
-      double var, eps;
+      double var = 0, eps = 0;
 
       VarThread( const GenericImage& image, double mean, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -16430,8 +16859,8 @@ private:
    {
    public:
 
-      double s0, s1;
-      size_type n0, n1;
+      double s0 = 0, s1 = 0;
+      size_type n0 = 0, n1 = 0;
 
       TwoSidedSumAbsDevThread( const GenericImage& image, double center,
                                const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
@@ -16471,8 +16900,8 @@ private:
    {
    public:
 
-      double num, den;
-      size_type n, nr;
+      double num = 0, den = 0;
+      size_type n = 0, nr = 0;
 
       BWMVThread( const GenericImage& image, double center, double kd,
                   const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
@@ -16514,9 +16943,9 @@ private:
    {
    public:
 
-      double num0, den0;
-      double num1, den1;
-      size_type n0, n1, nr0, nr1;
+      double num0 = 0, den0 = 0;
+      double num1 = 0, den1 = 0;
+      size_type n0 = 0, n1 = 0, nr0 = 0, nr1 = 0;
 
       TwoSidedBWMVThread( const GenericImage& image, double center, double kd0, double kd1,
                           const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
@@ -16577,7 +17006,7 @@ private:
    public:
 
       Array<sample> samples;
-      size_type n;
+      size_type n = 0;
 
       SmpThread( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -16605,7 +17034,7 @@ private:
    public:
 
       Array<double> values;
-      size_type n;
+      size_type n = 0;
 
       DSmpThread( const GenericImage& image, const Rect& rect, int ch1, int ch2, int firstRow, int endRow )
          : RectThreadBase( image, rect, ch1, ch2, firstRow, endRow )
@@ -16626,10 +17055,24 @@ private:
 
       virtual void DoExecute()
       {
-         this->Execute( [=]( const sample* __restrict__ f )
+         if ( this->HasSimpleSelection() )
+         {
+            size_type N = size_type( this->m_endRow - this->m_firstRow ) * size_type( this->m_rect.Width() );
+            for ( int i = this->m_ch1; i <= this->m_ch2; ++i )
             {
-               P::FromSample( values[n++], *f );
-            } );
+               const sample* __restrict__ f = this->m_image.PixelAddress( 0, this->m_rect.y0 + this->m_firstRow, i );
+               PCL_IVDEP
+               for ( size_type j = 0; j < N; ++j, ++n, ++f )
+                  P::FromSample( values[n], *f );
+            }
+         }
+         else
+         {
+            this->Execute( [=]( const sample* __restrict__ f )
+               {
+                  P::FromSample( values[n++], *f );
+               } );
+         }
       }
    };
 
@@ -17997,4 +18440,4 @@ using ComplexImage = FComplexImage;
 #endif   // __PCL_Image_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Image.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/Image.h - Released 2025-02-19T18:29:04Z

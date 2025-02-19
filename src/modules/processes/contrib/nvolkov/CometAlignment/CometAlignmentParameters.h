@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard CometAlignment Process Module Version 1.3.8
+// Standard CometAlignment Process Module Version 1.3.9
 // ----------------------------------------------------------------------------
-// CometAlignmentParameters.h - Released 2025-01-09T18:44:32Z
+// CometAlignmentParameters.h - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard CometAlignment PixInsight module.
 //
@@ -426,6 +426,18 @@ public:
 
 // ----------------------------------------------------------------------------
 
+class CAGenerateHistoryProperties : public MetaBoolean
+{
+public:
+
+   CAGenerateHistoryProperties( MetaProcess* );
+
+   IsoString Id() const override;
+   bool DefaultValue() const override;
+};
+
+// ----------------------------------------------------------------------------
+
 class CAOverwriteExistingFiles : public MetaBoolean
 {
 public:
@@ -558,6 +570,7 @@ extern CAOutputDirectory* TheCAOutputDirectoryParameter;
 extern CAOutputExtension* TheCAOutputExtensionParameter;
 extern CAOutputPrefix* TheCAOutputPrefixParameter;
 extern CAOutputPostfix* TheCAOutputPostfixParameter;
+extern CAGenerateHistoryProperties* TheCAGenerateHistoryPropertiesParameter;
 extern CAOverwriteExistingFiles* TheCAOverwriteExistingFilesParameter;
 extern CAGenerateCometPathMap* TheCAGenerateCometPathMapParameter;
 extern CAOnError* TheCAOnErrorParameter;
@@ -576,4 +589,4 @@ PCL_END_LOCAL
 #endif // __CometAlignmentParameters_h
 
 // ----------------------------------------------------------------------------
-// EOF CometAlignmentParameters.h - Released 2025-01-09T18:44:32Z
+// EOF CometAlignmentParameters.h - Released 2025-02-19T18:29:34Z

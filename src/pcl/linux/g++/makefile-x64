@@ -2,7 +2,7 @@
 # PixInsight Makefile Generator Script v1.143
 # Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2025-01-09T20:21:01.606Z
+# Generated on .... 2025-02-19T21:24:25.469Z
 # Project id ...... PCL
 # Project type .... StaticLibrary
 # Platform ........ Linux/g++
@@ -93,6 +93,7 @@ SRC_FILES= \
 ../../ImageColor.cpp \
 ../../ImageOp.cpp \
 ../../ImageStatistics.cpp \
+../../ImageType.cpp \
 ../../ImageVariant.cpp \
 ../../ImageView.cpp \
 ../../ImageWindow.cpp \
@@ -287,6 +288,7 @@ OBJ_FILES= \
 ./x64/Release/ImageColor.o \
 ./x64/Release/ImageOp.o \
 ./x64/Release/ImageStatistics.o \
+./x64/Release/ImageType.o \
 ./x64/Release/ImageVariant.o \
 ./x64/Release/ImageView.o \
 ./x64/Release/ImageWindow.o \
@@ -481,6 +483,7 @@ DEP_FILES= \
 ./x64/Release/ImageColor.d \
 ./x64/Release/ImageOp.d \
 ./x64/Release/ImageStatistics.d \
+./x64/Release/ImageType.d \
 ./x64/Release/ImageVariant.d \
 ./x64/Release/ImageView.d \
 ./x64/Release/ImageWindow.d \

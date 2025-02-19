@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/PropertyDescription.h - Released 2025-01-09T18:43:56Z
+// pcl/PropertyDescription.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -81,8 +81,8 @@ struct PCL_CLASS PropertyDescription
     */
    using data_type = VariantType::value_type;
 
-   IsoString id;                          //!< Identifier of this property.
-   data_type type = VariantType::Invalid; //!< Property data type.
+   IsoString id;                          //!< The identifier of this property.
+   data_type type = VariantType::Invalid; //!< The property's data type.
 
    /*!
     * Default constructor. Constructs an %PropertyDescription object with
@@ -94,9 +94,9 @@ struct PCL_CLASS PropertyDescription
     * Constructs an %PropertyDescription object with the specified
     * property identifier and data type.
     */
-   PropertyDescription( const IsoString& s, data_type t = VariantType::Invalid )
-      : id( s )
-      , type( t )
+   PropertyDescription( const IsoString& a_id, data_type a_type = VariantType::Invalid )
+      : id( a_id )
+      , type( a_type )
    {
    }
 
@@ -161,4 +161,4 @@ using PropertyDescriptionArray = Array<PropertyDescription>;
 #endif   // __PCL_PropertyDescription_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/PropertyDescription.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/PropertyDescription.h - Released 2025-02-19T18:29:04Z

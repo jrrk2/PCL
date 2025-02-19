@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/ProcessImplementation.cpp - Released 2025-01-09T18:44:07Z
+// pcl/ProcessImplementation.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -51,9 +51,11 @@
 
 #include <pcl/Exception.h>
 #include <pcl/ImageWindow.h>
+#include <pcl/MetaModule.h>
 #include <pcl/ProcessImplementation.h>
 #include <pcl/View.h>
 
+#include <pcl/api/APIException.h>
 #include <pcl/api/APIInterface.h>
 
 namespace pcl
@@ -225,7 +227,37 @@ void ProcessImplementation::LaunchOn( ImageWindow& w ) const
 
 // ----------------------------------------------------------------------------
 
+String ProcessImplementation::ToSource( const IsoString& language, const IsoString& varId, int indent ) const
+{
+   char16_type* s = (*API->Process->GetProcessInstanceSourceCode)(
+                              ModuleHandle(), m_serverHandle, language.c_str(), varId.c_str(), indent );
+   if ( s == nullptr )
+      throw APIFunctionError( "GetProcessInstanceSourceCode" );
+   String source( s );
+   Module->Deallocate( s );
+   return source;
+}
+
+String ProcessImplementation::ToHistorySource( const String& xmlSource ) const
+{
+   String source = ToSource( "XPSM 1.0[no-read-only-parameters,no-execution-time,no-description]" );
+
+   if ( !xmlSource.IsEmpty() )
+   {
+      size_type p = xmlSource.Find( "</ProcessingHistory>" );
+      if ( p != String::notFound )
+         return xmlSource.Left( p ) << source << "</ProcessingHistory>";
+   }
+
+   return String( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                  "<ProcessingHistory version=\"1.0\">" )
+               << source
+               << "</ProcessingHistory>";
+}
+
+// ----------------------------------------------------------------------------
+
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/ProcessImplementation.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/ProcessImplementation.cpp - Released 2025-02-19T18:29:13Z

@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/GeometricTransformation.h - Released 2025-01-09T18:43:56Z
+// pcl/GeometricTransformation.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -217,7 +217,7 @@ public:
     *                   \a gamma exponent. On output, these values will be
     *                   expressed in a linear color space.
     *
-    * \param length           Number of pixel sample values to process.
+    * \param length     Number of pixel sample values to process.
     *
     * \param gamma            The gamma exponent of the nonlinear color space.
     *                   A value \a gamma > 0 must be specified.
@@ -256,10 +256,10 @@ public:
     *                   values will be expressed in a nonlinear color space
     *                   with the specified \a gamma exponent.
     *
-    * \param length           Number of pixel sample values to process.
+    * \param length     Number of pixel sample values to process.
     *
-    * \param gamma            The gamma exponent of the nonlinear color space.
-    *                   A value \a gamma > 0 must be specified.
+    * \param gamma      The gamma exponent of the nonlinear color space. A
+    *                   value \a gamma > 0 must be specified.
     *
     * \param threadData       Reference to an AbstractImage::ThreadData object
     *                   for thread control and monitoring.
@@ -294,7 +294,7 @@ public:
     *                   expressed in the sRGB color space. On output, these
     *                   values will be expressed in a linear color space.
     *
-    * \param length           Number of pixel sample values to process.
+    * \param length     Number of pixel sample values to process.
     *
     * \param threadData       Reference to an AbstractImage::ThreadData object
     *                   for thread control and monitoring.
@@ -327,7 +327,7 @@ public:
     *                   expressed in a linear color space. On output, these
     *                   values will be expressed in the sRGB color space.
     *
-    * \param length           Number of pixel sample values to process.
+    * \param length     Number of pixel sample values to process.
     *
     * \param threadData       Reference to an AbstractImage::ThreadData object
     *                   for thread control and monitoring.
@@ -672,4 +672,4 @@ protected:
 #endif   // __PCL_GeometricTransformation_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/GeometricTransformation.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/GeometricTransformation.h - Released 2025-02-19T18:29:04Z

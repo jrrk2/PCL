@@ -4,7 +4,7 @@
 # PixInsight Makefile Generator Script v1.143
 # Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2025-01-09T20:21:01.720Z
+# Generated on .... 2025-02-19T21:24:25.585Z
 # Project id ...... PCL
 # Project type .... StaticLibrary
 # Platform ........ Windows/vc16
@@ -22,7 +22,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{C5161847-86E9-4B72-9003-6C878100172C}</ProjectGuid>
+    <ProjectGuid>{194A28B4-795B-45EA-B3D7-5AF328EFDAE9}</ProjectGuid>
     <RootNamespace>PixInsight</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>
@@ -189,6 +189,7 @@
     <ClCompile Include="..\..\ImageColor.cpp"/>
     <ClCompile Include="..\..\ImageOp.cpp"/>
     <ClCompile Include="..\..\ImageStatistics.cpp"/>
+    <ClCompile Include="..\..\ImageType.cpp"/>
     <ClCompile Include="..\..\ImageVariant.cpp"/>
     <ClCompile Include="..\..\ImageView.cpp"/>
     <ClCompile Include="..\..\ImageWindow.cpp"/>

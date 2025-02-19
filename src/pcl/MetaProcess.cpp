@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/MetaProcess.cpp - Released 2025-01-09T18:44:07Z
+// pcl/MetaProcess.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -186,6 +186,26 @@ const MetaParameter* MetaProcess::operator[]( size_type i ) const
    if ( p == nullptr )
       throw Error( "MetaProcess: invalid non-parameter child instance" );
    return p;
+}
+
+// ----------------------------------------------------------------------------
+
+Property MetaProcess::SignatureProperty( const IsoString& taskId ) const
+{
+   IsoString id = "PCL:Signature:" + taskId.Trimmed();
+   if ( !Property::IsValidIdentifier( id ) )
+      throw Error( "MetaProcess::SignatureProperty(): invalid property identifier '" + id + '\'' );
+
+   int major, minor, release, build;
+   IsoString dum1, dum2;
+   Module->GetVersion( major, minor, release, build, dum1, dum2 );
+   IsoString info;
+   info << "process=" << Id() << IsoString().Format( ",version=%d.%d.%d", major, minor, release );
+   if ( build > 0 )
+      info << IsoString().Format( "-%d", build );
+   info << ",timestamp=" << TimePoint::Now().ToIsoString();
+
+   return Property( id, info );
 }
 
 // ----------------------------------------------------------------------------
@@ -1121,4 +1141,4 @@ void MetaProcess::PerformAPIDefinitions() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/MetaProcess.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/MetaProcess.cpp - Released 2025-02-19T18:29:13Z

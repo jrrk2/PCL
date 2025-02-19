@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/ATrousWaveletTransform.cpp - Released 2025-01-09T18:44:07Z
+// pcl/ATrousWaveletTransform.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -307,7 +307,7 @@ public:
    static double NoiseEstimate( const ATrousWaveletTransform::transform& transform, int numberOfLayers,
                                 const float sej[], const GenericImage<P>& image,
                                 double sigma, float K, size_type* nn, float low, float high,
-                                bool parallel, int maxProcessors )
+                                bool parallel, int maxProcessors, bool __performanceAnalysis__ = false )
    {
       bool statusInitialized = false;
       if ( image.Status().IsInitializationEnabled() )
@@ -337,7 +337,20 @@ public:
          }
       }
 
-      Array<size_type> L = pcl::Thread::OptimalThreadLoads( N, 16/*overheadLimit*/, parallel ? maxProcessors : 1 );
+      Array<size_type> L;
+      if ( likely( !__performanceAnalysis__ ) )
+      {
+         pcl::Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::NoiseMRS;
+         data.length = N;
+         data.overheadLimit = 32768;
+         data.itemSize = P::BytesPerSample();
+         data.floatingPoint = P::IsFloatSample();
+         L = pcl::Thread::OptimalThreadLoads( data, parallel ? maxProcessors : 1 );
+      }
+      else
+         L = pcl::Thread::OptimalThreadLoads( N, 1/*overheadLimit*/, maxProcessors );
+
       ReferenceArray<Thread<P> > threads;
       for ( size_type i = 0, n = 0; i < L.Length(); n += L[i++] )
          threads.Add( new Thread<P>( data, n, n + L[i] ) );
@@ -539,8 +552,27 @@ void ATrousWaveletTransform::ValidateScalingFunction() const
 }
 
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/*
+ * Performance analysis
+ */
+double ATrousWaveletTransform::PCL_PA_NoiseMRS_F32( const Image& image, const float sej[], double sigma, int maxThreads ) const
+{
+   return PCL_NoiseMRSEngine::NoiseEstimate( m_transform, m_numberOfLayers, sej, image, sigma,
+                                             3/*k*/, nullptr/*N*/, 0.00002F/*low*/, 0.99998F/*high*/,
+                                             true/*parallel*/, maxThreads, true/*__performanceAnalysis__*/ );
+}
+double ATrousWaveletTransform::PCL_PA_NoiseMRS_F64( const DImage& image, const float sej[], double sigma, int maxThreads ) const
+{
+   return PCL_NoiseMRSEngine::NoiseEstimate( m_transform, m_numberOfLayers, sej, image, sigma,
+                                             3/*k*/, nullptr/*N*/, 0.00002F/*low*/, 0.99998F/*high*/,
+                                             true/*parallel*/, maxThreads, true/*__performanceAnalysis__*/ );
+}
+
+// ----------------------------------------------------------------------------
 
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/ATrousWaveletTransform.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/ATrousWaveletTransform.cpp - Released 2025-02-19T18:29:13Z

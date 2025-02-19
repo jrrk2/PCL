@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Convolution.cpp - Released 2025-01-09T18:44:07Z
+// pcl/Convolution.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -63,31 +63,31 @@ class PCL_ConvolutionEngine
 public:
 
    template <class P> static
-   void Apply( GenericImage<P>& image, const Convolution& convolution )
+   void Apply( GenericImage<P>& image, const Convolution& convolution, int maxThreads = 0 )
    {
       if ( convolution.IsHighPassFilter() )
       {
          if ( P::BitsPerSample() < 32 )
-            HighPassIntegerImage( image, convolution, reinterpret_cast<Image*>( 0 ) );
+            HighPassIntegerImage( image, convolution, reinterpret_cast<Image*>( 0 ), maxThreads );
          else
-            HighPassIntegerImage( image, convolution, reinterpret_cast<DImage*>( 0 ) );
+            HighPassIntegerImage( image, convolution, reinterpret_cast<DImage*>( 0 ), maxThreads );
       }
       else
-         DoApply( image, convolution );
+         DoApply( image, convolution, maxThreads );
    }
 
    static
-   void Apply( Image& image, const Convolution& convolution )
+   void Apply( Image& image, const Convolution& convolution, int maxThreads = 0 )
    {
-      DoApply( image, convolution );
+      DoApply( image, convolution, maxThreads );
       if ( convolution.IsHighPassFilter() )
          HighPassRescaleFloatImage( image, convolution );
    }
 
    static
-   void Apply( DImage& image, const Convolution& convolution )
+   void Apply( DImage& image, const Convolution& convolution, int maxThreads = 0 )
    {
-      DoApply( image, convolution );
+      DoApply( image, convolution, maxThreads );
       if ( convolution.IsHighPassFilter() )
          HighPassRescaleFloatImage( image, convolution );
    }
@@ -95,7 +95,7 @@ public:
 private:
 
    template <class P> static
-   void DoApply( GenericImage<P>& image, const Convolution& convolution )
+   void DoApply( GenericImage<P>& image, const Convolution& convolution, int maxThreads )
    {
       if ( image.IsEmptySelection() )
          return;
@@ -123,9 +123,27 @@ private:
          didFlip = true;
       }
 
-      Array<size_type> L = pcl::Thread::OptimalThreadLoads( image.SelectedRectangle().Height(),
-                                       n/*overheadLimit*/,
-                                       convolution.IsParallelProcessingEnabled() ? convolution.MaxProcessors() : 1 );
+      Array<size_type> L;
+      if ( maxThreads <= 0 )
+      {
+         pcl::Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::Convolution;
+         data.length = image.SelectedRectangle().Height();
+         data.minimumLength = n;
+         data.overheadLimit = n;
+         data.itemSize = P::BytesPerSample();
+         data.floatingPoint = P::IsFloatSample();
+         data.kernelSize = convolution.Filter().Size();
+         data.width = image.SelectedRectangle().Width();
+         data.height = image.SelectedRectangle().Height();
+         L = pcl::Thread::OptimalThreadLoads( data, convolution.IsParallelProcessingEnabled() ? convolution.MaxProcessors() : 1 );
+      }
+      else
+      {
+         // Performance analysis
+         L = pcl::Thread::OptimalThreadLoads( image.SelectedRectangle().Height(), n/*overheadLimit*/, maxThreads );
+      }
+
       int numberOfThreads = int( L.Length() );
 
       size_type N = image.NumberOfSelectedSamples();
@@ -133,7 +151,6 @@ private:
          image.Status().Initialize( "Convolution", N );
 
       ThreadData<P> data( image, convolution, N );
-
       ReferenceArray<Thread<P> > threads;
       for ( int i = 0, n = 0, y0 = image.SelectedRectangle().y0; i < numberOfThreads; n += int( L[i++] ) )
          threads.Add( new Thread<P>( data,
@@ -175,10 +192,10 @@ private:
    }
 
    template <class P, class P1> static
-   void HighPassIntegerImage( GenericImage<P>& image, const Convolution& convolution, GenericImage<P1>* )
+   void HighPassIntegerImage( GenericImage<P>& image, const Convolution& convolution, GenericImage<P1>*, int maxThreads )
    {
       GenericImage<P1> tmp( image );
-      Apply( tmp, convolution );
+      Apply( tmp, convolution, maxThreads );
 
       StatusMonitor monitor = tmp.Status();
       image.SetStatusCallback( nullptr );
@@ -523,8 +540,23 @@ void Convolution::ValidateFilter() const
 }
 
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/*
+ * Performance analysis
+ */
+void PCL_PA_Convolution_F32( Image& image, const Convolution& convolution, int maxThreads )
+{
+   PCL_ConvolutionEngine::Apply( image, convolution, maxThreads );
+}
+void PCL_PA_Convolution_F64( DImage& image, const Convolution& convolution, int maxThreads )
+{
+   PCL_ConvolutionEngine::Apply( image, convolution, maxThreads );
+}
+
+// ----------------------------------------------------------------------------
 
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Convolution.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/Convolution.cpp - Released 2025-02-19T18:29:13Z

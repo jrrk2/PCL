@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Exception.cpp - Released 2025-01-09T18:44:07Z
+// pcl/Exception.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -212,12 +212,29 @@ String Exception::Caption() const
 
 void Exception::Show() const
 {
+   bool showOnGUI = s_useGUI && Thread::IsRootThread();
+   bool showOnConsole = s_useConsole || !showOnGUI;
+
+   if ( showOnConsole )
+      if ( ShowUnformatted() )
+      {
+         if ( HaveConsole() )
+         {
+            Console console;
+            console.Show();
+            console.Write( Message() );
+         }
+         else
+            std::cerr << RemoveHTMLTags( TranslateHTMLParagraphTags( TranslateHTMLBreakTags( Message() ) ) ) << '\n' << std::flush;
+
+         if ( !showOnGUI )
+            return;
+      }
+
    String caption = Caption();
    String info = FormatInfo();
 
-   bool showOnGUI = s_useGUI && Thread::IsRootThread();
-
-   if ( s_useConsole || !showOnGUI )
+   if ( showOnConsole )
    {
       String text = caption + ": " + info;
       if ( HaveConsole() )
@@ -389,4 +406,4 @@ void SourceCodeError::Show() const
 }  // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Exception.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/Exception.cpp - Released 2025-02-19T18:29:13Z

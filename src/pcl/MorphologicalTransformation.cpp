@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/MorphologicalTransformation.cpp - Released 2025-01-09T18:44:07Z
+// pcl/MorphologicalTransformation.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -63,7 +63,7 @@ class PCL_MorphologicalTransformationEngine
 public:
 
    template <class P> static
-   void Apply( GenericImage<P>& image, const MorphologicalTransformation& transformation )
+   void Apply( GenericImage<P>& image, const MorphologicalTransformation& transformation, int maxThreads = 0 )
    {
       if ( image.IsEmptySelection() )
          return;
@@ -88,11 +88,27 @@ public:
          didReflect = true;
       }
 
-      int numberOfRows = image.SelectedRectangle().Height();
+      Array<size_type> L;
+      if ( maxThreads <= 0 )
+      {
+         pcl::Thread::PerformanceAnalysisData data;
+         data.algorithm = PerformanceAnalysisAlgorithm::MorphologicalMedian;
+         data.length = image.SelectedRectangle().Height();
+         data.minimumLength = n;
+         data.overheadLimit = n;
+         data.itemSize = P::BytesPerSample();
+         data.floatingPoint = P::IsFloatSample();
+         data.kernelSize = transformation.Structure().Size();
+         data.width = image.SelectedRectangle().Width();
+         data.height = image.SelectedRectangle().Height();
+         L = pcl::Thread::OptimalThreadLoads( data, transformation.IsParallelProcessingEnabled() ? transformation.MaxProcessors() : 1 );
+      }
+      else
+      {
+         // Performance analysis
+         L = pcl::Thread::OptimalThreadLoads( image.SelectedRectangle().Height(), n/*overheadLimit*/, maxThreads );
+      }
 
-      Array<size_type> L = pcl::Thread::OptimalThreadLoads( numberOfRows,
-                                       n/*overheadLimit*/,
-                                       transformation.IsParallelProcessingEnabled() ? transformation.MaxProcessors() : 1 );
       int numberOfThreads = int( L.Length() );
 
       size_type N = image.NumberOfSelectedSamples();
@@ -100,7 +116,6 @@ public:
          image.Status().Initialize( "Morphological transformation, " + transformation.Operator().Description(), N );
 
       ThreadData<P> data( image, transformation, N );
-
       ReferenceArray<Thread<P> > threads;
       for ( int i = 0, n = 0, y0 = image.SelectedRectangle().y0; i < numberOfThreads; n += int( L[i++] ) )
          threads.Add( new Thread<P>( data,
@@ -425,8 +440,23 @@ void MorphologicalTransformation::Validate() const
 }
 
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/*
+ * Performance analysis
+ */
+void PCL_PA_MorphologicalTransformation_F32( Image& image, const MorphologicalTransformation& transformation, int maxThreads )
+{
+   PCL_MorphologicalTransformationEngine::Apply( image, transformation, maxThreads );
+}
+void PCL_PA_MorphologicalTransformation_F64( DImage& image, const MorphologicalTransformation& transformation, int maxThreads )
+{
+   PCL_MorphologicalTransformationEngine::Apply( image, transformation, maxThreads );
+}
+
+// ----------------------------------------------------------------------------
 
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/MorphologicalTransformation.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/MorphologicalTransformation.cpp - Released 2025-02-19T18:29:13Z

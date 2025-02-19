@@ -2,14 +2,14 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.5
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/APIDefs.h - Released 2024-12-27T18:16:01Z
+// pcl/APIDefs.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
 //
-// Copyright (c) 2003-2024 Pleiades Astrophoto S.L. All Rights Reserved.
+// Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
 // Redistribution and use in both source and binary forms, with or without
 // modification, is permitted provided that the following conditions are met:
@@ -230,6 +230,7 @@ struct api_image_options
    float  exposure;
    float  aperture;
    float  focalLength;
+   int32  imageType;
    int32  cfaType;
 };
 
@@ -258,6 +259,7 @@ struct api_image_file_info
    float  exposure;
    float  aperture;
    float  focalLength;
+   int32  imageType;
    int32  cfaType;
 };
 
@@ -965,4 +967,4 @@ void PCL_FUNC PCLImageOptionsToAPI( api_image_options&, const ImageOptions& );
 #endif   // __PCL_API_APIDefs_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/APIDefs.h - Released 2024-12-27T18:16:01Z
+// EOF pcl/APIDefs.h - Released 2025-02-19T18:29:04Z

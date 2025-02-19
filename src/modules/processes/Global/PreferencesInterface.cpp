@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard Global Process Module Version 1.6.2
+// Standard Global Process Module Version 1.6.4
 // ----------------------------------------------------------------------------
-// PreferencesInterface.cpp - Released 2025-01-09T18:44:32Z
+// PreferencesInterface.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Global PixInsight module.
 //
@@ -61,9 +61,9 @@
 #include <pcl/Edit.h>
 #include <pcl/ErrorHandler.h>
 #include <pcl/FileDialog.h>
-#include <pcl/GlobalSettings.h>
 #include <pcl/Graphics.h>
 #include <pcl/Label.h>
+#include <pcl/MetaModule.h>
 #include <pcl/PushButton.h>
 #include <pcl/RadioButton.h>
 #include <pcl/Sizer.h>
@@ -2775,15 +2775,18 @@ ParallelProcessingPreferencesPage::ParallelProcessingPreferencesPage( Preference
    MaxModuleThreadPriority_Set.comboBox.AddItem( "Time Critical" );
    MaxModuleThreadPriority_Set.item = &instance.process.maxModuleThreadPriority;
    MaxModuleThreadPriority_Set.SetToolTip(
-      "<p>This is the maximum thread priority allowed for threads created by external modules. <i>Time critical</i> "
-      "allows modules to create real-time priority threads, which are seldomly used, but sometimes necessary "
-      "to carry out performance-critical operations. Lowest priority will force all installed modules to use very "
-      "low priority threads, which may have a strong impact over processing performance.</p>"
-      "<p><b>* Warning *</b> Forcing low thread priorities will degrade processing performance. You should only "
-      "change this value if you are sure of what you are doing.</p>" );
+      "<p>This is the maximum thread priority allowed for threads created by external modules. "
+      "<i>Time critical</i> will enable modules to create real-time priority threads, which are "
+      "seldomly used, but sometimes necessary to carry out performance-critical operations. "
+      "<i>Lowest</I> priority will force all installed modules to use very low-priority threads, "
+      "which may strongly impact processing performance.</p>"
+      "<p>The default value of this parameter is platform-dependent. Currently, it is "
+      "<i>Time-Critical</i> on Linux and macOS and <i>Normal</i> on Windows.</p>"
+      "<p><b>* Warning *</b> Forcing low thread priorities will degrade processing performance. "
+      "You should only change this value if you know what you are doing.</p>" );
 
    MaxProcessors_Integer.label.SetText( "Maximum number of processors used" );
-   MaxProcessors_Integer.spinBox.SetRange( 1, int_max );
+   MaxProcessors_Integer.spinBox.SetRange( 1, Module->NumberOfProcessors() );
    MaxProcessors_Integer.item = &instance.process.maxProcessors;
    MaxProcessors_Integer.SetToolTip(
       "<p>This is the maximum number of processors (physical and logical) that PixInsight is allowed "
@@ -2800,7 +2803,7 @@ ParallelProcessingPreferencesPage::ParallelProcessingPreferencesPage( Preference
    MaxProcessors_Integer.sizer.Add( UseAllAvailableProcessors_CheckBox );
 
    MaxFileReadThreads_Integer.label.SetText( "Maximum number of file reading threads" );
-   MaxFileReadThreads_Integer.spinBox.SetRange( 1, 1024 );
+   MaxFileReadThreads_Integer.spinBox.SetRange( 1, Module->NumberOfProcessors() );
    MaxFileReadThreads_Integer.item = &instance.process.maxFileReadThreads;
    MaxFileReadThreads_Integer.SetToolTip(
       "<p>This is the maximum number of threads allowed for concurrent file reading operations. Tasks that perform "
@@ -2814,7 +2817,7 @@ ParallelProcessingPreferencesPage::ParallelProcessingPreferencesPage( Preference
       "set this parameter to its minimum value of one thread.</p>" );
 
    MaxFileWriteThreads_Integer.label.SetText( "Maximum number of file writing threads" );
-   MaxFileWriteThreads_Integer.spinBox.SetRange( 1, 1024 );
+   MaxFileWriteThreads_Integer.spinBox.SetRange( 1, Module->NumberOfProcessors() );
    MaxFileWriteThreads_Integer.item = &instance.process.maxFileWriteThreads;
    MaxFileWriteThreads_Integer.SetToolTip(
       "<p>This is the maximum number of threads allowed for concurrent file writing operations. Tasks that perform "
@@ -2866,32 +2869,32 @@ ParallelProcessingPreferencesPage::ParallelProcessingPreferencesPage( Preference
 
 void ParallelProcessingPreferencesPage::TransferSettings( PreferencesInstance& to, const PreferencesInstance& from )
 {
+   int numProcessors = Module->NumberOfProcessors();
    to.process.enableParallelProcessing          = from.process.enableParallelProcessing;
    to.process.enableParallelCoreRendering       = from.process.enableParallelCoreRendering;
    to.process.enableParallelCoreColorManagement = from.process.enableParallelCoreColorManagement;
    to.process.enableParallelModuleProcessing    = from.process.enableParallelModuleProcessing;
    to.process.enableThreadCPUAffinity           = from.process.enableThreadCPUAffinity;
    to.process.maxModuleThreadPriority           = from.process.maxModuleThreadPriority;
-   to.process.maxProcessors                     = from.process.maxProcessors;
-   to.process.maxFileReadThreads                = from.process.maxFileReadThreads;
-   to.process.maxFileWriteThreads               = from.process.maxFileWriteThreads;
+   to.process.maxProcessors                     = pcl::Min( from.process.maxProcessors, numProcessors );
+   to.process.maxFileReadThreads                = pcl::Min( from.process.maxFileReadThreads, numProcessors );
+   to.process.maxFileWriteThreads               = pcl::Min( from.process.maxFileWriteThreads, numProcessors );
    to.process.enableCUDAAcceleration            = from.process.enableCUDAAcceleration;
    to.process.initCUDARuntimeAtStartup          = from.process.initCUDARuntimeAtStartup;
 }
 
 void ParallelProcessingPreferencesPage::PerformAdditionalUpdates()
 {
+   int numProcessors = Module->NumberOfProcessors();
    int maxProcessors = *MaxProcessors_Integer.item;
-   MaxProcessors_Integer.label.Enable( maxProcessors != int_max );
-   MaxProcessors_Integer.spinBox.Enable( maxProcessors != int_max );
-   UseAllAvailableProcessors_CheckBox.SetChecked( maxProcessors == int_max );
+   MaxProcessors_Integer.label.Enable( maxProcessors < numProcessors );
+   MaxProcessors_Integer.spinBox.Enable( maxProcessors < numProcessors );
+   UseAllAvailableProcessors_CheckBox.SetChecked( maxProcessors >= numProcessors );
 }
 
 void ParallelProcessingPreferencesPage::__UseAllAvailableProcessors_ButtonClick( Button& /*sender*/, bool checked )
 {
-   *MaxProcessors_Integer.item = checked ?
-            int_max :
-            PixInsightSettings::GlobalInteger( "System/NumberOfProcessors" );
+   *MaxProcessors_Integer.item = Module->NumberOfProcessors();
    MaxProcessors_Integer.Synchronize();
    MaxProcessors_Integer.label.Enable( !checked );
    MaxProcessors_Integer.spinBox.Enable( !checked );
@@ -3148,4 +3151,4 @@ void PreferencesInterface::GUIData::InitializeCategories()
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF PreferencesInterface.cpp - Released 2025-01-09T18:44:32Z
+// EOF PreferencesInterface.cpp - Released 2025-02-19T18:29:34Z

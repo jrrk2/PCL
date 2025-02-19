@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/SeparableConvolution.h - Released 2025-01-09T18:43:56Z
+// pcl/SeparableConvolution.h - Released 2025-02-19T18:29:04Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -397,33 +397,23 @@ public:
    /*!
     * Returns the minimum filter size in pixels for which separable convolution
     * is consistently faster than nonseparable convolution on the current
-    * PixInsight/PCL platform, for the specified number of parallel execution
-    * threads.
+    * PixInsight/PCL platform and host machine.
     *
-    * The values returned by this function have been determined experimentally
-    * on reference hardware for optimized execution on machines and builds with
-    * AVX2/FMA3 processor instruction support.
+    * \param width   Width of the convolved image in pixels.
+    * \param height  Height of the convolved image in pixels.
+    *
+    * Since PixInsight 1.9.3 Lockhart, this function queries the running
+    * PixInsight core application to retrieve a critical value based on thread
+    * performance analysis microbenchmarks. If no performance analysis data are
+    * available, the function returns an empirical value based on average
+    * reference hardware.
+    *
+    * \note Both \a width and \a height parameters are currently ignored and
+    * reserved for future implementations.
     *
     * \ingroup convolution_speed_limits
     */
-   static constexpr int FasterThanNonseparableFilterSize( int numThreads )
-   {
-      if ( numThreads >= 32 )
-         return 29;
-      if ( numThreads >= 28 )
-         return 25;
-      if ( numThreads >= 24 )
-         return 21;
-      if ( numThreads >= 16 )
-         return 19;
-      if ( numThreads >= 8 )
-         return 13;
-      if ( numThreads >= 4 )
-         return 11;
-      if ( numThreads >= 2 )
-         return 9;
-      return 7;
-   }
+   static int FasterThanNonseparableFilterSize( int width = 0, int height = 0 );
 
 protected:
 
@@ -478,4 +468,4 @@ private:
 #endif   // __PCL_SeparableConvolution_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/SeparableConvolution.h - Released 2025-01-09T18:43:56Z
+// EOF pcl/SeparableConvolution.h - Released 2025-02-19T18:29:04Z

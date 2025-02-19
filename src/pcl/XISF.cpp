@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/XISF.cpp - Released 2025-01-09T18:44:07Z
+// pcl/XISF.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -85,6 +85,7 @@ const bool XISF::DefaultAutoMetadata = true;
 const bool XISF::DefaultNoWarnings = false;
 const bool XISF::DefaultWarningsAreErrors = false;
 const char* XISF::InternalNamespacePrefix = "XISF:";
+const int XISF::InternalNamespacePrefixLength = 5;
 
 #endif
 
@@ -635,6 +636,89 @@ CryptographicHash* XISF::NewCryptographicHash( XISF::block_checksum algorithm )
 
 // ----------------------------------------------------------------------------
 
+const char* XISF::ImageTypeId( XISF::image_type type )
+{
+   switch ( type )
+   {
+   case ImageType::Bias:
+      return "Bias";
+   case ImageType::Dark:
+      return "Dark";
+   case ImageType::Flat:
+      return "Flat";
+   case ImageType::Light:
+      return "Light";
+   case ImageType::MasterBias:
+      return "MasterBias";
+   case ImageType::MasterDark:
+      return "MasterDark";
+   case ImageType::MasterFlat:
+      return "MasterFlat";
+   case ImageType::MasterLight:
+      return "MasterLight";
+   case ImageType::DefectMap:
+      return "DefectMap";
+   case ImageType::RejectionMapHigh:
+      return "RejectionMapHigh";
+   case ImageType::RejectionMapLow:
+      return "RejectionMapLow";
+   case ImageType::BinaryRejectionMapHigh:
+      return "BinaryRejectionMapHigh";
+   case ImageType::BinaryRejectionMapLow:
+      return "BinaryRejectionMapLow";
+   case ImageType::SlopeMap:
+      return "SlopeMap";
+   case ImageType::WeightMap:
+      return "WeightMap";
+   default:
+   case ImageType::Unknown:
+      return "";
+   }
+}
+
+// ----------------------------------------------------------------------------
+
+XISF::image_type XISF::ImageTypeFromId( const String& id )
+{
+   if ( id.IsEmpty() )
+      return ImageType::Unknown;
+   String type = id.CaseFolded();
+   if ( type == "bias" )
+      return ImageType::Bias;
+   // N.B.: Be tolerant of nonstandard type values 'darkflat' and 'flatdark'
+   if ( type == "dark" || type == "darkflat" || type == "flatdark" )
+      return ImageType::Dark;
+   if ( type == "flat" )
+      return ImageType::Flat;
+   if ( type == "light" )
+      return ImageType::Light;
+   if ( type == "masterbias" )
+      return ImageType::MasterBias;
+   if ( type == "masterdark" )
+      return ImageType::MasterDark;
+   if ( type == "masterflat" )
+      return ImageType::MasterFlat;
+   if ( type == "masterlight" )
+      return ImageType::MasterLight;
+   if ( type == "defectmap" )
+      return ImageType::DefectMap;
+   if ( type == "rejectionmaphigh" )
+      return ImageType::RejectionMapHigh;
+   if ( type == "rejectionmaplow" )
+      return ImageType::RejectionMapLow;
+   if ( type == "binaryrejectionmaphigh" )
+      return ImageType::BinaryRejectionMapHigh;
+   if ( type == "binaryrejectionmaplow" )
+      return ImageType::BinaryRejectionMapLow;
+   if ( type == "slopemap" )
+      return ImageType::SlopeMap;
+   if ( type == "weightmap" )
+      return ImageType::WeightMap;
+   return ImageType::Unknown;
+}
+
+// ----------------------------------------------------------------------------
+
 void XISF::EnsurePTLUTInitialized()
 {
    static AtomicInt initialized;
@@ -718,4 +802,4 @@ void XISF::EnsurePTLUTInitialized()
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/XISF.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/XISF.cpp - Released 2025-02-19T18:29:13Z

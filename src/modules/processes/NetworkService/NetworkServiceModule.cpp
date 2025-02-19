@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
 // Standard NetworkService Process Module Version 1.2.0
 // ----------------------------------------------------------------------------
-// NetworkServiceModule.cpp - Released 2025-01-09T18:44:32Z
+// NetworkServiceModule.cpp - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard NetworkService PixInsight module.
 //
@@ -57,8 +57,8 @@
 #define MODULE_VERSION_LANGUAGE  eng
 
 #define MODULE_RELEASE_YEAR      2025
-#define MODULE_RELEASE_MONTH     1
-#define MODULE_RELEASE_DAY       9
+#define MODULE_RELEASE_MONTH     2
+#define MODULE_RELEASE_DAY       19
 
 #include "NetworkServiceInterface.h"
 #include "NetworkServiceModule.h"
@@ -194,4 +194,4 @@ PCL_MODULE_EXPORT int InstallPixInsightModule( int mode )
 }
 
 // ----------------------------------------------------------------------------
-// EOF NetworkServiceModule.cpp - Released 2025-01-09T18:44:32Z
+// EOF NetworkServiceModule.cpp - Released 2025-02-19T18:29:34Z

@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// Standard Debayer Process Module Version 1.12.0
+// Standard Debayer Process Module Version 1.12.1
 // ----------------------------------------------------------------------------
-// DebayerParameters.h - Released 2025-01-09T18:44:32Z
+// DebayerParameters.h - Released 2025-02-19T18:29:34Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Debayer PixInsight module.
 //
@@ -561,6 +561,34 @@ public:
 };
 
 extern DebayerOutputPostfix* TheDebayerOutputPostfixParameter;
+
+// ----------------------------------------------------------------------------
+
+class DebayerGenerateHistoryProperties : public MetaBoolean
+{
+public:
+
+   DebayerGenerateHistoryProperties( MetaProcess* );
+
+   IsoString Id() const override;
+   bool DefaultValue() const override;
+};
+
+extern DebayerGenerateHistoryProperties* TheDebayerGenerateHistoryPropertiesParameter;
+
+// ----------------------------------------------------------------------------
+
+class DebayerGenerateFITSKeywords : public MetaBoolean
+{
+public:
+
+   DebayerGenerateFITSKeywords( MetaProcess* );
+
+   IsoString Id() const override;
+   bool DefaultValue() const override;
+};
+
+extern DebayerGenerateFITSKeywords* TheDebayerGenerateFITSKeywordsParameter;
 
 // ----------------------------------------------------------------------------
 
@@ -1954,4 +1982,4 @@ PCL_END_LOCAL
 #endif   // __DebayerParameters_h
 
 // ----------------------------------------------------------------------------
-// EOF DebayerParameters.h - Released 2025-01-09T18:44:32Z
+// EOF DebayerParameters.h - Released 2025-02-19T18:29:34Z

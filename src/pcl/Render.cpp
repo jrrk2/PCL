@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.8.6
+// /_/     \____//_____/   PCL 2.9.1
 // ----------------------------------------------------------------------------
-// pcl/Render.cpp - Released 2025-01-09T18:44:07Z
+// pcl/Render.cpp - Released 2025-02-19T18:29:13Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -56,9 +56,9 @@
  */
 
 #include <pcl/Bitmap.h>
-#include <pcl/GlobalSettings.h>
 #include <pcl/ImageVariant.h>
 #include <pcl/ImageWindow.h>
+#include <pcl/MetaModule.h>
 #include <pcl/Thread.h>
 #include <pcl/Vector.h>
 
@@ -1257,7 +1257,7 @@ bool __Render( Bitmap& bitmap, int x0, int y0, int z, int channel,
    {
       static int numberOfProcessors = 0;
       if ( numberOfProcessors <= 0 )
-         numberOfProcessors = Max( 1, PixInsightSettings::GlobalInteger( "System/NumberOfProcessors" ) );
+         numberOfProcessors = Module->NumberOfProcessors();
 
       int rowsPerStep = Max( 1, 65536/data.w );
       if ( z < 0 )
@@ -1393,4 +1393,4 @@ bool Render( Bitmap& bitmap, int x, int y, int zoom, int channel,
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Render.cpp - Released 2025-01-09T18:44:07Z
+// EOF pcl/Render.cpp - Released 2025-02-19T18:29:13Z
