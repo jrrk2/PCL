@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// getcolui.c - Released 2025-02-19T18:29:25Z
+// getcolui.c - Released 2025-02-21T12:13:50Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -2019,4 +2019,4 @@ int fffstru2(char *input,         /* I - array of values to be converted     */
 }
 
 // ----------------------------------------------------------------------------
-// EOF getcolui.c - Released 2025-02-19T18:29:25Z
+// EOF getcolui.c - Released 2025-02-21T12:13:50Z

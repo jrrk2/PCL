@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
-// pcl/PreviewSelectionDialog.cpp - Released 2025-02-19T18:29:13Z
+// pcl/PreviewSelectionDialog.cpp - Released 2025-02-21T12:13:39Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -116,4 +116,4 @@ void PreviewSelectionDialog::ControlShow( Control& sender )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/PreviewSelectionDialog.cpp - Released 2025-02-19T18:29:13Z
+// EOF pcl/PreviewSelectionDialog.cpp - Released 2025-02-21T12:13:39Z

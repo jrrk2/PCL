@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
-// pcl/Thread.cpp - Released 2025-02-19T18:29:13Z
+// pcl/Thread.cpp - Released 2025-02-21T12:13:39Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -464,7 +464,7 @@ int Thread::NumberOfThreads( size_type N, size_type overheadLimit )
          {
             int threadsAllowed = Min( processorsAvailable, (*API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
             if ( overheadLimit < 2 || N/threadsAllowed >= overheadLimit )
-               return threadsAllowed;
+               return int( Min( size_type( threadsAllowed ), N ) );
             return Max( 1, int( N/overheadLimit ) );
          }
 
@@ -477,7 +477,7 @@ int Thread::NumberOfThreads( size_type N, size_type overheadLimit )
 //                {
 //                   int threadsAllowed = Min( processorsAvailable, PixInsightSettings::GlobalInteger( "Process/MaxProcessors" ) );
 //                   if ( overheadLimit < 2 || N/threadsAllowed >= overheadLimit )
-//                      return threadsAllowed;
+//                      return Min( threadsAllowed, N );
 //                   return Max( 1, int( N/overheadLimit ) );
 //                }
       }
@@ -528,14 +528,20 @@ int Thread::OptimalNumberOfThreads( const Thread::PerformanceAnalysisData& data 
       int processorsAvailable = Module->NumberOfProcessors() - NumberOfRunningThreads();
       if ( processorsAvailable > 1 )
       {
-         int optimalThreads = (*API->Thread->PerformanceAnalysisValue)( data.algorithm, data.length,
-                                                                        data.itemSize, data.floatingPoint,
-                                                                        data.kernelSize, data.width, data.height );
-         if ( optimalThreads <= 0 )
-            return NumberOfThreads( data.length, Max( data.minimumLength, data.overheadLimit ) );
-
          int threadsAllowed = Min( processorsAvailable, (*API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
-         return Min( optimalThreads, threadsAllowed );
+         if ( threadsAllowed > 1 )
+         {
+            int optimalThreads = (*API->Thread->PerformanceAnalysisValue)( data.algorithm, data.length,
+                                                                           data.itemSize, data.floatingPoint,
+                                                                           data.kernelSize, data.width, data.height );
+            if ( optimalThreads > 0 )
+               return int( Min( size_type( Min( optimalThreads, threadsAllowed ) ), data.length ) );
+
+            size_type overheadLimit = Max( data.minimumLength, data.overheadLimit );
+            if ( overheadLimit < 2 || data.length/threadsAllowed >= overheadLimit )
+               return int( Min( size_type( threadsAllowed ), data.length ) );
+            return Max( 1, int( data.length/overheadLimit ) );
+         }
       }
    }
 
@@ -547,7 +553,6 @@ int Thread::OptimalNumberOfThreads( const Thread::PerformanceAnalysisData& data 
 Array<size_type> Thread::OptimalThreadLoads( const Thread::PerformanceAnalysisData& data, int maxThreads )
 {
    int numberOfThreads = (maxThreads > 1) ? Min( OptimalNumberOfThreads( data ), maxThreads ) : 1;
-
    size_type itemsPerThread = Max( size_type( 1 ), data.length/numberOfThreads );
    size_type minimumLength = Max( size_type( 1 ), data.minimumLength );
    if ( itemsPerThread < minimumLength )
@@ -575,4 +580,4 @@ void PCL_FUNC Sleep( unsigned ms )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Thread.cpp - Released 2025-02-19T18:29:13Z
+// EOF pcl/Thread.cpp - Released 2025-02-21T12:13:39Z

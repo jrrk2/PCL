@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard AssistedColorCalibration Process Module Version 1.0.0
 // ----------------------------------------------------------------------------
-// AssistedColorCalibrationParameters.h - Released 2025-02-19T18:29:34Z
+// AssistedColorCalibrationParameters.h - Released 2025-02-21T12:13:59Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard AssistedColorCalibration PixInsight module.
 //
@@ -204,4 +204,4 @@ PCL_END_LOCAL
 #endif // __AssistedColorCalibrationParameters_h
 
 // ----------------------------------------------------------------------------
-// EOF AssistedColorCalibrationParameters.h - Released 2025-02-19T18:29:34Z
+// EOF AssistedColorCalibrationParameters.h - Released 2025-02-21T12:13:59Z

@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard Gaia Process Module Version 1.2.6
 // ----------------------------------------------------------------------------
-// GaiaInstance.h - Released 2025-02-19T18:29:34Z
+// GaiaInstance.h - Released 2025-02-21T12:13:58Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Gaia PixInsight module.
 //
@@ -133,4 +133,4 @@ struct GaiaBinaryHeader
 #endif   // __GaiaInstance_h
 
 // ----------------------------------------------------------------------------
-// EOF GaiaInstance.h - Released 2025-02-19T18:29:34Z
+// EOF GaiaInstance.h - Released 2025-02-21T12:13:58Z

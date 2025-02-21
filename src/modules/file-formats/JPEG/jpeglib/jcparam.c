@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard JPEG File Format Module Version 1.0.5
 // ----------------------------------------------------------------------------
-// jcparam.c - Released 2025-02-19T18:29:25Z
+// jcparam.c - Released 2025-02-21T12:13:50Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard JPEG PixInsight module.
 //
@@ -643,4 +643,4 @@ jpeg_simple_progression (j_compress_ptr cinfo)
 #endif /* C_PROGRESSIVE_SUPPORTED */
 
 // ----------------------------------------------------------------------------
-// EOF jcparam.c - Released 2025-02-19T18:29:25Z
+// EOF jcparam.c - Released 2025-02-21T12:13:50Z

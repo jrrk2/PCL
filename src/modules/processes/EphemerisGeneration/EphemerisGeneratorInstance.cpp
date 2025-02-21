@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard EphemerisGeneration Process Module Version 1.3.0
 // ----------------------------------------------------------------------------
-// EphemerisGeneratorInstance.cpp - Released 2025-02-19T18:29:34Z
+// EphemerisGeneratorInstance.cpp - Released 2025-02-21T12:13:58Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard EphemerisGeneration PixInsight module.
 //
@@ -1374,4 +1374,4 @@ size_type EphemerisGeneratorInstance::ParameterLength( const MetaParameter* p, s
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF EphemerisGeneratorInstance.cpp - Released 2025-02-19T18:29:34Z
+// EOF EphemerisGeneratorInstance.cpp - Released 2025-02-21T12:13:58Z

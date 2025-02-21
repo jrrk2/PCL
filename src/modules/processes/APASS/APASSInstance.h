@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard APASS Process Module Version 1.1.5
 // ----------------------------------------------------------------------------
-// APASSInstance.h - Released 2025-02-19T18:29:34Z
+// APASSInstance.h - Released 2025-02-21T12:13:58Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard APASS PixInsight module.
 //
@@ -128,4 +128,4 @@ struct APASSBinaryHeader
 #endif   // __APASSInstance_h
 
 // ----------------------------------------------------------------------------
-// EOF APASSInstance.h - Released 2025-02-19T18:29:34Z
+// EOF APASSInstance.h - Released 2025-02-21T12:13:58Z

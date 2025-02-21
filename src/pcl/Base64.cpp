@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
-// pcl/Base64.cpp - Released 2025-02-19T18:29:13Z
+// pcl/Base64.cpp - Released 2025-02-21T12:13:39Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -182,4 +182,4 @@ ByteArray IsoString::FromBase64() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Base64.cpp - Released 2025-02-19T18:29:13Z
+// EOF pcl/Base64.cpp - Released 2025-02-21T12:13:39Z

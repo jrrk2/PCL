@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
-// pcl/SettingsData.cpp - Released 2025-02-19T18:29:13Z
+// pcl/SettingsData.cpp - Released 2025-02-21T12:13:39Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -550,9 +550,10 @@ private:
  * execution. In particular, the pcl::GlobalSettings class must not be used.
  */
 
-SettingsData::SettingsData( const IsoString& identifier )
+SettingsData::SettingsData( const IsoString& identifier, bool universal )
    : m_root( new SettingsTree() )
    , m_identifier( identifier.Trimmed() )
+   , m_universal( universal )
 {
    PCL_PRECONDITION( !m_identifier.IsEmpty() )
    if ( m_identifier.IsEmpty() )
@@ -580,7 +581,10 @@ SettingsData::SettingsData( const IsoString& identifier )
    if ( !confDirPath.EndsWith( '/' ) )
       confDirPath << '/';
 
-   m_filePath = confDirPath + m_identifier + String().Format( "-%03d-pxi.settings", instance );
+   if ( m_universal )
+      m_filePath = confDirPath + m_identifier + "-pxi.settings";
+   else
+      m_filePath = confDirPath + m_identifier + String().Format( "-%03d-pxi.settings", instance );
 }
 
 // ----------------------------------------------------------------------------
@@ -750,6 +754,10 @@ void SettingsData::Load()
 
 void SettingsData::Save() const
 {
+   if ( m_universal )
+      if ( (*API->Global->ApplicationInstanceSlot)( ModuleHandle() ) != 1 )
+         throw Error( String( "SettingsData::Save(): " ) + "Universal settings files can only be written by the first core application instance." );
+
    AutoPointer<XMLDocument> xml = new XMLDocument;
    xml->SetXML( "1.0", "UTF-8" );
    *xml << new XMLComment( "\nPixInsight XML Settings Dictionary Format - XSDT version 1.0"
@@ -785,13 +793,19 @@ void SettingsData::Save() const
 
 void SettingsData::Purge()
 {
-   volatile AutoLock lock( m_mutex );
+   if ( m_universal )
+      if ( (*API->Global->ApplicationInstanceSlot)( ModuleHandle() ) != 1 )
+         throw Error( String( "SettingsData::Purge(): " ) + "Universal settings files can only be written by the first core application instance." );
 
-   m_root->Clear();
-   m_modifiedCount = 0;
+   {
+      volatile AutoLock lock( m_mutex );
 
-   if ( File::Exists( m_filePath ) )
-      File::Remove( m_filePath );
+      m_root->Clear();
+      m_modifiedCount = 0;
+
+      if ( File::Exists( m_filePath ) )
+         File::Remove( m_filePath );
+   }
 }
 
 // ----------------------------------------------------------------------------
@@ -827,4 +841,4 @@ IsoStringList SettingsData::TokenizedKey( const IsoString& key )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/SettingsData.cpp - Released 2025-02-19T18:29:13Z
+// EOF pcl/SettingsData.cpp - Released 2025-02-21T12:13:39Z

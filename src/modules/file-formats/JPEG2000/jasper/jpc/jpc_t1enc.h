@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard JPEG2000 File Format Module Version 1.0.3
 // ----------------------------------------------------------------------------
-// jpc_t1enc.h - Released 2025-02-19T18:29:25Z
+// jpc_t1enc.h - Released 2025-02-21T12:13:50Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard JPEG2000 PixInsight module.
 //
@@ -145,4 +145,4 @@ int jpc_enc_enccblk(jpc_enc_t *enc, jas_stream_t *out, jpc_enc_tcmpt_t *comp,
 #endif
 
 // ----------------------------------------------------------------------------
-// EOF jpc_t1enc.h - Released 2025-02-19T18:29:25Z
+// EOF jpc_t1enc.h - Released 2025-02-21T12:13:50Z

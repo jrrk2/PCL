@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// simplerng.h - Released 2025-02-19T18:29:25Z
+// simplerng.h - Released 2025-02-21T12:13:50Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -79,4 +79,4 @@ extern int simplerng_getpoisson(double lambda);
 extern double simplerng_logfactorial(int n);
 
 // ----------------------------------------------------------------------------
-// EOF simplerng.h - Released 2025-02-19T18:29:25Z
+// EOF simplerng.h - Released 2025-02-21T12:13:50Z

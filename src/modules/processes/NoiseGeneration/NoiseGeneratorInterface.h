@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard NoiseGeneration Process Module Version 1.0.2
 // ----------------------------------------------------------------------------
-// NoiseGeneratorInterface.h - Released 2025-02-19T18:29:34Z
+// NoiseGeneratorInterface.h - Released 2025-02-21T12:13:59Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard NoiseGeneration PixInsight module.
 //
@@ -128,4 +128,4 @@ PCL_END_LOCAL
 #endif   // __NoiseGeneratorInterface_h
 
 // ----------------------------------------------------------------------------
-// EOF NoiseGeneratorInterface.h - Released 2025-02-19T18:29:34Z
+// EOF NoiseGeneratorInterface.h - Released 2025-02-21T12:13:59Z

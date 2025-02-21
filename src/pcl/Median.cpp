@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
-// pcl/Median.cpp - Released 2025-02-19T18:29:13Z
+// pcl/Median.cpp - Released 2025-02-21T12:13:39Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -2765,4 +2765,4 @@ double PCL_PA_FastMAD_F64( const double* __restrict__ begin, const double* __res
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Median.cpp - Released 2025-02-19T18:29:13Z
+// EOF pcl/Median.cpp - Released 2025-02-21T12:13:39Z

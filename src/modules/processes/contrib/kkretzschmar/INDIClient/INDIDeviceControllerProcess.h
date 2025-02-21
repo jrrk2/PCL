@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard INDIClient Process Module Version 1.2.3
 // ----------------------------------------------------------------------------
-// INDIDeviceControllerProcess.h - Released 2025-02-19T18:29:34Z
+// INDIDeviceControllerProcess.h - Released 2025-02-21T12:13:59Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard INDIClient PixInsight module.
 //
@@ -92,4 +92,4 @@ PCL_END_LOCAL
 #endif // __INDIDeviceControllerProcess_h
 
 // ----------------------------------------------------------------------------
-// EOF INDIDeviceControllerProcess.h - Released 2025-02-19T18:29:34Z
+// EOF INDIDeviceControllerProcess.h - Released 2025-02-21T12:13:59Z

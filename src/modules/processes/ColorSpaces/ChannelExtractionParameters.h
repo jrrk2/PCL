@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard ColorSpaces Process Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// ChannelExtractionParameters.h - Released 2025-02-19T18:29:34Z
+// ChannelExtractionParameters.h - Released 2025-02-21T12:13:58Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard ColorSpaces PixInsight module.
 //
@@ -78,4 +78,4 @@ PCL_END_LOCAL
 #endif   // __ChannelExtractionParameters_h
 
 // ----------------------------------------------------------------------------
-// EOF ChannelExtractionParameters.h - Released 2025-02-19T18:29:34Z
+// EOF ChannelExtractionParameters.h - Released 2025-02-21T12:13:58Z

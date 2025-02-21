@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard Geometry Process Module Version 1.4.2
 // ----------------------------------------------------------------------------
-// ChannelMatchProcess.h - Released 2025-02-19T18:29:34Z
+// ChannelMatchProcess.h - Released 2025-02-21T12:13:58Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Geometry PixInsight module.
 //
@@ -90,4 +90,4 @@ PCL_END_LOCAL
 #endif   // __ChannelMatchProcess_h
 
 // ----------------------------------------------------------------------------
-// EOF ChannelMatchProcess.h - Released 2025-02-19T18:29:34Z
+// EOF ChannelMatchProcess.h - Released 2025-02-21T12:13:58Z

@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard XISF File Format Module Version 1.1.2
 // ----------------------------------------------------------------------------
-// XISFOptionsDialog.cpp - Released 2025-02-19T18:29:25Z
+// XISFOptionsDialog.cpp - Released 2025-02-21T12:13:50Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard XISF PixInsight module.
 //
@@ -568,4 +568,4 @@ void XISFOptionsDialog::Dialog_Return( Dialog&/*sender*/, int retVal )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF XISFOptionsDialog.cpp - Released 2025-02-19T18:29:25Z
+// EOF XISFOptionsDialog.cpp - Released 2025-02-21T12:13:50Z

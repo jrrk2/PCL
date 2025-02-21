@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// putcoluk.c - Released 2025-02-19T18:29:25Z
+// putcoluk.c - Released 2025-02-21T12:13:50Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -1059,4 +1059,4 @@ int ffuintfstr(unsigned int *input, /* I - array of values to be converted  */
 }
 
 // ----------------------------------------------------------------------------
-// EOF putcoluk.c - Released 2025-02-19T18:29:25Z
+// EOF putcoluk.c - Released 2025-02-21T12:13:50Z

@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard FITS File Format Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// drvrnet.c - Released 2025-02-19T18:29:25Z
+// drvrnet.c - Released 2025-02-21T12:13:50Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
@@ -4497,4 +4497,4 @@ static int encode64(unsigned s_len, char *src, unsigned d_len, char *dst) {
 #endif
 
 // ----------------------------------------------------------------------------
-// EOF drvrnet.c - Released 2025-02-19T18:29:25Z
+// EOF drvrnet.c - Released 2025-02-21T12:13:50Z

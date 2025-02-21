@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard Sandbox Process Module Version 1.0.2
 // ----------------------------------------------------------------------------
-// SandboxProcess.h - Released 2025-02-19T18:29:34Z
+// SandboxProcess.h - Released 2025-02-21T12:13:59Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Sandbox PixInsight module.
 //
@@ -91,4 +91,4 @@ PCL_END_LOCAL
 #endif   // __SandboxProcess_h
 
 // ----------------------------------------------------------------------------
-// EOF SandboxProcess.h - Released 2025-02-19T18:29:34Z
+// EOF SandboxProcess.h - Released 2025-02-21T12:13:59Z

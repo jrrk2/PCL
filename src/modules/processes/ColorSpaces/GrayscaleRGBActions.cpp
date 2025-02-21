@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard ColorSpaces Process Module Version 1.2.2
 // ----------------------------------------------------------------------------
-// GrayscaleRGBActions.cpp - Released 2025-02-19T18:29:34Z
+// GrayscaleRGBActions.cpp - Released 2025-02-21T12:13:58Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard ColorSpaces PixInsight module.
 //
@@ -114,4 +114,4 @@ bool ConvertToRGBColorAction::IsEnabled( ActionInfo info ) const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF GrayscaleRGBActions.cpp - Released 2025-02-19T18:29:34Z
+// EOF GrayscaleRGBActions.cpp - Released 2025-02-21T12:13:58Z

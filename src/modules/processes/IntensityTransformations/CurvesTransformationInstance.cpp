@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard IntensityTransformations Process Module Version 1.7.2
 // ----------------------------------------------------------------------------
-// CurvesTransformationInstance.cpp - Released 2025-02-19T18:29:34Z
+// CurvesTransformationInstance.cpp - Released 2025-02-21T12:13:59Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard IntensityTransformations PixInsight module.
 //
@@ -226,8 +226,18 @@ public:
       if ( useLUT )
          data.lut.Generate( image, instance );
 
-      Array<size_type> L = Thread::OptimalThreadLoads( N, 256/*overheadLimit*/ );
-      ReferenceArray<CurvesThread<P> > threads;
+      Array<size_type> L = Thread::OptimalThreadLoads( N, 16384/*overheadLimit*/ );
+//       Array<size_type> L;
+//       {
+//          pcl::Thread::PerformanceAnalysisData data;
+//          data.algorithm = PerformanceAnalysisAlgorithm::HistogramTransformation;
+//          data.length = N;
+//          data.overheadLimit = 16384;
+//          data.itemSize = P::BytesPerSample();
+//          data.floatingPoint = P::IsFloatSample();
+//          L = pcl::Thread::OptimalThreadLoads( data );
+//       }
+      ReferenceArray<CurvesThread<P>> threads;
       for ( size_type i = 0, n = 0; i < L.Length(); n += L[i++] )
          threads.Add( new CurvesThread<P>( instance, data, image, n, n + L[i] ) );
       AbstractImage::RunThreads( threads, data );
@@ -935,4 +945,4 @@ size_type CurvesTransformationInstance::ParameterLength( const MetaParameter* p,
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF CurvesTransformationInstance.cpp - Released 2025-02-19T18:29:34Z
+// EOF CurvesTransformationInstance.cpp - Released 2025-02-21T12:13:59Z

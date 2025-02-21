@@ -2,9 +2,9 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
-// pcl/Image.h - Released 2025-02-19T18:29:04Z
+// pcl/Image.h - Released 2025-02-21T12:13:32Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -7447,7 +7447,7 @@ public:
    template <typename T>
    void GetRow( T* buffer, int y, int channel = -1 ) const
    {
-      PCL_PRECONDITION( buffer != 0 )
+      PCL_PRECONDITION( buffer != nullptr )
       if ( channel < 0 )
          channel = m_channel;
       if ( y >= 0 && y < m_height && channel >= 0 && channel < m_numberOfChannels )
@@ -7478,7 +7478,7 @@ public:
    template <typename T>
    void GetColumn( T* buffer, int x, int channel = -1 ) const
    {
-      PCL_PRECONDITION( buffer != 0 )
+      PCL_PRECONDITION( buffer != nullptr )
       if ( channel < 0 )
          channel = m_channel;
       if ( x >= 0 && x < m_width && channel >= 0 && channel < m_numberOfChannels )
@@ -7513,7 +7513,7 @@ public:
    template <typename T>
    GenericImage& SetRow( const T* buffer, int y, int channel = -1 )
    {
-      PCL_PRECONDITION( buffer != 0 )
+      PCL_PRECONDITION( buffer != nullptr )
       if ( channel < 0 )
          channel = m_channel;
       if ( y >= 0 && y < m_height && channel >= 0 && channel < m_numberOfChannels )
@@ -7545,7 +7545,7 @@ public:
    template <typename T>
    GenericImage& SetColumn( const T* buffer, int x, int channel = -1 )
    {
-      PCL_PRECONDITION( buffer != 0 )
+      PCL_PRECONDITION( buffer != nullptr )
       if ( channel < 0 )
          channel = m_channel;
       if ( x >= 0 && x < m_width && channel >= 0 && channel < m_numberOfChannels )
@@ -16190,7 +16190,7 @@ private:
 
          if ( count > 0 )
          {
-            if ( m_amin != 0 )
+            if ( m_amin != nullptr )
                for ( int i = this->m_ch1; i <= this->m_ch2; ++i )
                   if ( m_amin >= this->m_image[i] && m_amin < (this->m_image[i] + this->m_image.NumberOfPixels()) )
                   {
@@ -16199,7 +16199,7 @@ private:
                      pmin.y = (m_amin - this->m_image[i]) / this->m_image.Width();
                      break;
                   }
-            if ( m_amax != 0 )
+            if ( m_amax != nullptr )
                for ( int i = this->m_ch1; i <= this->m_ch2; ++i )
                   if ( m_amax >= this->m_image[i] && m_amax < (this->m_image[i] + this->m_image.NumberOfPixels()) )
                   {
@@ -18440,4 +18440,4 @@ using ComplexImage = FComplexImage;
 #endif   // __PCL_Image_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Image.h - Released 2025-02-19T18:29:04Z
+// EOF pcl/Image.h - Released 2025-02-21T12:13:32Z

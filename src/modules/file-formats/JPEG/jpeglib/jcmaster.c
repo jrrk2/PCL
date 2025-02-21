@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard JPEG File Format Module Version 1.0.5
 // ----------------------------------------------------------------------------
-// jcmaster.c - Released 2025-02-19T18:29:25Z
+// jcmaster.c - Released 2025-02-21T12:13:50Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard JPEG PixInsight module.
 //
@@ -727,4 +727,4 @@ jinit_c_master_control (j_compress_ptr cinfo, boolean transcode_only)
 }
 
 // ----------------------------------------------------------------------------
-// EOF jcmaster.c - Released 2025-02-19T18:29:25Z
+// EOF jcmaster.c - Released 2025-02-21T12:13:50Z

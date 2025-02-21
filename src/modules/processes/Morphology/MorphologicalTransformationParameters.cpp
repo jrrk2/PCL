@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard Morphology Process Module Version 1.0.1
 // ----------------------------------------------------------------------------
-// MorphologicalTransformationParameters.cpp - Released 2025-02-19T18:29:34Z
+// MorphologicalTransformationParameters.cpp - Released 2025-02-21T12:13:59Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Morphology PixInsight module.
 //
@@ -366,4 +366,4 @@ IsoString MTStructureWayMask::Id() const
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF MorphologicalTransformationParameters.cpp - Released 2025-02-19T18:29:34Z
+// EOF MorphologicalTransformationParameters.cpp - Released 2025-02-21T12:13:59Z

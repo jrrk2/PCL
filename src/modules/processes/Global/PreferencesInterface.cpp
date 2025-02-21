@@ -2,11 +2,11 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.1
+// /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
 // Standard Global Process Module Version 1.6.4
 // ----------------------------------------------------------------------------
-// PreferencesInterface.cpp - Released 2025-02-19T18:29:34Z
+// PreferencesInterface.cpp - Released 2025-02-21T12:13:58Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard Global PixInsight module.
 //
@@ -3151,4 +3151,4 @@ void PreferencesInterface::GUIData::InitializeCategories()
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF PreferencesInterface.cpp - Released 2025-02-19T18:29:34Z
+// EOF PreferencesInterface.cpp - Released 2025-02-21T12:13:58Z
