@@ -4,7 +4,7 @@
 //  / ____// /___ / /___   PixInsight Class Library
 // /_/     \____//_____/   PCL 2.9.3
 // ----------------------------------------------------------------------------
-// pcl/Position.h - Released 2025-02-21T12:13:32Z
+// pcl/Position.h - Released 2025-02-25T11:26:45Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
@@ -900,7 +900,7 @@ public:
 
    /*!
     * Returns the ICRS barycentric position of the Earth (barycentric
-    * rectangular equatorial coordinates), computed for the TDB time of
+    * rectangular equatorial coordinates) computed for the TDB time of
     * calculation by the class constructor. The components of the
     * returned vector are expressed in au.
     */
@@ -911,7 +911,7 @@ public:
 
    /*!
     * Returns the ICRS barycentric velocity of the Earth (barycentric
-    * rectangular equatorial coordinates), computed for the TDB time of
+    * rectangular equatorial coordinates) computed for the TDB time of
     * calculation by the class constructor. The components of the
     * returned vector are expressed in au/day.
     */
@@ -922,7 +922,7 @@ public:
 
    /*!
     * Returns the ICRS barycentric position of the Sun (barycentric rectangular
-    * equatorial coordinates), computed for the TDB time of calculation by the
+    * equatorial coordinates) computed for the TDB time of calculation by the
     * class constructor. The components of the returned vector are in au.
     */
    Vector BarycentricPositionOfSun() const
@@ -932,7 +932,7 @@ public:
 
    /*!
     * Returns the ICRS heliocentric position of the Earth (heliocentric
-    * rectangular equatorial coordinates), computed for the TDB time of
+    * rectangular equatorial coordinates) computed for the TDB time of
     * calculation by the class constructor. The components of the
     * returned vector are expressed in au.
     */
@@ -942,34 +942,83 @@ public:
    }
 
    /*!
+    * Returns the ICRS heliocentric position of the observer (heliocentric
+    * rectangular equatorial coordinates) computed for the TDB time of
+    * calculation. The components of the returned vector are expressed in au.
+    *
+    * If a valid observer location has not been defined for this object (by a
+    * previous call to SetObserver()), this function returns an empty vector.
+    */
+   Vector HeliocentricPositionOfObserver() const
+   {
+      return m_Oh;
+   }
+
+   /*!
+    * Returns the ICRS geocentric position vector of the observer computed for
+    * the TDB time of calculation. The components of the returned vector are
+    * expressed in km.
+    *
+    * If polar motion corrections are enabled and valid CIP_ITRS data are
+    * available for the current time of calculation, polar motion is taken into
+    * account in the calculation of the observer's geocentric position and
+    * velocity. See SetObserver() for more information.
+    *
+    * If a valid observer location has not been defined for this object (by a
+    * previous call to SetObserver()), this function returns an empty vector.
+    */
+   Vector GeocentricPositionOfObserver() const
+   {
+      return m_G;
+   }
+
+   /*!
+    * Returns the ICRS geocentric velocity vector of the observer computed for
+    * the TDB time of calculation. The components of the returned vector are
+    * expressed in km/day.
+    *
+    * If polar motion corrections are enabled and valid CIP_ITRS data are
+    * available for the current time of calculation, polar motion is taken into
+    * account in the calculation of the observer's geocentric position and
+    * velocity. See SetObserver() for more information.
+    *
+    * If a valid observer location has not been defined for this object (by a
+    * previous call to SetObserver()), this function returns an empty vector.
+    */
+   Vector GeocentricVelocityOfObserver() const
+   {
+      return m_Gd;
+   }
+
+   /*!
     * Calculates all parameters and data structures necessary for equinox-based
     * reduction of positions.
     *
     * This member function calculates the following structures:
     *
     * \li Precession+bias angles, IAU 2006 precession model, Fukushima-Williams
-    * parameterization. See ESAA sections 6.6.2.2 and 7.2.5.1.
+    * parameterization. See ES2AA sections 6.6.2.2 and 7.2.5.1.
     *
-    * \li Mean obliquity of the ecliptic, IAU 2006 precession model. See ESAA
+    * \li Mean obliquity of the ecliptic, IAU 2006 precession model. See ES2AA
     * section 7.2.5.1.
     *
-    * \li Nutation angles, IAU 2006/2000A_R nutation model. See ESAA section
+    * \li Nutation angles, IAU 2006/2000A_R nutation model. See ES2AA section
     * 6.6.1.
     *
-    * \li Combined bias-precession-nutation matrix, equinox-based. See ESAA
+    * \li Combined bias-precession-nutation matrix, equinox-based. See ES2AA
     * sections 6.7 and 7.2.5.1.
     *
-    * \li Position of the Celestial Intermediate Pole (CIP). ESAA section 6.7.
+    * \li Position of the Celestial Intermediate Pole (CIP). ES2AA section 6.7.
     *
-    * \li Celestial Intermediate Origin (CIO) locator. ESAA section 6.7.
+    * \li Celestial Intermediate Origin (CIO) locator. ES2AA section 6.7.
     *
     * \li Equation of the origins (EO). See Wallace, P. & Capitaine, N., 2006,
-    * Astron.Astrophys. 459, 981, and ESAA section 6.4.
+    * Astron.Astrophys. 459, 981, and ES2AA section 6.4.
     *
     * \li Earth rotation angle (ERA) for the UT1 time of calculation. See IERS
     * Technical Note No. 32, 2003, Section 5.4.4.
     *
-    * \li Greenwich Apparent Sidereal Time (GAST), IAU 2006. ESAA 6.8.5.
+    * \li Greenwich Apparent Sidereal Time (GAST), IAU 2006. ES2AA 6.8.5.
     *
     * Since all of these items depend exclusively on time, they are computed
     * only once in the first call to this function, and subsequent calls will
@@ -987,7 +1036,7 @@ public:
     *
     * This member function starts by calling InitEquinoxBasedParameters(), so
     * it implicitly calculates all equinox-based parameters. Then it calculates
-    * the CIO-based combined bias-precession-nutation matrix. See ESAA
+    * the CIO-based combined bias-precession-nutation matrix. See ES2AA
     * sections 6.7 and 7.2.5.2.
     *
     * Since all of these items depend exclusively on time, they are computed
@@ -1537,9 +1586,10 @@ public:
     */
    static Vector ICRSEquatorialToGalactic( const Vector& q )
    {
-      return Matrix( +0.494055821648, -0.054657353964, -0.445679169947,
-                     -0.872844082054, -0.484928636070, +0.746511167077,
+      return Matrix( -0.054657353964, -0.872844082054, -0.484928636070,
+                     +0.494055821648, -0.445679169947, +0.746511167077,
                      -0.867710446378, -0.198779490637, +0.455593344276 )*q;
+
    }
 
    /*!
@@ -1576,9 +1626,10 @@ public:
     */
    static Vector GalacticToICRSEquatorial( const Vector& g )
    {
-      return Matrix( -0.823971452454, +1.289170419979, -2.918407488771,
-                     -2.840810442223, -1.835975400200, +0.229340705201,
-                     -2.808784424949, +1.654265575150, -3.263314653103 )*g;
+      return Matrix( -0.054657353964, +0.494055821648, -0.867710446378,
+                     -0.872844082054, -0.445679169947, -0.198779490637,
+                     -0.484928636070, +0.746511167077, +0.455593344276 )*g;
+
    }
 
    /*!
@@ -1716,4 +1767,4 @@ private:
 #endif  // __PCL_Position_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Position.h - Released 2025-02-21T12:13:32Z
+// EOF pcl/Position.h - Released 2025-02-25T11:26:45Z
