@@ -2,51 +2,18 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.3
+// /_/     \____//_____/   PCL 2.9.4
 // ----------------------------------------------------------------------------
-// pcl/Process.cpp - Released 2025-02-21T12:13:39Z
+// pcl/Process.cpp - Released 2025-04-07T08:53:32Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
 //
 // Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
-// Redistribution and use in both source and binary forms, with or without
-// modification, is permitted provided that the following conditions are met:
-//
-// 1. All redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-//
-// 2. All redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the names "PixInsight" and "Pleiades Astrophoto", nor the names
-//    of their contributors, may be used to endorse or promote products derived
-//    from this software without specific prior written permission. For written
-//    permission, please contact info@pixinsight.com.
-//
-// 4. All products derived from this software, in any form whatsoever, must
-//    reproduce the following acknowledgment in the end-user documentation
-//    and/or other materials provided with the product:
-//
-//    "This product is based on software from the PixInsight project, developed
-//    by Pleiades Astrophoto and its contributors (https://pixinsight.com/)."
-//
-//    Alternatively, if that is where third-party acknowledgments normally
-//    appear, this acknowledgment must be reproduced in the product itself.
-//
-// THIS SOFTWARE IS PROVIDED BY PLEIADES ASTROPHOTO AND ITS CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PLEIADES ASTROPHOTO OR ITS
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, BUSINESS
-// INTERRUPTION; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; AND LOSS OF USE,
-// DATA OR PROFITS) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Use of this source code is governed by the PixInsight Class Library License
+// version 2.0, which can be found in the LICENSE file as well as at:
+// https://pixinsight.com/license/PCL-License-2.0.html
 // ----------------------------------------------------------------------------
 
 #include <pcl/Process.h>
@@ -130,6 +97,8 @@ Process::Process( const void* handle )
 
 Process::~Process()
 {
+   // N.B.: This destructor cannot be implemented in the class declaration
+   // because ProcessPrivate is not defined.
 }
 
 // ----------------------------------------------------------------------------
@@ -435,7 +404,7 @@ api_bool InternalProcessEnumerator::CategoryCallback( meta_process_handle handle
 #define enumeration reinterpret_cast<ProcessesByCategoryEnumerationData*>( m_data )
    Process P( handle );
    if ( P.Categories().Contains( enumeration->category ) )
-      enumeration->processes.Add( P );
+      enumeration->processes.Add( std::move( P ) );
    return api_true;
 #undef enumeration
 }
@@ -453,4 +422,4 @@ Array<Process> Process::ProcessesByCategory( const IsoString& category )
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Process.cpp - Released 2025-02-21T12:13:39Z
+// EOF pcl/Process.cpp - Released 2025-04-07T08:53:32Z

@@ -1,21 +1,22 @@
 *******************************************************************************
-PixInsight Class Library License Version 1.0
+PixInsight Class Library License
+Version 2.0, 7 April 2025
 *******************************************************************************
 
-Copyright (c) 2003-2025, Pleiades Astrophoto S.L. All Rights Reserved.
+Copyright (c) 2025, Pleiades Astrophoto S.L. All Rights Reserved.
 
 Redistribution and use in both source and binary forms, with or without
-modification, is permitted provided that the following conditions are met:
+modification, are permitted provided that the following conditions are met:
 
-1. All redistributions of source code must retain the above copyright notice,
-   this list of conditions and the following disclaimer.
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions, and the following disclaimer.
 
-2. All redistributions in binary form must reproduce the above copyright
-   notice, this list of conditions and the following disclaimer in the
-   documentation and/or other materials provided with the distribution.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions, and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
 
-3. Neither the names "PixInsight" and "Pleiades Astrophoto", nor the names of
-   their contributors, may be used to endorse or promote products derived from
+3. Neither the names "PixInsight" and "Pleiades Astrophoto" nor the names of
+   their contributors may be used to endorse or promote products derived from
    this software without specific prior written permission. For written
    permission, please contact info@pixinsight.com.
 
@@ -24,10 +25,16 @@ modification, is permitted provided that the following conditions are met:
    other materials provided with the product:
 
    "This product is based on software from the PixInsight project, developed by
-    Pleiades Astrophoto and its contributors (https://pixinsight.com/)."
+   Pleiades Astrophoto and its contributors (https://pixinsight.com/)."
 
    Alternatively, if that is where third-party acknowledgments normally appear,
    this acknowledgment must be reproduced in the product itself.
+
+5. The use of any material released under this license to train, develop, or
+   improve any neural network or machine learning system, either directly or
+   indirectly as part of a derived product, either in source code or binary
+   form, is strictly forbidden without specific prior written permission. For
+   written permission, please contact info@pixinsight.com.
 
 THIS SOFTWARE IS PROVIDED BY PLEIADES ASTROPHOTO AND ITS CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE

@@ -10,7 +10,11 @@
 // 2025/01/09 18:50:41 UTC
 // installer.cpp
 // ----------------------------------------------------------------------------
-// Copyright (c) 2013-2024 Pleiades Astrophoto S.L.
+// Copyright (c) 2013-2025 Pleiades Astrophoto S.L.
+//
+// Use of this source code is governed by the PixInsight Class Library License
+// version 2.0, which can be found in the LICENSE file as well as at:
+// https://pixinsight.com/license/PCL-License-2.0.html
 // ----------------------------------------------------------------------------
 
 #if !defined( __PCL_FREEBSD ) && !defined( __PCL_LINUX )

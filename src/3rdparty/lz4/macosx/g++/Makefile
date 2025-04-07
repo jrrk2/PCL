@@ -1,8 +1,8 @@
 ######################################################################
-# PixInsight Makefile Generator Script v1.143
+# PixInsight Makefile Generator Script v1.144
 # Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2025-02-21T19:23:14.327Z
+# Generated on .... 2025-04-07T08:57:39.362Z
 # Project id ...... lz4
 # Project type .... StaticLibrary
 # Platform ........ MacOSX/g++

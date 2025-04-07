@@ -2,52 +2,19 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.3
+// /_/     \____//_____/   PCL 2.9.4
 // ----------------------------------------------------------------------------
-// Standard XISF File Format Module Version 1.1.2
+// Standard XISF File Format Module Version 1.1.3
 // ----------------------------------------------------------------------------
-// XISFInstance.cpp - Released 2025-02-21T12:13:50Z
+// XISFInstance.cpp - Released 2025-04-07T08:53:45Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard XISF PixInsight module.
 //
 // Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
-// Redistribution and use in both source and binary forms, with or without
-// modification, is permitted provided that the following conditions are met:
-//
-// 1. All redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-//
-// 2. All redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the names "PixInsight" and "Pleiades Astrophoto", nor the names
-//    of their contributors, may be used to endorse or promote products derived
-//    from this software without specific prior written permission. For written
-//    permission, please contact info@pixinsight.com.
-//
-// 4. All products derived from this software, in any form whatsoever, must
-//    reproduce the following acknowledgment in the end-user documentation
-//    and/or other materials provided with the product:
-//
-//    "This product is based on software from the PixInsight project, developed
-//    by Pleiades Astrophoto and its contributors (https://pixinsight.com/)."
-//
-//    Alternatively, if that is where third-party acknowledgments normally
-//    appear, this acknowledgment must be reproduced in the product itself.
-//
-// THIS SOFTWARE IS PROVIDED BY PLEIADES ASTROPHOTO AND ITS CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PLEIADES ASTROPHOTO OR ITS
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, BUSINESS
-// INTERRUPTION; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; AND LOSS OF USE,
-// DATA OR PROFITS) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Use of this source code is governed by the PixInsight Class Library License
+// version 2.0, which can be found in the LICENSE file as well as at:
+// https://pixinsight.com/license/PCL-License-2.0.html
 // ----------------------------------------------------------------------------
 
 #include "XISFInstance.h"
@@ -82,6 +49,7 @@ namespace pcl
  *    no-embedded-data              rw
  *    fits-keywords                 rw
  *    no-fits-keywords              rw
+ *    image-type                    r
  *    image-ids                      w
  *    import-fits-keywords          r
  *    no-import-fits-keywords       r
@@ -167,6 +135,7 @@ public:
    HintValue<bool>              embeddedData;
    HintValue<IsoString>         cfa;
    HintValue<bool>              onlyFirstImage;
+   HintValue<IsoString>         imageType;
    HintValue<bool>              normalize;
    HintValue<double>            resolution;
    HintValue<IsoString>         resolutionUnit;
@@ -278,6 +247,12 @@ public:
             onlyFirstImage = true;
          else if ( *i == "no-only-first-image" )
             onlyFirstImage = false;
+         else if ( *i == "image-type" )
+         {
+            if ( ++i == theHints.End() )
+               break;
+            imageType = *i;
+         }
          else if ( *i == "normalize" )
             normalize = true;
          else if ( *i == "no-normalize" )
@@ -385,6 +360,9 @@ public:
       if ( onlyFirstImage.HasChanged() )
          hints << (onlyFirstImage.Value() ? "only-first-image" : "no-only-first-image");
 
+      if ( imageType.HasChanged() )
+         hints << "image-type " + imageType.Value();
+
       if ( normalize.HasChanged() )
          hints << (normalize.Value() ? "normalize" : "no-normalize");
 
@@ -420,10 +398,31 @@ public:
       return IsoString().ToSpaceSeparated( hints );
    }
 
-   void ApplyReadHints( ImageOptions& options ) const
+   void ApplyReadHints( ImageOptions& options, int imageIndex ) const
    {
       if ( normalize.HasChanged() )
          options.readNormalized = normalize;
+
+      if ( imageIndex == 0 )
+         if ( imageType.HasChanged() )
+            if ( imageType.Value().CompareIC( "bias" ) == 0 )
+               options.imageType = ImageType::Bias;
+            else if ( imageType.Value().CompareIC( "dark" ) == 0 )
+               options.imageType = ImageType::Dark;
+            else if ( imageType.Value().CompareIC( "flat" ) == 0 )
+               options.imageType = ImageType::Flat;
+            else if ( imageType.Value().CompareIC( "light" ) == 0 )
+               options.imageType = ImageType::Light;
+            else if ( imageType.Value().CompareIC( "master_bias" ) == 0 )
+               options.imageType = ImageType::MasterBias;
+            else if ( imageType.Value().CompareIC( "master_dark" ) == 0 )
+               options.imageType = ImageType::MasterDark;
+            else if ( imageType.Value().CompareIC( "master_flat" ) == 0 )
+               options.imageType = ImageType::MasterFlat;
+            else if ( imageType.Value().CompareIC( "master_light" ) == 0 )
+               options.imageType = ImageType::MasterLight;
+            else
+               options.imageType = ImageType::Unknown;
    }
 
    void ApplyReadHints( XISFOptions& options ) const
@@ -595,7 +594,13 @@ ImageDescriptionArray XISFInstance::Open( const String& filePath, const IsoStrin
       for ( int i = 0; i < int( m_reader->NumberOfImages() ); ++i )
       {
          m_reader->SelectImage( i );
-         images << ImageDescription( m_reader->ImageInfo(), m_reader->ImageOptions(), m_reader->ImageId() );
+
+         ImageDescription description( m_reader->ImageInfo(), m_reader->ImageOptions(), m_reader->ImageId() );
+         if ( m_readHints.IsValid() )
+            m_readHints->ApplyReadHints( description.options, i );
+
+         images << description;
+
          if ( onlyFirstImage )
             break;
       }
@@ -775,7 +780,7 @@ static void ReadXISFImage( GenericImage<P>& image, XISFReader* reader, const XIS
    if ( hints != nullptr )
    {
       ImageOptions imageOptions;
-      hints->ApplyReadHints( imageOptions );
+      hints->ApplyReadHints( imageOptions, reader->SelectedImageIndex() );
       reader->SetImageOptions( imageOptions );
    }
    reader->ReadImage( image );
@@ -824,7 +829,7 @@ void ReadXISFSamples( T* buffer, int startRow, int rowCount, int channel, XISFRe
    if ( hints )
    {
       ImageOptions imageOptions;
-      hints->ApplyReadHints( imageOptions );
+      hints->ApplyReadHints( imageOptions, reader->SelectedImageIndex() );
       reader->SetImageOptions( imageOptions );
    }
 
@@ -1189,4 +1194,4 @@ void XISFInstance::CloseImage()
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF XISFInstance.cpp - Released 2025-02-21T12:13:50Z
+// EOF XISFInstance.cpp - Released 2025-04-07T08:53:45Z

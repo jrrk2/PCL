@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T09:14:58.511Z
+# Project id ...... chbtest
+# Project type .... Executable
+# Platform ........ Windows/vc17
+######################################################################
+-->
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>de0d8a88-e6f8-479d-a982-450131bbdbef</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\chbtest.cpp">
+        <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

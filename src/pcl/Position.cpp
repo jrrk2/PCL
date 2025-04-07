@@ -2,51 +2,18 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.3
+// /_/     \____//_____/   PCL 2.9.4
 // ----------------------------------------------------------------------------
-// pcl/Position.cpp - Released 2025-02-21T12:13:39Z
+// pcl/Position.cpp - Released 2025-04-07T08:53:32Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
 //
 // Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
-// Redistribution and use in both source and binary forms, with or without
-// modification, is permitted provided that the following conditions are met:
-//
-// 1. All redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-//
-// 2. All redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the names "PixInsight" and "Pleiades Astrophoto", nor the names
-//    of their contributors, may be used to endorse or promote products derived
-//    from this software without specific prior written permission. For written
-//    permission, please contact info@pixinsight.com.
-//
-// 4. All products derived from this software, in any form whatsoever, must
-//    reproduce the following acknowledgment in the end-user documentation
-//    and/or other materials provided with the product:
-//
-//    "This product is based on software from the PixInsight project, developed
-//    by Pleiades Astrophoto and its contributors (https://pixinsight.com/)."
-//
-//    Alternatively, if that is where third-party acknowledgments normally
-//    appear, this acknowledgment must be reproduced in the product itself.
-//
-// THIS SOFTWARE IS PROVIDED BY PLEIADES ASTROPHOTO AND ITS CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PLEIADES ASTROPHOTO OR ITS
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, BUSINESS
-// INTERRUPTION; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; AND LOSS OF USE,
-// DATA OR PROFITS) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Use of this source code is governed by the PixInsight Class Library License
+// version 2.0, which can be found in the LICENSE file as well as at:
+// https://pixinsight.com/license/PCL-License-2.0.html
 // ----------------------------------------------------------------------------
 
 #include <pcl/AkimaInterpolation.h>
@@ -93,7 +60,7 @@ uint64 StarPosition::UniqueId()
 static double TDB_TT( const TimePoint& t )
 {
    // Approximate formula for TDB-TT, result in seconds.
-   // ESAA Eq. 7.101
+   // ES2AA Eq. 7.101
    double T1 = t.CenturiesSinceJ2000();
    double g = Rad( 357.53 + 3.599905e+4*T1 );
    double L_LJ = Rad( 246.11 + 3.296447e+4*T1 );
@@ -254,12 +221,12 @@ void Position::SetObserver( const ObserverPosition& O )
    {
       Vector p = CIP_ITRS();
       double s1 = AsRad( -0.000047*m_TT ); // TIO locator
-      // ESAA Eq. 7.77
+      // ES2AA Eq. 7.77
       Matrix Winv = Matrix::UnitMatrix( 3 );
       Winv.RotateX( p[1] );
       Winv.RotateY( p[0] );
       Winv.RotateZ( -s1 );
-      // ESAA Eq. 7.138, Eq. 7.140
+      // ES2AA Eq. 7.138, Eq. 7.140
       g = Winv*g;
       gd = Winv*gd;
    }
@@ -507,10 +474,10 @@ Vector Position::Deflection()
          Vector Sb = m_HS->StateVector( m_t-m_tau );
          // Heliocentric position at t-tau.
          Vector q = (m_ub - Sb).Unit();
-         // ESAA Eq. 7.64
+         // ES2AA Eq. 7.64
          double g1 = 2*9.8706e-9/d;
          double g2 = 1 + q*e;
-         // ESAA Eq. 7.63
+         // ES2AA Eq. 7.63
          m_u1 = U*(u + g1*(((u*q)*e - eu*q)/g2));
       }
    }
@@ -531,7 +498,7 @@ Vector Position::Aberration()
       // account for the geocentric velocity of the observer.
       m_u2 = m_u1;
       if ( m_observer )
-         m_u2 += m_tau*m_Gd; // ESAA Eq. 7.55
+         m_u2 += m_tau*m_Gd; // ES2AA Eq. 7.55
    }
    else
    {
@@ -547,7 +514,7 @@ Vector Position::Aberration()
       double bm1 = Sqrt( 1 - V.SumOfSquares() );
       double f1 = u*V;
       double f2 = 1 + f1/(1 + bm1);
-      m_u2 = (bm1*m_u1 + f2*m_u1.L2Norm()*V)/(1 + f1); // ESAA Eq. 7.118
+      m_u2 = (bm1*m_u1 + f2*m_u1.L2Norm()*V)/(1 + f1); // ES2AA Eq. 7.118
    }
 
    return m_u2;
@@ -646,7 +613,7 @@ Vector Position::Geometric( const StarPosition& S )
       double p = AsRad( S.p );
 
       // Relativistic Doppler effect.
-      // ESAA Eq. 7.26
+      // ES2AA Eq. 7.26
       double f = 1/(1 - S.v/c_km_s);
 
       // Unit conversion factors.
@@ -664,11 +631,11 @@ Vector Position::Geometric( const StarPosition& S )
       // Time of observation corrected for the Roemer delay.
       TimePoint tb = m_t + u.Dot( m_Eb )/c_au_day;
       // Barycentric position vector at time t.
-      // ESAA Eq. 7.127
+      // ES2AA Eq. 7.127
       m_U = m_ub = u + (tb - S.t0)*v;
 
       // Geocentric position vector at time t.
-      // ESAA Eq. 7.128
+      // ES2AA Eq. 7.128
       if ( p != 0 )
       {
          m_U -= p*m_Eb;
@@ -923,8 +890,8 @@ double Position::CIOLocator( double T, double X, double Y )
 
    /*
     * Non-periodic terms, values in arcseconds.
-    * Source: ESAA Eq. 6.53
-    * N.B: There is a known error in the third edition (2013) of ESAA:
+    * Source: ES2AA Eq. 6.53
+    * N.B: There is a known error in the third edition (2013) of ES2AA:
     *    On page 229, Eq. 6.53, the last line of Equation 6.53: the factor
     *    -0.7257411 should be -0.07257411.
     */
@@ -1001,10 +968,10 @@ double Position::PhaseAngle( const StarPosition& S )
 
 bool Position::CanComputeApparentVisualMagnitude( const EphemerisFile::Handle& H ) const
 {
-   // Minor planets with known absolute magnitudes and phase coefficients.
+   // Minor planets with known absolute magnitudes (H). Phase coefficients (G)
+   // are optional and we use a default value of 0.15 when not known.
    if ( H.H().IsDefined() )
-      if ( H.G().IsDefined() )
-         return true;
+      return true;
 
    // Comets with known total and/or nuclear absolute magnitudes.
    if ( H.M1().IsDefined() || H.M2().IsDefined() )
@@ -1012,7 +979,7 @@ bool Position::CanComputeApparentVisualMagnitude( const EphemerisFile::Handle& H
 
    if ( H.OriginId() == "SSB" )
    {
-      // The main solar system bodies except Sun, Earth and Moon.
+      // The main solar system bodies except Sun, Earth, and Moon.
       switch ( H.ObjectId().Hash32() )
       {
       case 0x77ee4333: // Me
@@ -1070,20 +1037,21 @@ Optional<double> Position::ApparentVisualMagnitude( EphemerisFile::Handle& H )
    if ( H.H().IsDefined() )
    {
       /*
-       * For objects with available H and G values in ephemeris data, apply the
-       * standard apparent magnitude algorithm for minor planets.
-       * See ESAA Section 10.4.3.
+       * For objects with available absolute magnitudes (H) in ephemeris data,
+       * apply the standard apparent magnitude algorithm for minor planets.
+       * When the phase coefficient parameter (G) is unavailable, assume a
+       * default value of 0.15 customarily. See ES2AA Section 10.4.3.
        */
-      if ( H.G().IsDefined() )
-         if ( 0 <= i && Deg( i ) <= 120 )
-         {
-            // ESAA Eq. 10.40
-            double t2 = Tan( i/2 );
-            double phi1 = Exp( -3.33*Pow( t2, 0.63 ) );
-            double phi2 = Exp( -1.87*Pow( t2, 1.22 ) );
-            // ESAA Eq. 10.38
-            V = H.H()() - 2.5*Log( (1 - H.G()())*phi1 + H.G()()*phi2 );
-         }
+      if ( 0 <= i && Deg( i ) <= 120 )
+      {
+         // ES2AA Eq. 10.40
+         double G = H.G().OrElse( 0.15 );
+         double t2 = Tan( i/2 );
+         double phi1 = Exp( -3.33*Pow( t2, 0.63 ) );
+         double phi2 = Exp( -1.87*Pow( t2, 1.22 ) );
+         // ES2AA Eq. 10.38
+         V = H.H()() - 2.5*Log( (1 - G)*phi1 + G*phi2 );
+      }
    }
    else if ( H.M1().IsDefined() )
    {
@@ -1115,7 +1083,7 @@ Optional<double> Position::ApparentVisualMagnitude( EphemerisFile::Handle& H )
        * light reflected by the rings.
        *
        * For Uranus, Pluto and the Galilean satellites of Jupiter, apply
-       * coefficients taken from ESAA Table 10.6. See also Errata in the ESAA
+       * coefficients taken from ES2AA Table 10.6. See also Errata in the ES2AA
        * (3rd edition, 1st printing), last update of 24 April 2018.
        */
       if ( H.OriginId() == "SSB" )
@@ -1239,7 +1207,7 @@ Optional<double> Position::ApparentVisualMagnitude( EphemerisFile::Handle& H )
       }
    }
 
-   // Observed visual magnitude, ESAA Eq. 10.4, Eq. 10.41.
+   // Observed visual magnitude, ES2AA Eq. 10.4, Eq. 10.41.
    if ( V.IsDefined() )
       return V() + 5*Log( d*d0 );
 
@@ -1302,4 +1270,4 @@ Optional<double> Position::CometApparentVisualNuclearMagnitude( EphemerisFile::H
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Position.cpp - Released 2025-02-21T12:13:39Z
+// EOF pcl/Position.cpp - Released 2025-04-07T08:53:32Z

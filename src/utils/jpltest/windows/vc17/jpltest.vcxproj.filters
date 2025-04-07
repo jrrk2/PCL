@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T09:15:45.430Z
+# Project id ...... jpltest
+# Project type .... Executable
+# Platform ........ Windows/vc17
+######################################################################
+-->
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>a99d399c-8313-41ad-b2e9-f5a90d900ea4</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\jpltest.cpp">
+        <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

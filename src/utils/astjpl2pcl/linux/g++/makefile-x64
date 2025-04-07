@@ -1,22 +1,12 @@
 ######################################################################
-# PixInsight Makefile Generator Script v1.127
-# Copyright (C) 2009-2022 Pleiades Astrophoto
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2022-12-07T20:24:23.140Z
+# Generated on .... 2025-04-07T09:14:43.758Z
 # Project id ...... astjpl2pcl
 # Project type .... Executable
 # Platform ........ Linux/g++
 # Configuration ... Release/x64
-# --------------------------------------------------------------------
-# Additional include search directories:
-# /PixInsight/src/utils/cspice/include
-# --------------------------------------------------------------------
-# Additional library search directories:
-# /PixInsight/src/utils/cspice/lib
-# --------------------------------------------------------------------
-# Additional libraries:
-# cspice
-# csupport
 ######################################################################
 
 OBJ_DIR="$(PCLSRCDIR)/utils/astjpl2pcl/linux/g++/x64/Release"
@@ -52,7 +42,7 @@ DEP_FILES= \
 -include $(DEP_FILES)
 
 $(OBJ_DIR)/astjpl2pcl: $(OBJ_FILES)
-	g++ -m64 -fPIC -pthread -Wl,-fuse-ld=gold -Wl,--enable-new-dtags -Wl,-z,noexecstack -Wl,-O1 -Wl,--gc-sections -s -L"$(PCLLIBDIR64)" -L"$(PCLBINDIR64)/lib" -L"/PixInsight/src/utils/cspice/lib" -o $(OBJ_DIR)/astjpl2pcl $(OBJ_FILES) -lpthread -lPCL-pxi -llz4-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lcspice -lcsupport
+	g++ -m64 -fPIC -pthread -Wl,-fuse-ld=gold -Wl,--enable-new-dtags -Wl,-z,noexecstack -Wl,-O1 -Wl,--gc-sections -s -L"$(PCLLIBDIR64)" -L"$(PCLBINDIR64)/lib" -o $(OBJ_DIR)/astjpl2pcl $(OBJ_FILES) -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi
 	$(MAKE) -f ./makefile-x64 --no-print-directory post-build
 
 .PHONY: clean
@@ -64,6 +54,6 @@ post-build:
 	cp $(OBJ_DIR)/astjpl2pcl $(PCLBINDIR64)
 
 ./x64/Release/%.o: ../../%.cpp
-	g++ -c -pipe -pthread -m64 -fPIC -D_REENTRANT -D__PCL_LINUX -D__PCL_AVX2 -D__PCL_FMA -D__PCL_CUDA -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -I"$(CUDA_HOME)/include" -I"/PixInsight/src/utils/cspice/include" -march=haswell -mtune=znver2 -mfpmath=sse -msse4.2 -mavx2 -mfma -minline-all-stringops -O3 -fomit-frame-pointer -ffunction-sections -fdata-sections -ffast-math -fnon-call-exceptions -std=c++17 -Wall -Wno-parentheses -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	g++ -c -pipe -pthread -m64 -fPIC -D_REENTRANT -D__PCL_LINUX -D__PCL_AVX2 -D__PCL_FMA -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -mavx2 -mfma -minline-all-stringops -O3 -ffunction-sections -fdata-sections -ffast-math -fnon-call-exceptions -std=c++17 -Wall -Wno-parentheses -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo ' '
 

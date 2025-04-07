@@ -2,49 +2,16 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 02.01.03.0819
+// /_/     \____//_____/   PCL 2.9.4
 // ----------------------------------------------------------------------------
 //
 // This file is part of the XISF command-line utility program.
 //
-// Copyright (c) 2017 Pleiades Astrophoto S.L.
+// Copyright (c) 2017-2025 Pleiades Astrophoto S.L.
 //
-// Redistribution and use in both source and binary forms, with or without
-// modification, is permitted provided that the following conditions are met:
-//
-// 1. All redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-//
-// 2. All redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the names "PixInsight" and "Pleiades Astrophoto", nor the names
-//    of their contributors, may be used to endorse or promote products derived
-//    from this software without specific prior written permission. For written
-//    permission, please contact info@pixinsight.com.
-//
-// 4. All products derived from this software, in any form whatsoever, must
-//    reproduce the following acknowledgment in the end-user documentation
-//    and/or other materials provided with the product:
-//
-//    "This product is based on software from the PixInsight project, developed
-//    by Pleiades Astrophoto and its contributors (http://pixinsight.com/)."
-//
-//    Alternatively, if that is where third-party acknowledgments normally
-//    appear, this acknowledgment must be reproduced in the product itself.
-//
-// THIS SOFTWARE IS PROVIDED BY PLEIADES ASTROPHOTO AND ITS CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PLEIADES ASTROPHOTO OR ITS
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, BUSINESS
-// INTERRUPTION; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; AND LOSS OF USE,
-// DATA OR PROFITS) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Use of this source code is governed by the PixInsight Class Library License
+// version 2.0, which can be found in the LICENSE file as well as at:
+// https://pixinsight.com/license/PCL-License-2.0.html
 // ----------------------------------------------------------------------------
 
 #include <pcl/Arguments.h>
@@ -283,7 +250,7 @@ static void EnumerateImages( const StringList& files, bool toStdout )
          ImageOptions options = xisf.ImageOptions();
          s << ' ' << XISF::SampleFormatId( options.bitsPerSample, options.ieeefpSampleFormat, options.complexSample );
          s << ' ' << XISF::ColorSpaceId( info.colorSpace );
-         s.AppendFormat( " w=%d h=%d n=%d p=%u\n", info.width, info.height, info.numberOfChannels, xisf.ImageProperties().Length() );
+         s.AppendFormat( " w=%d h=%d n=%d p=%u\n", info.width, info.height, info.numberOfChannels, xisf.ReadImageProperties().Length() );
          std::cout << s;
          if ( !toStdout )
             text << s;
@@ -315,19 +282,22 @@ static void EnumerateProperties( const StringList& files, bool toStdout )
 
       IsoString text;
 
-      for ( const PropertyDescription& p : xisf.Properties() )
       {
-         IsoString s;
-         s << p.id << " (" << XISF::PropertyTypeId( p.type ) << ")\n";
-         std::cout << s;
-         if ( !toStdout )
-            text << s;
+         PropertyDescriptionArray properties = xisf.PropertyDescriptions();
+         for ( const PropertyDescription& p : properties )
+         {
+            IsoString s;
+            s << p.id << " (" << XISF::PropertyTypeId( p.type ) << ")\n";
+            std::cout << s;
+            if ( !toStdout )
+               text << s;
+         }
       }
 
       for ( int i = 0; i < xisf.NumberOfImages(); ++i )
       {
          xisf.SelectImage( i );
-         PropertyDescriptionArray properties = xisf.ImageProperties();
+         PropertyDescriptionArray properties = xisf.ImagePropertyDescriptions();
          if ( !properties.IsEmpty() )
          {
             IsoString s;
@@ -339,7 +309,7 @@ static void EnumerateProperties( const StringList& files, bool toStdout )
             if ( !toStdout )
                text << s;
 
-            for ( const PropertyDescription& p : xisf.ImageProperties() )
+            for ( const PropertyDescription& p : properties )
             {
                IsoString s;
                s << p.id << " (" << XISF::PropertyTypeId( p.type ) << ")\n";
@@ -758,4 +728,4 @@ int main( int argc, const char** argv )
 }
 
 // ----------------------------------------------------------------------------
-// EOF pcl/xisf.cpp - Released 2017-04-16T10:37:44Z
+// EOF pcl/xisf.cpp - Released 2025-04-07T09:18:28Z

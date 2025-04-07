@@ -1,29 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################
-# PixInsight Makefile Generator Script v1.127
-# Copyright (C) 2009-2022 Pleiades Astrophoto
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2022-12-07T20:24:23.426Z
+# Generated on .... 2025-04-07T09:14:43.876Z
 # Project id ...... astjpl2pcl
 # Project type .... Executable
 # Platform ........ Windows/vc16
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Additional include search directories:
-# /PixInsight/src/utils/cspice/include
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Additional library search directories:
-# /PixInsight/src/utils/cspice/lib
-# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Additional libraries:
-# cspice
-# csupport
 ######################################################################
 -->
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
-      <UniqueIdentifier>eb70ef62-6b56-4188-93ab-83ec5882e0eb</UniqueIdentifier>
+      <UniqueIdentifier>a22f75f5-45cf-49c0-94bb-427b3d2056af</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

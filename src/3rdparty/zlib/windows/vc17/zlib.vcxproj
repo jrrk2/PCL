@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################
-# PixInsight Makefile Generator Script v1.143
+# PixInsight Makefile Generator Script v1.144
 # Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2025-02-21T19:23:15.127Z
+# Generated on .... 2025-04-07T08:57:40.146Z
 # Project id ...... zlib
 # Project type .... StaticLibrary
 # Platform ........ Windows/vc17
@@ -25,7 +25,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{0FC70B79-74DE-422B-99E1-43C8684E700C}</ProjectGuid>
+    <ProjectGuid>{79B1F71E-30C2-4EB6-A0DC-A2545E246CCC}</ProjectGuid>
     <RootNamespace>PixInsight</RootNamespace>
     <Keyword>Win32Proj</Keyword>
   </PropertyGroup>

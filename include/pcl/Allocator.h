@@ -2,51 +2,18 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.3
+// /_/     \____//_____/   PCL 2.9.4
 // ----------------------------------------------------------------------------
-// pcl/Allocator.h - Released 2025-02-21T12:13:32Z
+// pcl/Allocator.h - Released 2025-04-07T08:52:44Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
 //
 // Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
-// Redistribution and use in both source and binary forms, with or without
-// modification, is permitted provided that the following conditions are met:
-//
-// 1. All redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-//
-// 2. All redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the names "PixInsight" and "Pleiades Astrophoto", nor the names
-//    of their contributors, may be used to endorse or promote products derived
-//    from this software without specific prior written permission. For written
-//    permission, please contact info@pixinsight.com.
-//
-// 4. All products derived from this software, in any form whatsoever, must
-//    reproduce the following acknowledgment in the end-user documentation
-//    and/or other materials provided with the product:
-//
-//    "This product is based on software from the PixInsight project, developed
-//    by Pleiades Astrophoto and its contributors (https://pixinsight.com/)."
-//
-//    Alternatively, if that is where third-party acknowledgments normally
-//    appear, this acknowledgment must be reproduced in the product itself.
-//
-// THIS SOFTWARE IS PROVIDED BY PLEIADES ASTROPHOTO AND ITS CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PLEIADES ASTROPHOTO OR ITS
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, BUSINESS
-// INTERRUPTION; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; AND LOSS OF USE,
-// DATA OR PROFITS) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Use of this source code is governed by the PixInsight Class Library License
+// version 2.0, which can be found in the LICENSE file as well as at:
+// https://pixinsight.com/license/PCL-License-2.0.html
 // ----------------------------------------------------------------------------
 
 #ifndef __PCL_Allocator_h
@@ -69,13 +36,15 @@ namespace pcl
  * \class Allocator
  * \brief Provides memory allocation for PCL containers.
  *
- * %Allocator inherits directly from its template argument A, which
- * corresponds to a <em>block allocator</em> class. A block allocator is
- * responsible for allocation and deallocation of untyped blocks of contiguous
- * memory. %Allocator inherits block allocation capabilities and specializes
- * them for allocation of a particular type T.
+ * %Allocator inherits directly from its template argument A, which represents
+ * a <em>block allocator</em> class. A block allocator is responsible for
+ * allocating and deallocating untyped blocks of contiguous memory. %Allocator
+ * inherits block allocation capabilities from class A and specializes them for
+ * the allocation of a particular type T.
  *
- * The type T must have default and copy construction semantics.
+ * The type T must have default construction semantics. Depending on the
+ * functionality implemented by the container classes where %Allocator will be
+ * used, copy construction and/or move construction semantics may be required.
  *
  * Besides the default and copy constructors, the block allocator class A must
  * define the following member functions:
@@ -104,7 +73,7 @@ namespace pcl
  * Returns the size in bytes of a reallocated block. \a currentSize is the
  * current size in bytes of the block being reallocated, and \a newSize is the
  * requested block size. This function is similar to A::BlockSize(), but it is
- * called for reallocation of already existing data blocks, for example before
+ * called for reallocation of already existing data blocks; for example, before
  * deleting a subset of container elements.
  *
  * \code
@@ -120,7 +89,7 @@ namespace pcl
  * \endcode
  *
  * Custom deallocation routine. Deallocates a contiguous block of memory that
- * has been previously allocated by any allocator of class A.
+ * has been previously allocated by an instance of class A.
  *
  * StandardAllocator is an example of a block allocator that uses the standard
  * \c new and \c delete operators.
@@ -143,7 +112,7 @@ public:
    Allocator( const Allocator<T,A>& ) = default;
 
    /*!
-    * Constructs an %Allocator instance as a copy of other block allocator.
+    * Constructs an %Allocator instance as a copy of another block allocator.
     */
    Allocator( const A& a )
       : A( a )
@@ -151,7 +120,7 @@ public:
    }
 
    /*!
-    * Allocates a contiguous block of memory, sufficient to store at least \a n
+    * Allocates a contiguous block of memory sufficient to store at least \a n
     * instance of class T. Optionally, allocates the necessary space for \a n
     * objects plus \a extra additional bytes.
     *
@@ -163,22 +132,21 @@ public:
    T* Allocate( size_type n, size_type extra = 0 )
    {
       PCL_PRECONDITION( n+extra > 0 )
-      return (T*)this->AllocateBlock( n*sizeof( T )+extra );
-      //return (T*)new ( *this ) uint8[ n*sizeof( T )+extra ];
+      return reinterpret_cast<T*>( this->AllocateBlock( n*sizeof( T ) + extra ) );
    }
 
    /*!
     * Deallocates a block of memory.
     *
-    * \note This member function <em>does not destruct</em> any T instance; it
+    * \note This member function <em>does not destroy</em> any T instance; it
     * only deallocates a previously allocated block where an unspecified number
-    * of T instances might be stored (either constructed or not).
+    * of T instances might be stored (regardless of whether they were
+    * constructed).
     */
    void Deallocate( T* p )
    {
       PCL_PRECONDITION( p != nullptr )
-      this->DeallocateBlock( (void*)p );
-      //this->operator delete( (void*)p );
+      this->DeallocateBlock( reinterpret_cast<void*>( p ) );
    }
 
    /*!
@@ -201,7 +169,7 @@ public:
     * The value returned by this member function is always greater than or
     * equal to \a n.
     *
-    * \sa ShrunkLength()
+    * \sa ReallocatedLength()
     */
    size_type PagedLength( size_type n ) const
    {
@@ -247,6 +215,7 @@ public:
 template <class T, class A> inline void Construct( T* p, A& a )
 {
    PCL_PRECONDITION( p != nullptr )
+   static_assert( std::is_default_constructible_v<T> );
    new( (void*)p, a )T();
 }
 
@@ -257,10 +226,26 @@ template <class T, class A> inline void Construct( T* p, A& a )
  * \sa Allocator
  * \ingroup object_construction_destruction
  */
-template <class T, class T1, class A> inline void Construct( T* p, const T1& v, A& a )
+template <class T, class T1, class A> inline void CopyConstruct( T* p, const T1& v, A& a )
 {
    PCL_PRECONDITION( p != nullptr )
+   static_assert( std::is_convertible_v<T1, T> );
+   static_assert( std::is_copy_constructible_v<T> );
    new( (void*)p, a )T( v );
+}
+
+/*!
+ * Constructs an object with storage at address \a p, initial value \a v, and
+ * allocator \a a. This function invokes the move constructor of class T, with
+ * argument \a v, for the object stored at \a p.
+ * \sa Allocator
+ * \ingroup object_construction_destruction
+ */
+template <class T, class A> inline void MoveConstruct( T* p, T&& v, A& a )
+{
+   PCL_PRECONDITION( p != nullptr )
+   static_assert( std::is_move_constructible_v<T> );
+   new( (void*)p, a )T( std::move( v ) );
 }
 
 #ifdef _MSC_VER
@@ -406,4 +391,4 @@ inline void Destroy( long double**, long double** ) {}
 #endif  // __PCL_Allocator_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Allocator.h - Released 2025-02-21T12:13:32Z
+// EOF pcl/Allocator.h - Released 2025-04-07T08:52:44Z

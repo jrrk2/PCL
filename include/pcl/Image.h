@@ -2,51 +2,18 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.3
+// /_/     \____//_____/   PCL 2.9.4
 // ----------------------------------------------------------------------------
-// pcl/Image.h - Released 2025-02-21T12:13:32Z
+// pcl/Image.h - Released 2025-04-07T08:52:44Z
 // ----------------------------------------------------------------------------
 // This file is part of the PixInsight Class Library (PCL).
 // PCL is a multiplatform C++ framework for development of PixInsight modules.
 //
 // Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
-// Redistribution and use in both source and binary forms, with or without
-// modification, is permitted provided that the following conditions are met:
-//
-// 1. All redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-//
-// 2. All redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the names "PixInsight" and "Pleiades Astrophoto", nor the names
-//    of their contributors, may be used to endorse or promote products derived
-//    from this software without specific prior written permission. For written
-//    permission, please contact info@pixinsight.com.
-//
-// 4. All products derived from this software, in any form whatsoever, must
-//    reproduce the following acknowledgment in the end-user documentation
-//    and/or other materials provided with the product:
-//
-//    "This product is based on software from the PixInsight project, developed
-//    by Pleiades Astrophoto and its contributors (https://pixinsight.com/)."
-//
-//    Alternatively, if that is where third-party acknowledgments normally
-//    appear, this acknowledgment must be reproduced in the product itself.
-//
-// THIS SOFTWARE IS PROVIDED BY PLEIADES ASTROPHOTO AND ITS CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PLEIADES ASTROPHOTO OR ITS
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, BUSINESS
-// INTERRUPTION; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; AND LOSS OF USE,
-// DATA OR PROFITS) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Use of this source code is governed by the PixInsight Class Library License
+// version 2.0, which can be found in the LICENSE file as well as at:
+// https://pixinsight.com/license/PCL-License-2.0.html
 // ----------------------------------------------------------------------------
 
 #ifndef __PCL_Image_h
@@ -9301,7 +9268,7 @@ public:
                case ImageOp::Mul:         ITERATE( Mul         ); break;
                case ImageOp::Div:
                   for ( size_type j = 0; j < N; ++j, ++f, ++g )
-                     if ( *g != 0 )
+                     if ( *g != static_cast<typename P1::sample>( 0 ) )
                         P::Div( *f, *g );
                      else
                         *f = P::MaxSampleValue();
@@ -9369,7 +9336,7 @@ public:
                {
                   PCL_IVDEP
                   for ( int l = 0; l < w; ++l, ++f, ++g )
-                     if ( *g != 0 )
+                     if ( *g != static_cast<typename P1::sample>( 0 ) )
                         P::Div( *f, *g );
                      else
                         *f = P::MaxSampleValue();
@@ -16100,7 +16067,11 @@ private:
       {
          min = P::HighestSampleValue();
          count = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                if ( *f < min )
                   min = *f;
@@ -16127,7 +16098,11 @@ private:
       {
          max = P::LowestSampleValue();
          count = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                if ( max < *f )
                   max = *f;
@@ -16156,7 +16131,11 @@ private:
          min = P::HighestSampleValue();
          max = P::LowestSampleValue();
          count = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                if ( *f < min )
                   min = *f;
@@ -16237,7 +16216,11 @@ private:
       void DoExecute() override
       {
          min = P::HighestSampleValue();
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                if ( *f < min )
                   min = *(this->m_amin = f);
@@ -16264,7 +16247,11 @@ private:
       void DoExecute() override
       {
          max = P::LowestSampleValue();
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                if ( max < *f )
                   max = *(this->m_amax = f);
@@ -16292,7 +16279,11 @@ private:
       {
          min = P::HighestSampleValue();
          max = P::LowestSampleValue();
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                if ( *f < min )
                   min = *(this->m_amin = f);
@@ -16339,7 +16330,11 @@ private:
 
       virtual void DoExecute()
       {
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double v; P::FromSample( v, *f );
                SumStep( v );
@@ -16362,7 +16357,11 @@ private:
 
       void DoExecute() override
       {
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double v; P::FromSample( v, *f );
                this->SumStep( v*v );
@@ -16385,7 +16384,11 @@ private:
 
       void DoExecute() override
       {
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double v; P::FromSample( v, *f );
                this->SumStep( pcl::Abs( v ) );
@@ -16413,7 +16416,11 @@ private:
       {
          R = e = 0.0;
          n = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double v; P::FromSample( v, *f );
                for ( int i = 0;; )
@@ -16473,7 +16480,11 @@ private:
             if ( 1 + m_range != 1 )
             {
                const double scale = (__PCL_MEDIAN_HISTOGRAM_LENGTH - 1)/m_range;
+#if __cplusplus > 201703L
+               this->Execute( [=,this]( const sample* __restrict__ f )
+#else
                this->Execute( [=]( const sample* __restrict__ f )
+#endif
                   {
                      const int k = TruncInt( scale*(*f - m_low) );
                      if ( k >= 0 && k < __PCL_MEDIAN_HISTOGRAM_LENGTH )
@@ -16634,7 +16645,11 @@ private:
          minAbsDev = std::numeric_limits<double>::max();
          maxAbsDev = 0;
          count = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double d; P::FromSample( d, *f );
                d = pcl::Abs( d - m_center );
@@ -16672,7 +16687,11 @@ private:
          minAbsDevLow = minAbsDevHigh = std::numeric_limits<double>::max();
          maxAbsDevLow = maxAbsDevHigh = 0;
          nLow = nHigh = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double x; P::FromSample( x, *f );
                if ( x <= m_center )
@@ -16728,7 +16747,11 @@ private:
 #ifdef __PCL_MACOSX
          if ( 1 + m_range != 1 )
 #endif
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double d; P::FromSample( d, *f );
                d = pcl::Abs( d - m_center );
@@ -16774,7 +16797,11 @@ private:
 #ifdef __PCL_MACOSX
          if ( 1 + m_range != 1 )
 #endif
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double x; P::FromSample( x, *f );
                if ( m_side > 0 == x > m_center )
@@ -16813,7 +16840,11 @@ private:
       void Run() final
       {
          var = eps = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double d; P::FromSample( d, *f );
                d -= m_mean;
@@ -16845,7 +16876,11 @@ private:
 
       void DoExecute() override
       {
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double v; P::FromSample( v, *f );
                this->SumStep( pcl::Abs( v - m_center ) );
@@ -16873,7 +16908,11 @@ private:
       {
          s0 = s1 = 0;
          n0 = n1 = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double v; P::FromSample( v, *f );
                if ( v <= m_center )
@@ -16915,7 +16954,11 @@ private:
       {
          num = den = 0;
          n = nr = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                ++n;
                double xc; P::FromSample( xc, *f ); xc -= m_center;
@@ -16960,7 +17003,11 @@ private:
       {
          num0 = den0 = num1 = den1 = 0;
          n0 = n1 = nr0 = nr1 = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double xc; P::FromSample( xc, *f ); xc -= m_center;
                bool low = xc <= 0;
@@ -17020,7 +17067,11 @@ private:
       void Run() final
       {
          n = 0;
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                samples[n++] = *f;
             } );
@@ -17068,7 +17119,11 @@ private:
          }
          else
          {
+#if __cplusplus > 201703L
+            this->Execute( [=,this]( const sample* __restrict__ f )
+#else
             this->Execute( [=]( const sample* __restrict__ f )
+#endif
                {
                   P::FromSample( values[n++], *f );
                } );
@@ -17094,7 +17149,11 @@ private:
 
       void DoExecute() override
       {
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double d; P::FromSample( d, *f );
                this->values[this->n++] = pcl::Abs( d - m_center );
@@ -17124,7 +17183,11 @@ private:
       {
          p = this->values.Begin();
          q = this->values.End();
+#if __cplusplus > 201703L
+         this->Execute( [=,this]( const sample* __restrict__ f )
+#else
          this->Execute( [=]( const sample* __restrict__ f )
+#endif
             {
                double x; P::FromSample( x, *f );
                if ( x <= m_center )
@@ -18440,4 +18503,4 @@ using ComplexImage = FComplexImage;
 #endif   // __PCL_Image_h
 
 // ----------------------------------------------------------------------------
-// EOF pcl/Image.h - Released 2025-02-21T12:13:32Z
+// EOF pcl/Image.h - Released 2025-04-07T08:52:44Z

@@ -2,52 +2,19 @@
 //    / __ \ / ____// /
 //   / /_/ // /    / /
 //  / ____// /___ / /___   PixInsight Class Library
-// /_/     \____//_____/   PCL 2.9.3
+// /_/     \____//_____/   PCL 2.9.4
 // ----------------------------------------------------------------------------
-// Standard FITS File Format Module Version 1.2.2
+// Standard FITS File Format Module Version 1.2.3
 // ----------------------------------------------------------------------------
-// FITSInstance.cpp - Released 2025-02-21T12:13:50Z
+// FITSInstance.cpp - Released 2025-04-07T08:53:45Z
 // ----------------------------------------------------------------------------
 // This file is part of the standard FITS PixInsight module.
 //
 // Copyright (c) 2003-2025 Pleiades Astrophoto S.L. All Rights Reserved.
 //
-// Redistribution and use in both source and binary forms, with or without
-// modification, is permitted provided that the following conditions are met:
-//
-// 1. All redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-//
-// 2. All redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the names "PixInsight" and "Pleiades Astrophoto", nor the names
-//    of their contributors, may be used to endorse or promote products derived
-//    from this software without specific prior written permission. For written
-//    permission, please contact info@pixinsight.com.
-//
-// 4. All products derived from this software, in any form whatsoever, must
-//    reproduce the following acknowledgment in the end-user documentation
-//    and/or other materials provided with the product:
-//
-//    "This product is based on software from the PixInsight project, developed
-//    by Pleiades Astrophoto and its contributors (https://pixinsight.com/)."
-//
-//    Alternatively, if that is where third-party acknowledgments normally
-//    appear, this acknowledgment must be reproduced in the product itself.
-//
-// THIS SOFTWARE IS PROVIDED BY PLEIADES ASTROPHOTO AND ITS CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-// TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PLEIADES ASTROPHOTO OR ITS
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, BUSINESS
-// INTERRUPTION; PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; AND LOSS OF USE,
-// DATA OR PROFITS) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
+// Use of this source code is governed by the PixInsight Class Library License
+// version 2.0, which can be found in the LICENSE file as well as at:
+// https://pixinsight.com/license/PCL-License-2.0.html
 // ----------------------------------------------------------------------------
 
 #include "FITSInstance.h"
@@ -73,9 +40,10 @@ public:
    bool                              bottomUp;
    bool                              useRowOrderKeywords;
    bool                              signedIntegersArePhysical;
-   bool                              fixNonFinite;
-   bool                              onlyFirstImage;
-   int                               verbosity;
+   bool                              fixNonFinite = true;
+   bool                              onlyFirstImage = false;
+   IsoString                         imageType;
+   int                               verbosity = 1;
 
    FITSReadHints( const IsoString& hints )
    {
@@ -88,9 +56,6 @@ public:
       bottomUp = fitsOptions.bottomUp;
       useRowOrderKeywords = fitsOptions.useRowOrderKeywords;
       signedIntegersArePhysical = fitsOptions.signedIntegersArePhysical;
-      fixNonFinite = true;
-      onlyFirstImage = false;
-      verbosity = 1;
 
       IsoStringList theHints;
       hints.Break( theHints, ' ', true/*trim*/ );
@@ -135,6 +100,12 @@ public:
             onlyFirstImage = true;
          else if ( *i == "no-only-first-image" )
             onlyFirstImage = false;
+         else if ( *i == "image-type" )
+         {
+            if ( ++i == theHints.End() )
+               break;
+            imageType = *i;
+         }
          else if ( *i == "verbosity" )
          {
             if ( ++i == theHints.End() )
@@ -215,7 +186,31 @@ ImageDescriptionArray FITSInstance::Open( const String& filePath, const IsoStrin
                id.Prepend( '_' );
          }
 
-         images << ImageDescription( m_reader->Info(), m_reader->Options(), id );
+         ImageDescription description( m_reader->Info(), m_reader->Options(), id );
+         if ( i == 0 )
+            if ( m_readHints.IsValid() )
+               if ( !m_readHints->imageType.IsEmpty() )
+                  if ( m_readHints->imageType.CompareIC( "bias" ) == 0 )
+                     description.options.imageType = ImageType::Bias;
+                  else if ( m_readHints->imageType.CompareIC( "dark" ) == 0 )
+                     description.options.imageType = ImageType::Dark;
+                  else if ( m_readHints->imageType.CompareIC( "flat" ) == 0 )
+                     description.options.imageType = ImageType::Flat;
+                  else if ( m_readHints->imageType.CompareIC( "light" ) == 0 )
+                     description.options.imageType = ImageType::Light;
+                  else if ( m_readHints->imageType.CompareIC( "master_bias" ) == 0 )
+                     description.options.imageType = ImageType::MasterBias;
+                  else if ( m_readHints->imageType.CompareIC( "master_dark" ) == 0 )
+                     description.options.imageType = ImageType::MasterDark;
+                  else if ( m_readHints->imageType.CompareIC( "master_flat" ) == 0 )
+                     description.options.imageType = ImageType::MasterFlat;
+                  else if ( m_readHints->imageType.CompareIC( "master_light" ) == 0 )
+                     description.options.imageType = ImageType::MasterLight;
+                  else
+                     description.options.imageType = ImageType::Unknown;
+
+         images << description;
+
          if ( onlyFirstImage )
             break;
       }
@@ -857,4 +852,4 @@ void FITSInstance::CloseImage()
 } // pcl
 
 // ----------------------------------------------------------------------------
-// EOF FITSInstance.cpp - Released 2025-02-21T12:13:50Z
+// EOF FITSInstance.cpp - Released 2025-04-07T08:53:45Z

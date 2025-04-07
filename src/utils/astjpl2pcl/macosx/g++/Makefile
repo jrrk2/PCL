@@ -1,8 +1,8 @@
 ######################################################################
-# PixInsight Makefile Generator Script v1.127
-# Copyright (C) 2009-2022 Pleiades Astrophoto
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
-# Generated on .... 2022-12-07T20:24:23.268Z
+# Generated on .... 2025-04-07T09:14:43.827Z
 # Project id ...... astjpl2pcl
 # Project type .... Executable
 # Platform ........ MacOSX/g++
