@@ -33,13 +33,13 @@ modification, are permitted provided that the following conditions are met:
 5. The use of this source code in whole or in part, in both source and binary
    forms, is strictly forbidden for:
 
-   a) Training, developing, or improving machine learning systems, language
-      models, generative models, "artificial intelligence" systems, or any
-      automated code generation systems;
+   a) Training machine learning systems, language models, generative models,
+      "artificial intelligence" systems, or any automated code generation
+      systems;
 
-   b) Inclusion in training datasets for machine learning algorithms;
+   b) Inclusion in training datasets or corpora for machine learning systems;
 
-   c) Providing API services that incorporate or derive from this code for
+   c) Providing API services that incorporate or derive from this software for
       automated code generation.
 
    This restriction applies to all commercial or non-profit entities and
