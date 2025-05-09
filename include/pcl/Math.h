@@ -2563,7 +2563,7 @@ inline double SexagesimalToDecimal( int sign, const S1& s1, const S2& s2 = S2( 0
  * to severe roundoff errors if the number of summed elements is large. One way
  * to improve on this problem is to sort the input set by decreasing order of
  * absolute value \e before calling this function. A much better solution, but
- * computationally expensive, is a compensated summation algorithm such as
+ * computationally more expensive, is a compensated summation algorithm such as
  * Kahan summation, which we have implemented in the StableSum() routine.
  *
  * \ingroup statistical_functions
@@ -2582,8 +2582,9 @@ template <typename T> inline double Sum( const T* __restrict__ i, const T* __res
  *
  * For empty sequences, this function returns zero.
  *
- * In the current PCL versions, this function implements the Kahan summation
- * algorithm to reduce roundoff error to the machine's floating point error.
+ * In current PCL versions, this function implements the Kahan-Neumaier
+ * compensated summation algorithm to reduce roundoff error to the machine's
+ * floating point error.
  *
  * \ingroup statistical_functions
  */
@@ -2593,12 +2594,21 @@ template <typename T> inline double StableSum( const T* __restrict__ i, const T*
    double eps = 0;
    while ( i < j )
    {
-      double y = double( *i++ ) - eps;
-      double t = sum + y;
-      eps = (t - sum) - y;
+      volatile double x = double( *i++ );
+      volatile double t = sum + x;
+      if ( Abs( sum ) >= Abs( x ) )
+      {
+         volatile double y = sum - t;
+         eps += y + x;
+      }
+      else
+      {
+         volatile double y = x - t;
+         eps += y + sum;
+      }
       sum = t;
    }
-   return sum;
+   return sum + eps;
 }
 
 /*!
@@ -2607,7 +2617,7 @@ template <typename T> inline double StableSum( const T* __restrict__ i, const T*
  * For empty sequences, this function returns zero.
  *
  * See the remarks made for the Sum() function, which are equally applicable in
- * this case. See StableModulus() for a (slow) numerically stable version of
+ * this case. See StableModulus() for a (slower) numerically stable version of
  * this function.
  *
  * \ingroup statistical_functions
@@ -2626,8 +2636,9 @@ template <typename T> inline double Modulus( const T* __restrict__ i, const T* _
  *
  * For empty sequences, this function returns zero.
  *
- * In the current PCL versions, this function implements the Kahan summation
- * algorithm to reduce roundoff error to the machine's floating point error.
+ * In current PCL versions, this function implements the Kahan-Neumaier
+ * compensated summation algorithm to reduce roundoff error to the machine's
+ * floating point error.
  *
  * \ingroup statistical_functions
  */
@@ -2637,12 +2648,21 @@ template <typename T> inline double StableModulus( const T* __restrict__ i, cons
    double eps = 0;
    while ( i < j )
    {
-      double y = Abs( double( *i++ ) ) - eps;
-      double t = sum + y;
-      eps = (t - sum) - y;
+      volatile double x = Abs( double( *i++ ) );
+      volatile double t = sum + x;
+      if ( sum >= x )
+      {
+         volatile double y = sum - t;
+         eps += y + x;
+      }
+      else
+      {
+         volatile double y = x - t;
+         eps += y + sum;
+      }
       sum = t;
    }
-   return sum;
+   return sum + eps;
 }
 
 /*!
@@ -2651,8 +2671,8 @@ template <typename T> inline double StableModulus( const T* __restrict__ i, cons
  * For empty sequences, this function returns zero.
  *
  * See the remarks made for the Sum() function, which are equally applicable in
- * this case. See StableSumOfSquares() for a (slow) numerically stable version
- * of this function.
+ * this case. See StableSumOfSquares() for a (slower) numerically stable
+ * version of this function.
  *
  * \ingroup statistical_functions
  */
@@ -2673,8 +2693,9 @@ template <typename T> inline double SumOfSquares( const T* __restrict__ i, const
  *
  * For empty sequences, this function returns zero.
  *
- * In the current PCL versions, this function implements the Kahan summation
- * algorithm to reduce roundoff error to the machine's floating point error.
+ * In current PCL versions, this function implements the Kahan-Neumaier
+ * compensated summation algorithm to reduce roundoff error to the machine's
+ * floating point error.
  *
  * \ingroup statistical_functions
  */
@@ -2684,13 +2705,22 @@ template <typename T> inline double StableSumOfSquares( const T* __restrict__ i,
    double eps = 0;
    while ( i < j )
    {
-      double f = double( *i++ );
-      double y = f*f - eps;
-      double t = sum + y;
-      eps = (t - sum) - y;
+      volatile double x = double( *i++ );
+      x *= x;
+      volatile double t = sum + x;
+      if ( sum >= x )
+      {
+         volatile double y = sum - t;
+         eps += y + x;
+      }
+      else
+      {
+         volatile double y = x - t;
+         eps += y + sum;
+      }
       sum = t;
    }
-   return sum;
+   return sum + eps;
 }
 
 /*!
@@ -2699,8 +2729,8 @@ template <typename T> inline double StableSumOfSquares( const T* __restrict__ i,
  * For empty sequences, this function returns zero.
  *
  * See the remarks made for the Sum() function, which are equally applicable in
- * this case. See StableMean() for a (slow) numerically stable version of this
- * function.
+ * this case. See StableMean() for a (slower) numerically stable version of
+ * this function.
  *
  * \ingroup statistical_functions
  */
@@ -2718,8 +2748,9 @@ template <typename T> inline double Mean( const T* __restrict__ i, const T* __re
  *
  * For empty sequences, this function returns zero.
  *
- * In the current PCL versions, this function implements the Kahan summation
- * algorithm to reduce roundoff error to the machine's floating point error.
+ * In current PCL versions, this function implements the Kahan-Neumaier
+ * compensated summation algorithm to reduce roundoff error to the machine's
+ * floating point error.
  *
  * \ingroup statistical_functions
  */
@@ -3423,7 +3454,7 @@ template <typename T> inline double TrimmedMeanOfSquaresDestructive( T* __restri
  * For sequences of less than two elements, this function returns zero.
  *
  * See the remarks made for the Sum() function, which are equally applicable in
- * this case. See StableAvgDev() for a (slow) numerically stable version of
+ * this case. See StableAvgDev() for a (slower) numerically stable version of
  * this function.
  *
  * \note To make the average absolute deviation about the median consistent
@@ -3455,8 +3486,9 @@ template <typename T> inline double AvgDev( const T* __restrict__ i, const T* __
  *
  * For sequences of less than two elements, this function returns zero.
  *
- * In the current PCL versions, this function implements the Kahan summation
- * algorithm to reduce roundoff error to the machine's floating point error.
+ * In current PCL versions, this function implements the Kahan-Neumaier
+ * compensated summation algorithm to reduce roundoff error to the machine's
+ * floating point error.
  *
  * \note To make the average absolute deviation about the median consistent
  * with the standard deviation of a normal distribution, it must be
@@ -3471,15 +3503,23 @@ template <typename T> inline double StableAvgDev( const T* __restrict__ i, const
       return 0;
    double sum = 0;
    double eps = 0;
-   do
+   while ( i < j )
    {
-      double y = Abs( double( *i++ ) - center ) - eps;
-      double t = sum + y;
-      eps = (t - sum) - y;
+      volatile double x = Abs( double( *i++ ) - center );
+      volatile double t = sum + x;
+      if ( sum >= x )
+      {
+         volatile double y = sum - t;
+         eps += y + x;
+      }
+      else
+      {
+         volatile double y = x - t;
+         eps += y + sum;
+      }
       sum = t;
    }
-   while ( i < j );
-   return sum/n;
+   return (sum + eps)/n;
 }
 
 /*!
@@ -3524,8 +3564,9 @@ template <typename T> inline double AvgDev( const T* __restrict__ i, const T* __
  *
  * For sequences of less than two elements, this function returns zero.
  *
- * In the current PCL versions, this function implements the Kahan summation
- * algorithm to reduce roundoff error to the machine's floating point error.
+ * In current PCL versions, this function implements the Kahan-Neumaier
+ * compensated summation algorithm to reduce roundoff error to the machine's
+ * floating point error.
  *
  * \note To make the average absolute deviation about the median consistent
  * with the standard deviation of a normal distribution, it must be
@@ -3735,10 +3776,6 @@ template <typename T> inline TwoSidedEstimate Pow( const TwoSidedEstimate& e, T 
  *
  * For sequences of less than two elements, this function returns zero.
  *
- * See the remarks made for the Sum() function, which are equally applicable in
- * this case. See StableAvgDev() for a (slow) numerically stable version of
- * this function.
- *
  * \note To make the average absolute deviation about the median consistent
  * with the standard deviation of a normal distribution, it must be
  * multiplied by the constant 1.2533.
@@ -3775,10 +3812,6 @@ template <typename T> inline TwoSidedEstimate TwoSidedAvgDev( const T* __restric
  * dispersion.
  *
  * For sequences of less than two elements, this function returns zero.
- *
- * See the remarks made for the Sum() function, which are equally applicable in
- * this case. See StableAvgDev() for a (slow) numerically stable version of
- * this function.
  *
  * \note To make the average absolute deviation about the median consistent
  * with the standard deviation of a normal distribution, it must be
