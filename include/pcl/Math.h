@@ -109,6 +109,7 @@ namespace pcl
  */
 inline int MaxSSEInstructionSetSupported() noexcept
 {
+#ifndef __PCL_MACOSX
    int32 edxFlags = 0;
    int32 ecxFlags = 0;
 
@@ -126,7 +127,6 @@ inline int MaxSSEInstructionSetSupported() noexcept
                   :                                   // input operands
                   : "%eax", "%ebx", "%ecx", "%edx" ); // clobbered registers
 #endif
-
    if ( ecxFlags & (1u << 20) ) // SSE4.2
       return 42;
    if ( ecxFlags & (1u << 19) ) // SSE4.1
@@ -137,6 +137,7 @@ inline int MaxSSEInstructionSetSupported() noexcept
       return 2;
    if ( edxFlags & (1u << 25) ) // SSE
       return 1;
+#endif   
    return 0;
 }
 

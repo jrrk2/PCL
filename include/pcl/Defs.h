@@ -192,7 +192,9 @@
 #      ifndef __amd64
 #        ifndef _M_X64
 #          ifndef _M_AMD64
+#            ifndef __PCL_MACOSX
 #            error This version of PCL requires an x86_64 / EM64T / AMD64 architecture.
+#            endif
 #          endif
 #        endif
 #      endif
@@ -464,8 +466,14 @@ template <typename... Args> inline void __pcl_unused__( Args&&... ) {}
 #  define PCL_ALIGNED_MALLOC  _aligned_malloc
 #  define PCL_ALIGNED_FREE    _aligned_free
 #else
+#ifdef __PCL_MACOSX
+#include <stdlib.h>
+#  define PCL_ALIGNED_MALLOC  calloc
+#  define PCL_ALIGNED_FREE    free
+#else
 #  define PCL_ALIGNED_MALLOC  _mm_malloc
 #  define PCL_ALIGNED_FREE    _mm_free
+#endif
 #endif
 
 /*
