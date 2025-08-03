@@ -1521,7 +1521,7 @@ template <typename T> inline int RoundInt( T x ) noexcept
 
 #ifdef __PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES
 
-   return int( Round( x ) );
+     return int( Round( double (x) ) );
 
 #else
 
