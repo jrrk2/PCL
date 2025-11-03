@@ -167,6 +167,16 @@ struct FindFileInfo
    FileTime       lastAccessed;  //!< Time of last access.
    FileTime       lastModified;  //!< Time of last change.
 
+    // Define < operator
+    bool operator<(const FindFileInfo& other) const {
+        return this < &other;
+    }
+
+    // Define == operator (often useful)
+    bool operator==(const FindFileInfo& other) const {
+        return this == &other;
+    }
+
    /*!
     * Returns true iff this %FindFileInfo structure corresponds to a directory.
     */

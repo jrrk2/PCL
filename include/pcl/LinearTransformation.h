@@ -55,6 +55,16 @@ class LinearTransformation
 {
 public:
 
+    // Define < operator
+    bool operator<(const LinearTransformation& other) const {
+        return this < &other;
+    }
+
+    // Define == operator (often useful)
+    bool operator==(const LinearTransformation& other) const {
+        return this == &other;
+    }
+
    /*!
     * Default constructor. Constructs a unit linear transformation.
     */

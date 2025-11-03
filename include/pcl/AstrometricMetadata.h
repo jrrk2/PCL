@@ -145,6 +145,16 @@ public:
    {
    }
 
+    // Define < operator
+    bool operator<(const AstrometricMetadata& other) const {
+        return this < &other;
+    }
+
+    // Define == operator (often useful)
+    bool operator==(const AstrometricMetadata& other) const {
+        return this == &other;
+    }
+      
    /*!
     * Move constructor.
     */

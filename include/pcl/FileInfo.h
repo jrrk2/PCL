@@ -248,6 +248,16 @@ public:
    {
    }
 
+    // Define < operator
+    bool operator<(const FileInfo& other) const {
+        return this < &other;
+    }
+
+    // Define == operator (often useful)
+    bool operator==(const FileInfo& other) const {
+        return this == &other;
+    }
+   
    /*!
     * Assignment operator. Returns a reference to this object.
     */
