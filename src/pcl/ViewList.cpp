@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 ViewList::ViewList( Control& parent )
-   : Control( (*API->ViewList->CreateViewList)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
+   : Control( API_ViewList_CreateViewList( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateViewList" );
@@ -38,7 +38,7 @@ ViewList::ViewList( Control& parent )
 bool ViewList::IncludesMainViews() const
 {
    api_bool mainViews;
-   (*API->ViewList->GetViewListContents)( handle, &mainViews, 0, 0 );
+   API_ViewList_GetViewListContents( handle, &mainViews, 0, 0 );
    return mainViews != api_false;
 }
 
@@ -47,7 +47,7 @@ bool ViewList::IncludesMainViews() const
 bool ViewList::IncludesPreviews() const
 {
    api_bool previews;
-   (*API->ViewList->GetViewListContents)( handle, 0, &previews, 0 );
+   API_ViewList_GetViewListContents( handle, 0, &previews, 0 );
    return previews != api_false;
 }
 
@@ -56,7 +56,7 @@ bool ViewList::IncludesPreviews() const
 bool ViewList::IncludesRealTimePreview() const
 {
    api_bool realTimePreview;
-   (*API->ViewList->GetViewListContents)( handle, 0, 0, &realTimePreview );
+   API_ViewList_GetViewListContents( handle, 0, 0, &realTimePreview );
    return realTimePreview != api_false;
 }
 
@@ -64,49 +64,49 @@ bool ViewList::IncludesRealTimePreview() const
 
 void ViewList::Regenerate( bool mainViews, bool previews, bool realTimePreview )
 {
-   (*API->ViewList->RegenerateViewList)( handle, mainViews, previews, realTimePreview );
+   API_ViewList_RegenerateViewList( handle, mainViews, previews, realTimePreview );
 }
 
 // ----------------------------------------------------------------------------
 
 View ViewList::ExcludedView() const
 {
-   return View( (*API->ViewList->GetViewListExcludedView)( handle ) );
+   return View( API_ViewList_GetViewListExcludedView( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ViewList::ExcludeView( const View& v )
 {
-   (*API->ViewList->SetViewListExcludedView)( handle, v.handle );
+   API_ViewList_SetViewListExcludedView( handle, v.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 View ViewList::CurrentView() const
 {
-   return View( (*API->ViewList->GetViewListCurrentView)( handle ) );
+   return View( API_ViewList_GetViewListCurrentView( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ViewList::SelectView( const View& v )
 {
-   (*API->ViewList->SetViewListCurrentView)( handle, v.handle );
+   API_ViewList_SetViewListCurrentView( handle, v.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ViewList::HasView( const View& v )
 {
-   return (*API->ViewList->FindViewListView)( handle, v.handle ) != api_false;
+   return API_ViewList_FindViewListView( handle, v.handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ViewList::RemoveView( const View& v )
 {
-   (*API->ViewList->RemoveViewListView)( handle, v.handle );
+   API_ViewList_RemoveViewListView( handle, v.handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -153,7 +153,7 @@ public:
 void ViewList::OnViewSelected( view_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ViewList->SetViewListViewSelectedEventRoutine)( handle, &receiver,
+   if ( API_ViewList_SetViewListViewSelectedEventRoutine( handle, &receiver,
                   (f != nullptr) ? ViewListEventDispatcher::ViewSelected : nullptr ) == api_false )
       throw APIFunctionError( "SetViewListViewSelectedEventRoutine" );
    m_handlers->onViewSelected = f;
@@ -162,7 +162,7 @@ void ViewList::OnViewSelected( view_event_handler f, Control& receiver )
 void ViewList::OnCurrentViewUpdated( view_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ViewList->SetViewListCurrentViewUpdatedEventRoutine)( handle, &receiver,
+   if ( API_ViewList_SetViewListCurrentViewUpdatedEventRoutine( handle, &receiver,
                   (f != nullptr) ? ViewListEventDispatcher::CurrentViewUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetViewListCurrentViewUpdatedEventRoutine" );
    m_handlers->onCurrentViewUpdated = f;

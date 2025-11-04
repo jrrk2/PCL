@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 RadioButton::RadioButton( const String& text, Control& parent )
-   : Button( (*API->Button->CreateRadioButton)( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
+   : Button( API_Button_CreateRadioButton( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateRadioButton" );

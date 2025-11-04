@@ -28,7 +28,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 ReadWriteMutex::ReadWriteMutex()
-   : UIObject( (*API->Mutex->CreateReadWriteMutex)( ModuleHandle(), this, 0/*flags*/ ) )
+   : UIObject( API_Mutex_CreateReadWriteMutex( ModuleHandle(), this, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateReadWriteMutex" );
@@ -50,35 +50,35 @@ ReadWriteMutex& ReadWriteMutex::Null()
 
 void ReadWriteMutex::LockForRead()
 {
-   (*API->Mutex->LockForRead)( handle, api_false );
+   API_Mutex_LockForRead( handle, api_false );
 }
 
 // ----------------------------------------------------------------------------
 
 void ReadWriteMutex::LockForWrite()
 {
-   (*API->Mutex->LockForWrite)( handle, api_false );
+   API_Mutex_LockForWrite( handle, api_false );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ReadWriteMutex::TryLockForRead()
 {
-   return (*API->Mutex->LockForRead)( handle, api_true ) != api_false;
+   return API_Mutex_LockForRead( handle, api_true ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ReadWriteMutex::TryLockForWrite()
 {
-   return (*API->Mutex->LockForWrite)( handle, api_true ) != api_false;
+   return API_Mutex_LockForWrite( handle, api_true ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ReadWriteMutex::Unlock()
 {
-   (*API->Mutex->Unlock)( handle );
+   API_Mutex_Unlock( handle );
 }
 
 // ----------------------------------------------------------------------------

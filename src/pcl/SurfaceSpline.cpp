@@ -668,7 +668,7 @@ void SurfaceSplineBase::Generate( float* __restrict__ cv, void** handle,
 {
    if ( RadialBasisFunction::HasCoreImplementation( rbf ) )
    {
-      if ( (*API->Numerical->SurfaceSplineCreateF)( handle, rbf, e2, polynomial, x, y, z, n, m, r, w ) == api_false )
+      if ( API_Numerical_SurfaceSplineCreateF( handle, rbf, e2, polynomial, x, y, z, n, m, r, w ) == api_false )
          throw APIFunctionError( "SurfaceSplineCreateF" );
    }
    else
@@ -682,7 +682,7 @@ void SurfaceSplineBase::Generate( double* __restrict__ cv, void** handle,
 {
    if ( RadialBasisFunction::HasCoreImplementation( rbf ) )
    {
-      if ( (*API->Numerical->SurfaceSplineCreateD)( handle, rbf, e2, polynomial, x, y, z, n, m, r, w ) == api_false )
+      if ( API_Numerical_SurfaceSplineCreateD( handle, rbf, e2, polynomial, x, y, z, n, m, r, w ) == api_false )
          throw APIFunctionError( "SurfaceSplineCreateD" );
    }
    else
@@ -694,7 +694,7 @@ void SurfaceSplineBase::Generate( double* __restrict__ cv, void** handle,
 double SurfaceSplineBase::EvaluateHandle( const void* handle, double x, double y )
 {
    double z;
-   if ( (*API->Numerical->SurfaceSplineEvaluate)( handle, &z, x, y ) == api_false )
+   if ( API_Numerical_SurfaceSplineEvaluate( handle, &z, x, y ) == api_false )
       throw APIFunctionError( "SurfaceSplineEvaluate" );
    return z;
 }
@@ -702,14 +702,14 @@ double SurfaceSplineBase::EvaluateHandle( const void* handle, double x, double y
 void SurfaceSplineBase::EvaluateHandle( const void* handle, float* z, const float* x, const float* y, double x0, double y0, double r, size_type n )
 {
    if ( handle != 0 )
-      if ( (*API->Numerical->SurfaceSplineEvaluateVectorF)( handle, z, x, y, x0, y0, r, n ) == api_false )
+      if ( API_Numerical_SurfaceSplineEvaluateVectorF( handle, z, x, y, x0, y0, r, n ) == api_false )
          throw APIFunctionError( "SurfaceSplineEvaluateVectorF" );
 }
 
 void SurfaceSplineBase::EvaluateHandle( const void* handle, double* z, const double* x, const double* y, double x0, double y0, double r, size_type n )
 {
    if ( handle != 0 )
-      if ( (*API->Numerical->SurfaceSplineEvaluateVectorD)( handle, z, x, y, x0, y0, r, n ) == api_false )
+      if ( API_Numerical_SurfaceSplineEvaluateVectorD( handle, z, x, y, x0, y0, r, n ) == api_false )
          throw APIFunctionError( "SurfaceSplineEvaluateVectorD" );
 }
 
@@ -719,7 +719,7 @@ void SurfaceSplineBase::SerializeHandle( IsoString& data, const void* handle )
 {
    if ( handle != 0 )
    {
-      char* s = (*API->Numerical->SurfaceSplineSerialize)( ModuleHandle(), handle, 0u/*flags*/ );
+      char* s = API_Numerical_SurfaceSplineSerialize( ModuleHandle(), handle, 0u/*flags*/ );
       if ( s == nullptr || *s == '\0' )
          throw APIFunctionError( "SurfaceSplineSerialize" );
       data.Append( s );
@@ -733,7 +733,7 @@ void SurfaceSplineBase::SerializeHandle( IsoString& data, const void* handle )
 void* SurfaceSplineBase::DeserializeHandle( const IsoString& data )
 {
    void* handle;
-   if ( (*API->Numerical->SurfaceSplineDeserialize)( &handle, data.c_str(), data.Length(), 0u/*flags*/ ) == api_false )
+   if ( API_Numerical_SurfaceSplineDeserialize( &handle, data.c_str(), data.Length(), 0u/*flags*/ ) == api_false )
       throw APIFunctionError( "SurfaceSplineDeserialize" );
    return handle;
 }
@@ -743,7 +743,7 @@ void* SurfaceSplineBase::DeserializeHandle( const IsoString& data )
 void SurfaceSplineBase::DestroyHandle( void* handle )
 {
    if ( handle != 0 )
-      if ( (*API->Numerical->SurfaceSplineDestroy)( handle ) == api_false )
+      if ( API_Numerical_SurfaceSplineDestroy( handle ) == api_false )
          throw APIFunctionError( "SurfaceSplineDestroy" );
 }
 
@@ -753,7 +753,7 @@ void* SurfaceSplineBase::DuplicateHandle( const void* handle )
 {
    void* newHandle = 0;
    if ( handle != 0 )
-      if ( (*API->Numerical->SurfaceSplineDuplicate)( &newHandle, handle ) == api_false )
+      if ( API_Numerical_SurfaceSplineDuplicate( &newHandle, handle ) == api_false )
          throw APIFunctionError( "SurfaceSplineDuplicate" );
    return newHandle;
 }

@@ -278,7 +278,6 @@ SplineWorldTransformation::SplineWorldTransformation( const PropertyArray& prope
              */
             if ( RadialBasisFunction::HasCoreImplementation( m_rbf ) )
             {
-               if ( API != nullptr )
                   if ( !m_splineWI.m_Sx.m_serialization.IsEmpty() && !m_splineWI.m_Sy.m_serialization.IsEmpty() )
                      if ( !m_splineIW.m_Sx.m_serialization.IsEmpty() && !m_splineIW.m_Sy.m_serialization.IsEmpty() )
                      {
@@ -782,7 +781,6 @@ void SplineWorldTransformation::EnsureValidRBFParameters()
     * based on dense linear systems with O(n^3) time complexity.
     */
    if ( RadialBasisFunction::HasCoreImplementation( m_rbf ) )
-      if ( API == nullptr )
          m_rbf = ((m_rbf == RadialBasisFunction::DDMVariableOrder)) ?
                RadialBasisFunction::VariableOrder : RadialBasisFunction::ThinPlateSpline;
 
@@ -885,7 +883,6 @@ void SplineWorldTransformation::InitializeSplines()
        * If running as a standalone executable, we can only use our standard
        * surface splines (with O(n^3) time complexity).
        */
-      if ( API == nullptr )
          m_rbf = (m_order > 2) ? RadialBasisFunction::VariableOrder : RadialBasisFunction::ThinPlateSpline;
 
       /*

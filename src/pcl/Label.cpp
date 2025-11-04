@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 Label::Label( const String& text, Control& parent )
-   : Frame( (*API->Label->CreateLabel)( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
+   : Frame( API_Label_CreateLabel( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateLabel" );
@@ -38,13 +38,13 @@ Label::Label( const String& text, Control& parent )
 String Label::Text() const
 {
    size_type len = 0;
-   (*API->Label->GetLabelText)( handle, 0, &len );
+   API_Label_GetLabelText( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->Label->GetLabelText)( handle, text.Begin(), &len ) == api_false )
+      if ( API_Label_GetLabelText( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetLabelText" );
       text.ResizeToNullTerminated();
    }
@@ -55,63 +55,63 @@ String Label::Text() const
 
 void Label::SetText( const String& text )
 {
-   (*API->Label->SetLabelText)( handle, text.c_str() );
+   API_Label_SetLabelText( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 int Label::Margin() const
 {
-   return (*API->Label->GetLabelMargin)( handle );
+   return API_Label_GetLabelMargin( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Label::SetMargin( int px )
 {
-   (*API->Label->SetLabelMargin)( handle, px );
+   API_Label_SetLabelMargin( handle, px );
 }
 
 // ----------------------------------------------------------------------------
 
 int Label::TextAlignment() const
 {
-   return (*API->Label->GetLabelAlignment)( handle );
+   return API_Label_GetLabelAlignment( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Label::SetTextAlignment( int align )
 {
-   (*API->Label->SetLabelAlignment)( handle, align );
+   API_Label_SetLabelAlignment( handle, align );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Label::IsWordWrappingEnabled() const
 {
-   return (*API->Label->GetLabelWordWrappingEnabled)( handle ) != api_false;
+   return API_Label_GetLabelWordWrappingEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Label::EnableWordWrapping( bool enable )
 {
-   (*API->Label->SetLabelWordWrappingEnabled)( handle, enable );
+   API_Label_SetLabelWordWrappingEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Label::IsRichTextEnabled() const
 {
-   return (*API->Label->GetLabelRichTextEnabled)( handle ) != api_false;
+   return API_Label_GetLabelRichTextEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Label::EnableRichText( bool enable )
 {
-   (*API->Label->SetLabelRichTextEnabled)( handle, enable );
+   API_Label_SetLabelRichTextEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------

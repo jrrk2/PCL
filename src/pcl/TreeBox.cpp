@@ -30,11 +30,11 @@ namespace pcl
 TreeBox::TreeBox( Control& parent )
    : ScrollBox( nullptr )
 {
-   TransferHandle( (*API->TreeBox->CreateTreeBox)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) );
+   TransferHandle( API_TreeBox_CreateTreeBox( ModuleHandle(), this, parent.handle, 0/*flags*/ ) );
    if ( IsNull() )
       throw APIFunctionError( "CreateTreeBox" );
 
-   m_viewport.TransferHandle( (*API->TreeBox->CreateTreeBoxViewport)( handle, &m_viewport ) );
+   m_viewport.TransferHandle( API_TreeBox_CreateTreeBoxViewport( handle, &m_viewport ) );
    if ( m_viewport.IsNull() )
       throw APIFunctionError( "CreateTreeBoxViewport" );
 }
@@ -45,7 +45,7 @@ TreeBox::TreeBox( void* h )
    TransferHandle( h );
    if ( !IsNull() )
    {
-      m_viewport.TransferHandle( (*API->TreeBox->CreateTreeBoxViewport)( handle, &m_viewport ) );
+      m_viewport.TransferHandle( API_TreeBox_CreateTreeBoxViewport( handle, &m_viewport ) );
       if ( m_viewport.IsNull() )
          throw APIFunctionError( "CreateTreeBoxViewport" );
    }
@@ -78,7 +78,7 @@ TreeBox& TreeBox::NullTree()
 
 int TreeBox::NumberOfChildren() const
 {
-   return (*API->TreeBox->GetTreeBoxChildCount)( handle );
+   return API_TreeBox_GetTreeBoxChildCount( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -86,14 +86,14 @@ int TreeBox::NumberOfChildren() const
 const TreeBox::Node* TreeBox::Child( int idx ) const
 {
    return const_cast<const TreeBox::Node*>(
-      reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxChild)( handle, idx ) ) );
+      reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxChild( handle, idx ) ) );
 }
 
 // ----------------------------------------------------------------------------
 
 TreeBox::Node* TreeBox::Child( int idx )
 {
-   return reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxChild)( handle, idx ) );
+   return reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxChild( handle, idx ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -102,7 +102,7 @@ int TreeBox::ChildIndex( const TreeBox::Node* node ) const
 {
    if ( node == nullptr )
       return -1;
-   return (*API->TreeBox->GetTreeBoxChildIndex)( handle, node->handle );
+   return API_TreeBox_GetTreeBoxChildIndex( handle, node->handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -115,7 +115,7 @@ void TreeBox::Insert( int idx, TreeBox::Node* node )
       PCL_CHECK( node->Parent() == nullptr )
       if ( !m_children.Contains( node ) )
       {
-         (*API->TreeBox->InsertTreeBoxNode)( handle, idx, node->handle );
+         API_TreeBox_InsertTreeBoxNode( handle, idx, node->handle );
          m_children << node;
       }
    }
@@ -128,7 +128,7 @@ void TreeBox::Remove( int idx )
    Node* node = Child( idx );
    if ( node != nullptr )
    {
-      (*API->TreeBox->RemoveTreeBoxNode)( handle, idx );
+      API_TreeBox_RemoveTreeBoxNode( handle, idx );
       m_children.Remove( node );
       node->m_removed = true;
       delete node;
@@ -139,7 +139,7 @@ void TreeBox::Remove( int idx )
 
 void TreeBox::Clear()
 {
-   (*API->TreeBox->ClearTreeBox)( handle );
+   API_TreeBox_ClearTreeBox( handle );
    child_node_list children( m_children );
    m_children.Clear();
    for ( auto node : children )
@@ -154,14 +154,14 @@ void TreeBox::Clear()
 const TreeBox::Node* TreeBox::CurrentNode() const
 {
    return const_cast<const TreeBox::Node*>(
-      reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxCurrentNode)( handle ) ) );
+      reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxCurrentNode( handle ) ) );
 }
 
 // ----------------------------------------------------------------------------
 
 TreeBox::Node* TreeBox::CurrentNode()
 {
-   return reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxCurrentNode)( handle ) );
+   return reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxCurrentNode( handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -169,21 +169,21 @@ TreeBox::Node* TreeBox::CurrentNode()
 void TreeBox::SetCurrentNode( TreeBox::Node* node )
 {
    if ( node != nullptr )
-      (*API->TreeBox->SetTreeBoxCurrentNode)( handle, node->handle );
+      API_TreeBox_SetTreeBoxCurrentNode( handle, node->handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::AreMultipleSelectionsEnabled() const
 {
-   return (*API->TreeBox->GetTreeBoxMultipleNodeSelectionEnabled)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxMultipleNodeSelectionEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::EnableMultipleSelections( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxMultipleNodeSelectionEnabled)( handle, enable );
+   API_TreeBox_SetTreeBoxMultipleNodeSelectionEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
@@ -192,11 +192,11 @@ IndirectArray<TreeBox::Node> TreeBox::SelectedNodes() const
 {
    IndirectArray<TreeBox::Node> nodes;
    size_type n = 0;
-   (*API->TreeBox->GetTreeBoxSelectedNodes)( handle, 0, &n );
+   API_TreeBox_GetTreeBoxSelectedNodes( handle, 0, &n );
    if ( n > 0 )
    {
       nodes.Add( nullptr, n );
-      if ( (*API->TreeBox->GetTreeBoxSelectedNodes)( handle,
+      if ( API_TreeBox_GetTreeBoxSelectedNodes( handle,
                      reinterpret_cast< ::api_handle*>( nodes.Begin() ), &n ) == api_false )
          throw APIFunctionError( "GetTreeBoxSelectedNodes" );
       nodes.Pack();
@@ -218,7 +218,7 @@ bool TreeBox::HasSelectedTopLevelNodes() const
 
 void TreeBox::SelectAllNodes()
 {
-   (*API->TreeBox->SelectAllTreeBoxNodes)( handle );
+   API_TreeBox_SelectAllTreeBoxNodes( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -231,7 +231,7 @@ void TreeBox::SelectAllNodes()
 void TreeBox::BeginNodeEdition( TreeBox::Node* node, int col )
 {
    if ( node != nullptr )
-      (*API->TreeBox->BeginTreeBoxNodeEdition)( handle, node->handle, col );
+      API_TreeBox_BeginTreeBoxNodeEdition( handle, node->handle, col );
 }
 
 // ----------------------------------------------------------------------------
@@ -239,7 +239,7 @@ void TreeBox::BeginNodeEdition( TreeBox::Node* node, int col )
 void TreeBox::EndNodeEdition( TreeBox::Node* node, int col )
 {
    if ( node != nullptr )
-      (*API->TreeBox->EndTreeBoxNodeEdition)( handle, node->handle, col );
+      API_TreeBox_EndTreeBoxNodeEdition( handle, node->handle, col );
 }
 
 // ----------------------------------------------------------------------------
@@ -247,7 +247,7 @@ void TreeBox::EndNodeEdition( TreeBox::Node* node, int col )
 void TreeBox::EditNode( TreeBox::Node* node, int col )
 {
    if ( node != nullptr )
-      (*API->TreeBox->EditTreeBoxNode)( handle, node->handle, col );
+      API_TreeBox_EditTreeBoxNode( handle, node->handle, col );
 }
 */
 
@@ -256,14 +256,14 @@ void TreeBox::EditNode( TreeBox::Node* node, int col )
 const TreeBox::Node* TreeBox::NodeByPosition( int x, int y ) const
 {
    return const_cast<const TreeBox::Node*>(
-      reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxNodeByPos)( handle, x, y ) ) );
+      reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxNodeByPos( handle, x, y ) ) );
 }
 
 // ----------------------------------------------------------------------------
 
 TreeBox::Node* TreeBox::NodeByPosition( int x, int y )
 {
-   return reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxNodeByPos)( handle, x, y ) );
+   return reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxNodeByPos( handle, x, y ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -271,7 +271,7 @@ TreeBox::Node* TreeBox::NodeByPosition( int x, int y )
 void TreeBox::SetNodeIntoView( TreeBox::Node* node )
 {
    if ( node != nullptr )
-      (*API->TreeBox->SetTreeBoxNodeIntoView)( handle, node->handle );
+      API_TreeBox_SetTreeBoxNodeIntoView( handle, node->handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -281,7 +281,7 @@ pcl::Rect TreeBox::NodeRect( const TreeBox::Node* node ) const
    if ( node == nullptr )
       return pcl::Rect( 0 );
    pcl::Rect r;
-   (*API->TreeBox->GetTreeBoxNodeRect)( handle, node->handle, &r.x0, &r.y0, &r.x1, &r.y1 );
+   API_TreeBox_GetTreeBoxNodeRect( handle, node->handle, &r.x0, &r.y0, &r.x1, &r.y1 );
    return r;
 }
 
@@ -289,49 +289,49 @@ pcl::Rect TreeBox::NodeRect( const TreeBox::Node* node ) const
 
 int TreeBox::NumberOfColumns() const
 {
-   return (*API->TreeBox->GetTreeBoxColumnCount)( handle );
+   return API_TreeBox_GetTreeBoxColumnCount( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::SetNumberOfColumns( int nCols )
 {
-   (*API->TreeBox->SetTreeBoxColumnCount)( handle, nCols );
+   API_TreeBox_SetTreeBoxColumnCount( handle, nCols );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::IsColumnVisible( int col ) const
 {
-   return (*API->TreeBox->GetTreeBoxColumnVisible)( handle, col ) != api_false;
+   return API_TreeBox_GetTreeBoxColumnVisible( handle, col ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::ShowColumn( int col, bool show )
 {
-   (*API->TreeBox->SetTreeBoxColumnVisible)( handle, col, show );
+   API_TreeBox_SetTreeBoxColumnVisible( handle, col, show );
 }
 
 // ----------------------------------------------------------------------------
 
 int TreeBox::ColumnWidth( int col ) const
 {
-   return (*API->TreeBox->GetTreeBoxColumnWidth)( handle, col );
+   return API_TreeBox_GetTreeBoxColumnWidth( handle, col );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::SetColumnWidth( int col, int width )
 {
-   (*API->TreeBox->SetTreeBoxColumnWidth)( handle, col, width );
+   API_TreeBox_SetTreeBoxColumnWidth( handle, col, width );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::AdjustColumnWidthToContents( int col )
 {
-   (*API->TreeBox->AdjustTreeBoxColumnWidthToContents)( handle, col );
+   API_TreeBox_AdjustTreeBoxColumnWidthToContents( handle, col );
 }
 
 // ----------------------------------------------------------------------------
@@ -339,13 +339,13 @@ void TreeBox::AdjustColumnWidthToContents( int col )
 String TreeBox::HeaderText( int col ) const
 {
    size_type len = 0;
-   (*API->TreeBox->GetTreeBoxHeaderText)( handle, col, 0, &len );
+   API_TreeBox_GetTreeBoxHeaderText( handle, col, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->TreeBox->GetTreeBoxHeaderText)( handle, col, text.Begin(), &len ) == api_false )
+      if ( API_TreeBox_GetTreeBoxHeaderText( handle, col, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetTreeBoxHeaderText" );
       text.ResizeToNullTerminated();
    }
@@ -356,168 +356,168 @@ String TreeBox::HeaderText( int col ) const
 
 void TreeBox::SetHeaderText( int col, const String& text )
 {
-   (*API->TreeBox->SetTreeBoxHeaderText)( handle, col, text.c_str() );
+   API_TreeBox_SetTreeBoxHeaderText( handle, col, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 Bitmap TreeBox::HeaderIcon( int col ) const
 {
-   return Bitmap( (*API->TreeBox->GetTreeBoxHeaderIcon)( handle, col ) );
+   return Bitmap( API_TreeBox_GetTreeBoxHeaderIcon( handle, col ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::SetHeaderIcon( int col, const Bitmap& icon )
 {
-   (*API->TreeBox->SetTreeBoxHeaderIcon)( handle, col, icon.handle );
+   API_TreeBox_SetTreeBoxHeaderIcon( handle, col, icon.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int TreeBox::HeaderAlignment( int col ) const
 {
-   return (*API->TreeBox->GetTreeBoxHeaderAlignment)( handle, col );
+   return API_TreeBox_GetTreeBoxHeaderAlignment( handle, col );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::SetHeaderAlignment( int col, int align )
 {
-   (*API->TreeBox->SetTreeBoxHeaderAlignment)( handle, col, align );
+   API_TreeBox_SetTreeBoxHeaderAlignment( handle, col, align );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::IsHeaderVisible() const
 {
-   return (*API->TreeBox->GetTreeBoxHeaderVisible)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxHeaderVisible( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::ShowHeader( bool show )
 {
-   (*API->TreeBox->SetTreeBoxHeaderVisible)( handle, show );
+   API_TreeBox_SetTreeBoxHeaderVisible( handle, show );
 }
 
 // ----------------------------------------------------------------------------
 
 int TreeBox::IndentSize() const
 {
-   return (*API->TreeBox->GetTreeBoxIndentSize)( handle );
+   return API_TreeBox_GetTreeBoxIndentSize( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::SetIndentSize( int szPx )
 {
-   (*API->TreeBox->SetTreeBoxIndentSize)( handle, szPx );
+   API_TreeBox_SetTreeBoxIndentSize( handle, szPx );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::IsNodeExpansionEnabled() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeExpansionEnabled)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeExpansionEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::EnableNodeExpansion( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxNodeExpansionEnabled)( handle, enable );
+   API_TreeBox_SetTreeBoxNodeExpansionEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::IsRootDecorationEnabled() const
 {
-   return (*API->TreeBox->GetTreeBoxRootDecorationEnabled)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxRootDecorationEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::EnableRootDecoration( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxRootDecorationEnabled)( handle, enable );
+   API_TreeBox_SetTreeBoxRootDecorationEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::IsAlternateRowColorEnabled() const
 {
-   return (*API->TreeBox->GetTreeBoxAlternateRowColorEnabled)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxAlternateRowColorEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::EnableAlternateRowColor( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxAlternateRowColorEnabled)( handle, enable );
+   API_TreeBox_SetTreeBoxAlternateRowColorEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::IsUniformRowHeightEnabled() const
 {
-   return (*API->TreeBox->GetTreeBoxUniformRowHeightEnabled)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxUniformRowHeightEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::EnableUniformRowHeight( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxUniformRowHeightEnabled)( handle, enable );
+   API_TreeBox_SetTreeBoxUniformRowHeightEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::GetIconSize( int& width, int& height ) const
 {
-   (*API->TreeBox->GetTreeBoxIconSize)( handle, &width, &height );
+   API_TreeBox_GetTreeBoxIconSize( handle, &width, &height );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::SetIconSize( int width, int height )
 {
-   (*API->TreeBox->SetTreeBoxIconSize)( handle, width, height );
+   API_TreeBox_SetTreeBoxIconSize( handle, width, height );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::IsHeaderSortingEnabled() const
 {
-   return (*API->TreeBox->GetTreeBoxHeaderSortingEnabled)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxHeaderSortingEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::EnableHeaderSorting( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxHeaderSortingEnabled)( handle, enable );
+   API_TreeBox_SetTreeBoxHeaderSortingEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Sort( int col, bool ascending )
 {
-   (*API->TreeBox->SortTreeBox)( handle, col, ascending );
+   API_TreeBox_SortTreeBox( handle, col, ascending );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::IsNodeDraggingEnabled() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeDraggingEnabled)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeDraggingEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::EnableNodeDragging( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxNodeDraggingEnabled)( handle, enable );
+   API_TreeBox_SetTreeBoxNodeDraggingEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
@@ -525,14 +525,14 @@ void TreeBox::EnableNodeDragging( bool enable )
 // ----------------------------------------------------------------------------
 
 TreeBox::Node::Node()
-   : UIObject( (*API->TreeBox->CreateTreeBoxNode)( ModuleHandle(), this ) )
+   : UIObject( API_TreeBox_CreateTreeBoxNode( ModuleHandle(), this ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateTreeBoxNode" );
 }
 
 TreeBox::Node::Node( TreeBox::Node& parent, int index )
-   : UIObject( (*API->TreeBox->CreateTreeBoxNode)( ModuleHandle(), this ) )
+   : UIObject( API_TreeBox_CreateTreeBoxNode( ModuleHandle(), this ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateTreeBoxNode" );
@@ -541,7 +541,7 @@ TreeBox::Node::Node( TreeBox::Node& parent, int index )
 }
 
 TreeBox::Node::Node( TreeBox& parentTree, int index )
-   : UIObject( (*API->TreeBox->CreateTreeBoxNode)( ModuleHandle(), this ) )
+   : UIObject( API_TreeBox_CreateTreeBoxNode( ModuleHandle(), this ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateTreeBoxNode" );
@@ -556,23 +556,23 @@ TreeBox::Node::~Node()
    if ( !m_removed )
    {
       m_removed = true;
-      Node* parentNode = reinterpret_cast<Node*>( (*API->TreeBox->GetTreeBoxNodeParent)( handle ) );
+      Node* parentNode = reinterpret_cast<Node*>( API_TreeBox_GetTreeBoxNodeParent( handle ) );
       if ( parentNode != nullptr )
       {
          parentNode->m_children.Remove( this );
          int idx = parentNode->ChildIndex( this );
          if ( idx >= 0 )
-            (*API->TreeBox->RemoveTreeBoxNodeChild)( parentNode->handle, idx );
+            API_TreeBox_RemoveTreeBoxNodeChild( parentNode->handle, idx );
       }
       else
       {
-         TreeBox* parentTree = reinterpret_cast<TreeBox*>( (*API->TreeBox->GetTreeBoxNodeParentBox)( handle ) );
+         TreeBox* parentTree = reinterpret_cast<TreeBox*>( API_TreeBox_GetTreeBoxNodeParentBox( handle ) );
          if ( parentTree != nullptr )
          {
             parentTree->m_children.Remove( this );
             int idx = parentTree->ChildIndex( this );
             if ( idx >= 0 )
-               (*API->TreeBox->RemoveTreeBoxNode)( parentTree->handle, idx );
+               API_TreeBox_RemoveTreeBoxNode( parentTree->handle, idx );
          }
       }
    }
@@ -590,7 +590,7 @@ TreeBox::Node::~Node()
 
 const TreeBox& TreeBox::Node::ParentTree() const
 {
-   TreeBox* tree = reinterpret_cast<TreeBox*>( (*API->TreeBox->GetTreeBoxNodeParentBox)( handle ) );
+   TreeBox* tree = reinterpret_cast<TreeBox*>( API_TreeBox_GetTreeBoxNodeParentBox( handle ) );
    return (tree != nullptr) ? *tree : NullTree();
 }
 
@@ -598,7 +598,7 @@ const TreeBox& TreeBox::Node::ParentTree() const
 
 TreeBox& TreeBox::Node::ParentTree()
 {
-   TreeBox* tree = reinterpret_cast<TreeBox*>( (*API->TreeBox->GetTreeBoxNodeParentBox)( handle ) );
+   TreeBox* tree = reinterpret_cast<TreeBox*>( API_TreeBox_GetTreeBoxNodeParentBox( handle ) );
    return (tree != nullptr) ? *tree : NullTree();
 }
 
@@ -607,21 +607,21 @@ TreeBox& TreeBox::Node::ParentTree()
 const TreeBox::Node* TreeBox::Node::Parent() const
 {
    return const_cast<const TreeBox::Node*>(
-      reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxNodeParent)( handle ) ) );
+      reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxNodeParent( handle ) ) );
 }
 
 // ----------------------------------------------------------------------------
 
 TreeBox::Node* TreeBox::Node::Parent()
 {
-   return reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxNodeParent)( handle ) );
+   return reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxNodeParent( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 int TreeBox::Node::NumberOfChildren() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeChildCount)( handle );
+   return API_TreeBox_GetTreeBoxNodeChildCount( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -629,14 +629,14 @@ int TreeBox::Node::NumberOfChildren() const
 const TreeBox::Node* TreeBox::Node::Child( int idx ) const
 {
    return const_cast<const TreeBox::Node*>(
-      reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxNodeChild)( handle, idx ) ) );
+      reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxNodeChild( handle, idx ) ) );
 }
 
 // ----------------------------------------------------------------------------
 
 TreeBox::Node* TreeBox::Node::Child( int idx )
 {
-   return reinterpret_cast<TreeBox::Node*>( (*API->TreeBox->GetTreeBoxNodeChild)( handle, idx ) );
+   return reinterpret_cast<TreeBox::Node*>( API_TreeBox_GetTreeBoxNodeChild( handle, idx ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -659,7 +659,7 @@ void TreeBox::Node::Insert( int idx, TreeBox::Node* node )
       PCL_CHECK( node->Parent() == nullptr )
       if ( !m_children.Contains( node ) )
       {
-         (*API->TreeBox->InsertTreeBoxNodeChild)( handle, idx, node->handle );
+         API_TreeBox_InsertTreeBoxNodeChild( handle, idx, node->handle );
          m_children << node;
       }
    }
@@ -672,7 +672,7 @@ void TreeBox::Node::Remove( int idx )
    TreeBox::Node* node = Child( idx );
    if ( node != nullptr )
    {
-      (*API->TreeBox->RemoveTreeBoxNodeChild)( handle, idx );
+      API_TreeBox_RemoveTreeBoxNodeChild( handle, idx );
       m_children.Remove( node );
       node->m_removed = true;
       delete node;
@@ -683,98 +683,98 @@ void TreeBox::Node::Remove( int idx )
 
 bool TreeBox::Node::IsEnabled() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeEnabled)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::Enable( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxNodeEnabled)( handle, enable );
+   API_TreeBox_SetTreeBoxNodeEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::Node::IsExpanded() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeExpanded)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeExpanded( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::Expand( bool expand )
 {
-   (*API->TreeBox->SetTreeBoxNodeExpanded)( handle, expand );
+   API_TreeBox_SetTreeBoxNodeExpanded( handle, expand );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::Node::IsSelectable() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeSelectable)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeSelectable( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetSelectable( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxNodeSelectable)( handle, enable );
+   API_TreeBox_SetTreeBoxNodeSelectable( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::Node::IsSelected() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeSelected)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeSelected( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::Select( bool select )
 {
-   (*API->TreeBox->SetTreeBoxNodeSelected)( handle, select );
+   API_TreeBox_SetTreeBoxNodeSelected( handle, select );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::Node::IsCheckable() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeCheckable)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeCheckable( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetCheckable( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxNodeCheckable)( handle, enable );
+   API_TreeBox_SetTreeBoxNodeCheckable( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::Node::IsChecked() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeChecked)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeChecked( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::Check( bool check )
 {
-   (*API->TreeBox->SetTreeBoxNodeChecked)( handle, check );
+   API_TreeBox_SetTreeBoxNodeChecked( handle, check );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TreeBox::Node::IsFirstColumnSpanned() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeFirstColumnSpanned)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeFirstColumnSpanned( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetFirstColumnSpanned( bool spanned )
 {
-   (*API->TreeBox->SetTreeBoxNodeFirstColumnSpanned)( handle, spanned );
+   API_TreeBox_SetTreeBoxNodeFirstColumnSpanned( handle, spanned );
 }
 
 // ----------------------------------------------------------------------------
@@ -786,14 +786,14 @@ void TreeBox::Node::SetFirstColumnSpanned( bool spanned )
 /*
 bool TreeBox::Node::IsEditable() const
 {
-   return (*API->TreeBox->GetTreeBoxNodeEditable)( handle ) != api_false;
+   return API_TreeBox_GetTreeBoxNodeEditable( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetEditable( bool enable )
 {
-   (*API->TreeBox->SetTreeBoxNodeEditable)( handle, enable );
+   API_TreeBox_SetTreeBoxNodeEditable( handle, enable );
 }
 */
 // ----------------------------------------------------------------------------
@@ -801,13 +801,13 @@ void TreeBox::Node::SetEditable( bool enable )
 String TreeBox::Node::Text( int col ) const
 {
    size_type len = 0;
-   (*API->TreeBox->GetTreeBoxNodeColText)( handle, col, 0, &len );
+   API_TreeBox_GetTreeBoxNodeColText( handle, col, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->TreeBox->GetTreeBoxNodeColText)( handle, col, text.Begin(), &len ) == api_false )
+      if ( API_TreeBox_GetTreeBoxNodeColText( handle, col, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetTreeBoxNodeColText" );
       text.ResizeToNullTerminated();
    }
@@ -818,35 +818,35 @@ String TreeBox::Node::Text( int col ) const
 
 void TreeBox::Node::SetText( int col, const String& text )
 {
-   (*API->TreeBox->SetTreeBoxNodeColText)( handle, col, text.c_str() );
+   API_TreeBox_SetTreeBoxNodeColText( handle, col, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 Bitmap TreeBox::Node::Icon( int col ) const
 {
-   return TreeBox::BitmapFromHandle( (*API->TreeBox->GetTreeBoxNodeColIcon)( handle, col ) );
+   return TreeBox::BitmapFromHandle( API_TreeBox_GetTreeBoxNodeColIcon( handle, col ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetIcon( int col, const Bitmap& icon )
 {
-   (*API->TreeBox->SetTreeBoxNodeColIcon)( handle, col, TreeBox::HandleFromBitmap( icon ) );
+   API_TreeBox_SetTreeBoxNodeColIcon( handle, col, TreeBox::HandleFromBitmap( icon ) );
 }
 
 // ----------------------------------------------------------------------------
 
 int TreeBox::Node::Alignment( int col ) const
 {
-   return (*API->TreeBox->GetTreeBoxNodeColAlignment)( handle, col );
+   return API_TreeBox_GetTreeBoxNodeColAlignment( handle, col );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetAlignment( int col, int align )
 {
-   (*API->TreeBox->SetTreeBoxNodeColAlignment)( handle, col, align );
+   API_TreeBox_SetTreeBoxNodeColAlignment( handle, col, align );
 }
 
 // ----------------------------------------------------------------------------
@@ -854,13 +854,13 @@ void TreeBox::Node::SetAlignment( int col, int align )
 String TreeBox::Node::ToolTip( int col ) const
 {
    size_type len = 0;
-   (*API->TreeBox->GetTreeBoxNodeColToolTip)( handle, col, 0, &len );
+   API_TreeBox_GetTreeBoxNodeColToolTip( handle, col, 0, &len );
 
    String tip;
    if ( len > 0 )
    {
       tip.SetLength( len );
-      if ( (*API->TreeBox->GetTreeBoxNodeColToolTip)( handle, col, tip.Begin(), &len ) == api_false )
+      if ( API_TreeBox_GetTreeBoxNodeColToolTip( handle, col, tip.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetTreeBoxNodeColToolTip" );
       tip.ResizeToNullTerminated();
    }
@@ -871,49 +871,49 @@ String TreeBox::Node::ToolTip( int col ) const
 
 void TreeBox::Node::SetToolTip( int col, const String& tip )
 {
-   (*API->TreeBox->SetTreeBoxNodeColToolTip)( handle, col, tip.c_str() );
+   API_TreeBox_SetTreeBoxNodeColToolTip( handle, col, tip.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 pcl::Font TreeBox::Node::Font( int col ) const
 {
-   return TreeBox::FontFromHandle( (*API->TreeBox->GetTreeBoxNodeColFont)( handle, col ) );
+   return TreeBox::FontFromHandle( API_TreeBox_GetTreeBoxNodeColFont( handle, col ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetFont( int col, const pcl::Font& font )
 {
-   (*API->TreeBox->SetTreeBoxNodeColFont)( handle, col, TreeBox::HandleFromFont( font ) );
+   API_TreeBox_SetTreeBoxNodeColFont( handle, col, TreeBox::HandleFromFont( font ) );
 }
 
 // ----------------------------------------------------------------------------
 
 RGBA TreeBox::Node::BackgroundColor( int col ) const
 {
-   return (*API->TreeBox->GetTreeBoxNodeColBackgroundColor)( handle, col );
+   return API_TreeBox_GetTreeBoxNodeColBackgroundColor( handle, col );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetBackgroundColor( int col, RGBA color )
 {
-   (*API->TreeBox->SetTreeBoxNodeColBackgroundColor)( handle, col, color );
+   API_TreeBox_SetTreeBoxNodeColBackgroundColor( handle, col, color );
 }
 
 // ----------------------------------------------------------------------------
 
 RGBA TreeBox::Node::TextColor( int col ) const
 {
-   return (*API->TreeBox->GetTreeBoxNodeColTextColor)( handle, col );
+   return API_TreeBox_GetTreeBoxNodeColTextColor( handle, col );
 }
 
 // ----------------------------------------------------------------------------
 
 void TreeBox::Node::SetTextColor( int col, RGBA color )
 {
-   (*API->TreeBox->SetTreeBoxNodeColTextColor)( handle, col, color );
+   API_TreeBox_SetTreeBoxNodeColTextColor( handle, col, color );
 }
 
 // ----------------------------------------------------------------------------
@@ -1004,7 +1004,7 @@ public:
 void TreeBox::OnCurrentNodeUpdated( node_navigation_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxCurrentNodeUpdatedEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxCurrentNodeUpdatedEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::CurrentNodeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxCurrentNodeUpdatedEventRoutine" );
    m_handlers->onCurrentNodeUpdated = f;
@@ -1013,7 +1013,7 @@ void TreeBox::OnCurrentNodeUpdated( node_navigation_event_handler f, Control& re
 void TreeBox::OnNodeActivated( node_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxNodeActivatedEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxNodeActivatedEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::NodeActivated : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxNodeActivatedEventRoutine" );
    m_handlers->onNodeActivated = f;
@@ -1022,7 +1022,7 @@ void TreeBox::OnNodeActivated( node_event_handler f, Control& receiver )
 void TreeBox::OnNodeUpdated( node_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxNodeUpdatedEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxNodeUpdatedEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::NodeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxNodeUpdatedEventRoutine" );
    m_handlers->onNodeUpdated = f;
@@ -1031,7 +1031,7 @@ void TreeBox::OnNodeUpdated( node_event_handler f, Control& receiver )
 void TreeBox::OnNodeEntered( node_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxNodeEnteredEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxNodeEnteredEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::NodeEntered : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxNodeEnteredEventRoutine" );
    m_handlers->onNodeEntered = f;
@@ -1040,7 +1040,7 @@ void TreeBox::OnNodeEntered( node_event_handler f, Control& receiver )
 void TreeBox::OnNodeClicked( node_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxNodeClickedEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxNodeClickedEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::NodeClicked : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxNodeClickedEventRoutine" );
    m_handlers->onNodeClicked = f;
@@ -1049,7 +1049,7 @@ void TreeBox::OnNodeClicked( node_event_handler f, Control& receiver )
 void TreeBox::OnNodeDoubleClicked( node_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxNodeDoubleClickedEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxNodeDoubleClickedEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::NodeDoubleClicked : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxNodeDoubleClickedEventRoutine" );
    m_handlers->onNodeDoubleClicked = f;
@@ -1058,7 +1058,7 @@ void TreeBox::OnNodeDoubleClicked( node_event_handler f, Control& receiver )
 void TreeBox::OnNodeExpanded( node_expand_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxNodeExpandedEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxNodeExpandedEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::NodeExpanded : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxNodeExpandedEventRoutine" );
    m_handlers->onNodeExpanded = f;
@@ -1067,7 +1067,7 @@ void TreeBox::OnNodeExpanded( node_expand_event_handler f, Control& receiver )
 void TreeBox::OnNodeCollapsed( node_expand_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxNodeCollapsedEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxNodeCollapsedEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::NodeCollapsed : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxNodeCollapsedEventRoutine" );
    m_handlers->onNodeCollapsed = f;
@@ -1076,7 +1076,7 @@ void TreeBox::OnNodeCollapsed( node_expand_event_handler f, Control& receiver )
 void TreeBox::OnNodeSelectionUpdated( tree_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TreeBox->SetTreeBoxNodeSelectionUpdatedEventRoutine)( handle, &receiver,
+   if ( API_TreeBox_SetTreeBoxNodeSelectionUpdatedEventRoutine( handle, &receiver,
                   (f != nullptr) ? TreeBoxEventDispatcher::NodeSelectionUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetTreeBoxNodeSelectionUpdatedEventRoutine" );
    m_handlers->onNodeSelectionUpdated = f;

@@ -28,7 +28,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 SVG::SVG( const String& filePath, int width, int height )
-   : UIObject( (*API->SVG->CreateSVGFile)( ModuleHandle(), filePath.c_str(), width, height, 0/*flags*/ ) )
+   : UIObject( API_SVG_CreateSVGFile( ModuleHandle(), filePath.c_str(), width, height, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateSVGFile" );
@@ -37,7 +37,7 @@ SVG::SVG( const String& filePath, int width, int height )
 // ----------------------------------------------------------------------------
 
 SVG::SVG( int width, int height )
-   : UIObject( (*API->SVG->CreateSVGBuffer)( ModuleHandle(), width, height, 0/*flags*/ ) )
+   : UIObject( API_SVG_CreateSVGBuffer( ModuleHandle(), width, height, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateSVGBuffer" );
@@ -65,7 +65,7 @@ void SVG::GetDimensions( int& w, int& h ) const
       return;
    }
 
-   if ( (*API->SVG->GetSVGDimensions)( handle, &w, &h ) == api_false )
+   if ( API_SVG_GetSVGDimensions( handle, &w, &h ) == api_false )
       throw APIFunctionError( "GetSVGDimensions" );
 }
 
@@ -73,7 +73,7 @@ void SVG::GetDimensions( int& w, int& h ) const
 
 void SVG::SetDimensions( int w, int h ) const
 {
-   if ( (*API->SVG->SetSVGDimensions)( handle, w, h ) == api_false )
+   if ( API_SVG_SetSVGDimensions( handle, w, h ) == api_false )
       throw APIFunctionError( "SetSVGDimensions" );
 }
 
@@ -82,7 +82,7 @@ void SVG::SetDimensions( int w, int h ) const
 DRect SVG::ViewBox() const
 {
    DRect r;
-   if ( (*API->SVG->GetSVGViewBox)( handle, &r.x0, &r.y0, &r.x1, &r.y1 ) == api_false )
+   if ( API_SVG_GetSVGViewBox( handle, &r.x0, &r.y0, &r.x1, &r.y1 ) == api_false )
       throw APIFunctionError( "GetSVGViewBox" );
    return r;
 }
@@ -91,7 +91,7 @@ DRect SVG::ViewBox() const
 
 void SVG::SetViewBox( double x0, double y0, double x1, double y1 )
 {
-   if ( (*API->SVG->SetSVGViewBox)( handle, x0, y0, x1, y1 ) == api_false )
+   if ( API_SVG_SetSVGViewBox( handle, x0, y0, x1, y1 ) == api_false )
       throw APIFunctionError( "SetSVGViewBox" );
 }
 
@@ -99,14 +99,14 @@ void SVG::SetViewBox( double x0, double y0, double x1, double y1 )
 
 int SVG::Resolution() const
 {
-   return (*API->SVG->GetSVGResolution)( handle );
+   return API_SVG_GetSVGResolution( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void SVG::SetResolution( int r )
 {
-   (*API->SVG->SetSVGResolution)( handle, r );
+   API_SVG_SetSVGResolution( handle, r );
 }
 
 // ----------------------------------------------------------------------------
@@ -116,12 +116,12 @@ String SVG::FilePath() const
    if ( !IsNull() )
    {
       size_type len = 0;
-      (*API->SVG->GetSVGFilePath)( handle, 0, &len );
+      API_SVG_GetSVGFilePath( handle, 0, &len );
       if ( len > 0 )
       {
          String path;
          path.SetLength( len );
-         if ( (*API->SVG->GetSVGFilePath)( handle, path.Begin(), &len ) == api_false )
+         if ( API_SVG_GetSVGFilePath( handle, path.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetSVGFilePath" );
          path.ResizeToNullTerminated();
          return path;
@@ -138,11 +138,11 @@ ByteArray SVG::Data() const
    if ( !IsNull() )
    {
       size_type len = 0;
-      (*API->SVG->GetSVGDataBuffer)( handle, 0, &len );
+      API_SVG_GetSVGDataBuffer( handle, 0, &len );
       if ( len > 0 )
       {
          ByteArray data( len );
-         if ( (*API->SVG->GetSVGDataBuffer)( handle, data.Begin(), &len ) == api_false )
+         if ( API_SVG_GetSVGDataBuffer( handle, data.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetSVGDataBuffer" );
          return data;
       }
@@ -158,12 +158,12 @@ String SVG::Title() const
    if ( !IsNull() )
    {
       size_type len = 0;
-      (*API->SVG->GetSVGTitle)( handle, 0, &len );
+      API_SVG_GetSVGTitle( handle, 0, &len );
       if ( len > 0 )
       {
          String title;
          title.SetLength( len );
-         if ( (*API->SVG->GetSVGTitle)( handle, title.Begin(), &len ) == api_false )
+         if ( API_SVG_GetSVGTitle( handle, title.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetSVGTitle" );
          title.ResizeToNullTerminated();
          return title;
@@ -177,7 +177,7 @@ String SVG::Title() const
 
 void SVG::SetTitle( const String& title )
 {
-   (*API->SVG->SetSVGTitle)( handle, title.c_str() );
+   API_SVG_SetSVGTitle( handle, title.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -187,12 +187,12 @@ String SVG::Description() const
    if ( !IsNull() )
    {
       size_type len = 0;
-      (*API->SVG->GetSVGDescription)( handle, 0, &len );
+      API_SVG_GetSVGDescription( handle, 0, &len );
       if ( len > 0 )
       {
          String description;
          description.SetLength( len );
-         if ( (*API->SVG->GetSVGDescription)( handle, description.Begin(), &len ) == api_false )
+         if ( API_SVG_GetSVGDescription( handle, description.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetSVGDescription" );
          description.ResizeToNullTerminated();
          return description;
@@ -206,14 +206,14 @@ String SVG::Description() const
 
 void SVG::SetDescription( const String& desc )
 {
-   (*API->SVG->SetSVGDescription)( handle, desc.c_str() );
+   API_SVG_SetSVGDescription( handle, desc.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool SVG::IsPainting() const
 {
-   return (*API->SVG->IsSVGPainting)( handle ) != api_false;
+   return API_SVG_IsSVGPainting( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------

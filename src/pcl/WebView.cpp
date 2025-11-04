@@ -28,7 +28,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 WebView::WebView( Control& parent )
-   : Control( (*API->WebView->CreateWebView)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
+   : Control( API_WebView_CreateWebView( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
 {
    if ( handle == nullptr )
       throw APIFunctionError( "CreateWebView" );
@@ -38,7 +38,7 @@ WebView::WebView( Control& parent )
 
 void WebView::SetContent( const ByteArray& data, const IsoString& mimeType )
 {
-   if ( (*API->WebView->SetWebViewContent)( handle, data.Begin(), data.Size(), mimeType.Begin() ) == api_false )
+   if ( API_WebView_SetWebViewContent( handle, data.Begin(), data.Size(), mimeType.Begin() ) == api_false )
       throw APIFunctionError( "SetWebViewContent" );
 }
 
@@ -46,7 +46,7 @@ void WebView::SetContent( const ByteArray& data, const IsoString& mimeType )
 
 void WebView::SetHTML( const IsoString& html )
 {
-   if ( (*API->WebView->SetWebViewContent)( handle, html.Begin(), html.Size(), "text/html;charset=UTF-8" ) == api_false )
+   if ( API_WebView_SetWebViewContent( handle, html.Begin(), html.Size(), "text/html;charset=UTF-8" ) == api_false )
       throw APIFunctionError( "SetWebViewContent" );
 }
 
@@ -54,7 +54,7 @@ void WebView::SetHTML( const IsoString& html )
 
 void WebView::SetHTML( const String& html )
 {
-   if ( (*API->WebView->SetWebViewContent)( handle, html.Begin(), html.Size(), "text/html;charset=UTF-16" ) == api_false )
+   if ( API_WebView_SetWebViewContent( handle, html.Begin(), html.Size(), "text/html;charset=UTF-16" ) == api_false )
       throw APIFunctionError( "SetWebViewContent" );
 }
 
@@ -62,7 +62,7 @@ void WebView::SetHTML( const String& html )
 
 void WebView::SetPlainText( const IsoString& text )
 {
-   if ( (*API->WebView->SetWebViewContent)( handle, text.Begin(), text.Size(), "text/plain;charset=UTF-8" ) == api_false )
+   if ( API_WebView_SetWebViewContent( handle, text.Begin(), text.Size(), "text/plain;charset=UTF-8" ) == api_false )
       throw APIFunctionError( "SetWebViewContent" );
 }
 
@@ -70,7 +70,7 @@ void WebView::SetPlainText( const IsoString& text )
 
 void WebView::SetPlainText( const String& text )
 {
-   if ( (*API->WebView->SetWebViewContent)( handle, text.Begin(), text.Size(), "text/plain;charset=UTF-16" ) == api_false )
+   if ( API_WebView_SetWebViewContent( handle, text.Begin(), text.Size(), "text/plain;charset=UTF-16" ) == api_false )
       throw APIFunctionError( "SetWebViewContent" );
 }
 
@@ -78,7 +78,7 @@ void WebView::SetPlainText( const String& text )
 
 void WebView::LoadContent( const String& uri )
 {
-   if ( (*API->WebView->LoadWebViewContent)( handle, uri.c_str() ) == api_false )
+   if ( API_WebView_LoadWebViewContent( handle, uri.c_str() ) == api_false )
       throw APIFunctionError( "LoadWebViewContent" );
 }
 
@@ -86,7 +86,7 @@ void WebView::LoadContent( const String& uri )
 
 void WebView::RequestPlainText() const
 {
-   if ( (*API->WebView->RequestWebViewPlainText)( handle ) == api_false )
+   if ( API_WebView_RequestWebViewPlainText( handle ) == api_false )
       throw APIFunctionError( "RequestWebViewPlainText" );
 }
 
@@ -94,7 +94,7 @@ void WebView::RequestPlainText() const
 
 void WebView::RequestHTML() const
 {
-   if ( (*API->WebView->RequestWebViewHTML)( handle ) == api_false )
+   if ( API_WebView_RequestWebViewHTML( handle ) == api_false )
       throw APIFunctionError( "RequestWebViewHTML" );
 }
 
@@ -104,7 +104,7 @@ void WebView::SaveAsPDF( const String& filePath, double pageWidth, double pageHe
                          double marginLeft, double marginTop, double marginRight, double marginBottom,
                          bool landscape )
 {
-   if ( (*API->WebView->SaveWebViewAsPDF)( handle, filePath.c_str(), &pageWidth, &pageHeight,
+   if ( API_WebView_SaveWebViewAsPDF( handle, filePath.c_str(), &pageWidth, &pageHeight,
                         &marginLeft, &marginTop, &marginRight, &marginBottom, landscape ? 1 : 0 ) == api_false )
       throw APIFunctionError( "SaveWebViewAsPDF" );
 }
@@ -113,7 +113,7 @@ void WebView::SaveAsPDF( const String& filePath, double pageWidth, double pageHe
 
 bool WebView::HasSelection() const
 {
-   return (*API->WebView->GetWebViewHasSelection)( handle ) != api_false;
+   return API_WebView_GetWebViewHasSelection( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -121,13 +121,13 @@ bool WebView::HasSelection() const
 String WebView::SelectedText() const
 {
    size_type len = 0;
-   (*API->WebView->GetWebViewSelectedText)( handle, nullptr, &len );
+   API_WebView_GetWebViewSelectedText( handle, nullptr, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->WebView->GetWebViewSelectedText)( handle, text.Begin(), &len ) == api_false )
+      if ( API_WebView_GetWebViewSelectedText( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetWebViewSelectedText" );
       text.ResizeToNullTerminated();
    }
@@ -140,7 +140,7 @@ String WebView::SelectedText() const
 double WebView::ZoomFactor() const
 {
    double zoom = 1.0;
-   if ( (*API->WebView->GetWebViewZoomFactor)( handle, &zoom ) == api_false )
+   if ( API_WebView_GetWebViewZoomFactor( handle, &zoom ) == api_false )
       throw APIFunctionError( "GetWebViewZoomFactor" );
    return zoom;
 }
@@ -149,7 +149,7 @@ double WebView::ZoomFactor() const
 
 void WebView::SetZoomFactor( double zoom )
 {
-   if ( (*API->WebView->SetWebViewZoomFactor)( handle, &zoom ) == api_false )
+   if ( API_WebView_SetWebViewZoomFactor( handle, &zoom ) == api_false )
       throw APIFunctionError( "SetWebViewZoomFactor" );
 }
 
@@ -157,14 +157,14 @@ void WebView::SetZoomFactor( double zoom )
 
 RGBA WebView::BackgroundColor() const
 {
-   return (*API->WebView->GetWebViewBackgroundColor)( handle );
+   return API_WebView_GetWebViewBackgroundColor( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void WebView::SetBackgroundColor( RGBA color )
 {
-   if ( (*API->WebView->SetWebViewBackgroundColor)( handle, color ) == api_false )
+   if ( API_WebView_SetWebViewBackgroundColor( handle, color ) == api_false )
       throw APIFunctionError( "SetWebViewBackgroundColor" );
 }
 
@@ -172,7 +172,7 @@ void WebView::SetBackgroundColor( RGBA color )
 
 void WebView::Reload()
 {
-   if ( (*API->WebView->ReloadWebView)( handle ) == api_false )
+   if ( API_WebView_ReloadWebView( handle ) == api_false )
       throw APIFunctionError( "ReloadWebView" );
 }
 
@@ -180,7 +180,7 @@ void WebView::Reload()
 
 void WebView::Stop()
 {
-   if ( (*API->WebView->StopWebView)( handle ) == api_false )
+   if ( API_WebView_StopWebView( handle ) == api_false )
       throw APIFunctionError( "StopWebView" );
 }
 
@@ -188,7 +188,7 @@ void WebView::Stop()
 
 void WebView::EvaluateScript( const String& sourceCode, const IsoString& language )
 {
-   if ( (*API->WebView->EvaluateWebViewScript)( handle, sourceCode.c_str(), language.c_str() ) == api_false )
+   if ( API_WebView_EvaluateWebViewScript( handle, sourceCode.c_str(), language.c_str() ) == api_false )
       throw APIFunctionError( "EvaluateWebViewScript" );
 }
 
@@ -260,7 +260,7 @@ public:
 void WebView::OnLoadStarted( view_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->WebView->SetWebViewLoadStartedEventRoutine)( handle, &receiver,
+   if ( API_WebView_SetWebViewLoadStartedEventRoutine( handle, &receiver,
                   (handler != nullptr) ? WebViewEventDispatcher::LoadStarted : nullptr ) == api_false )
       throw APIFunctionError( "SetWebViewLoadStartedEventRoutine" );
    m_handlers->onLoadStarted = handler;
@@ -269,7 +269,7 @@ void WebView::OnLoadStarted( view_event_handler handler, Control& receiver )
 void WebView::OnLoadProgress( progress_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->WebView->SetWebViewLoadProgressEventRoutine)( handle, &receiver,
+   if ( API_WebView_SetWebViewLoadProgressEventRoutine( handle, &receiver,
                   (handler != nullptr) ? WebViewEventDispatcher::LoadProgress : nullptr ) == api_false )
       throw APIFunctionError( "SetWebViewLoadProgressEventRoutine" );
    m_handlers->onLoadProgress = handler;
@@ -278,7 +278,7 @@ void WebView::OnLoadProgress( progress_event_handler handler, Control& receiver 
 void WebView::OnLoadFinished( state_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->WebView->SetWebViewLoadFinishedEventRoutine)( handle, &receiver,
+   if ( API_WebView_SetWebViewLoadFinishedEventRoutine( handle, &receiver,
                   (handler != nullptr) ? WebViewEventDispatcher::LoadFinished : nullptr ) == api_false )
       throw APIFunctionError( "SetWebViewLoadFinishedEventRoutine" );
    m_handlers->onLoadFinished = handler;
@@ -287,7 +287,7 @@ void WebView::OnLoadFinished( state_event_handler handler, Control& receiver )
 void WebView::OnSelectionUpdated( view_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->WebView->SetWebViewSelectionUpdatedEventRoutine)( handle, &receiver,
+   if ( API_WebView_SetWebViewSelectionUpdatedEventRoutine( handle, &receiver,
                   (handler != nullptr) ? WebViewEventDispatcher::SelectionUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetWebViewSelectionUpdatedEventRoutine" );
    m_handlers->onSelectionUpdated = handler;
@@ -296,7 +296,7 @@ void WebView::OnSelectionUpdated( view_event_handler handler, Control& receiver 
 void WebView::OnPlainTextAvailable( content_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->WebView->SetWebViewPlainTextAvailableEventRoutine)( handle, &receiver,
+   if ( API_WebView_SetWebViewPlainTextAvailableEventRoutine( handle, &receiver,
                   (handler != nullptr) ? WebViewEventDispatcher::PlainTextAvailable : nullptr ) == api_false )
       throw APIFunctionError( "SetWebViewPlainTextAvailableEventRoutine" );
    m_handlers->onPlainTextAvailable = handler;
@@ -305,7 +305,7 @@ void WebView::OnPlainTextAvailable( content_event_handler handler, Control& rece
 void WebView::OnHTMLAvailable( content_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->WebView->SetWebViewHTMLAvailableEventRoutine)( handle, &receiver,
+   if ( API_WebView_SetWebViewHTMLAvailableEventRoutine( handle, &receiver,
                   (handler != nullptr) ? WebViewEventDispatcher::HTMLAvailable : nullptr ) == api_false )
       throw APIFunctionError( "SetWebViewHTMLAvailableEventRoutine" );
    m_handlers->onHTMLAvailable = handler;
@@ -314,7 +314,7 @@ void WebView::OnHTMLAvailable( content_event_handler handler, Control& receiver 
 void WebView::OnScriptResultAvailable( result_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->WebView->SetWebViewScriptResultAvailableEventRoutine)( handle, &receiver,
+   if ( API_WebView_SetWebViewScriptResultAvailableEventRoutine( handle, &receiver,
                   (handler != nullptr) ? WebViewEventDispatcher::ScriptResultAvailable : nullptr ) == api_false )
       throw APIFunctionError( "SetWebViewScriptResultAvailableEventRoutine" );
    m_handlers->onScriptResultAvailable = handler;

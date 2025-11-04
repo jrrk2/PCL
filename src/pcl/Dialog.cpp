@@ -28,7 +28,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 Dialog::Dialog( Control& parent )
-   : Control( (*API->Dialog->CreateDialog)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
+   : Control( API_Dialog_CreateDialog( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateDialog" );
@@ -38,35 +38,35 @@ Dialog::Dialog( Control& parent )
 
 int Dialog::Execute()
 {
-   return (*API->Dialog->ExecuteDialog)( handle );
+   return API_Dialog_ExecuteDialog( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Dialog::Open()
 {
-   (*API->Dialog->OpenDialog)( handle );
+   API_Dialog_OpenDialog( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Dialog::Return( int retVal )
 {
-   (*API->Dialog->ReturnDialog)( handle, retVal );
+   API_Dialog_ReturnDialog( handle, retVal );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Dialog::IsUserResizable() const
 {
-   return (*API->Dialog->GetDialogResizable)( handle ) != api_false;
+   return API_Dialog_GetDialogResizable( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Dialog::EnableUserResizing( bool enable )
 {
-   (*API->Dialog->SetDialogResizable)( handle, enable );
+   API_Dialog_SetDialogResizable( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
@@ -114,7 +114,7 @@ public:
 void Dialog::OnExecute( execute_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Dialog->SetExecuteDialogEventRoutine)( handle, &receiver,
+   if ( API_Dialog_SetExecuteDialogEventRoutine( handle, &receiver,
                   (f != nullptr) ? DialogEventDispatcher::Executed : nullptr ) == api_false )
       throw APIFunctionError( "SetExecuteDialogEventRoutine" );
    m_handlers->onExecute = f;
@@ -123,7 +123,7 @@ void Dialog::OnExecute( execute_event_handler f, Control& receiver )
 void Dialog::OnReturn( return_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Dialog->SetReturnDialogEventRoutine)( handle, &receiver,
+   if ( API_Dialog_SetReturnDialogEventRoutine( handle, &receiver,
                   (f != nullptr) ? DialogEventDispatcher::Returned : nullptr ) == api_false )
       throw APIFunctionError( "SetReturnDialogEventRoutine" );
    m_handlers->onReturn = f;

@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 BitmapBox::BitmapBox( const Bitmap& bm, Control& parent )
-   : Frame( (*API->BitmapBox->CreateBitmapBox)( ModuleHandle(), this, bm.handle, parent.handle, 0/*flags*/ ) )
+   : Frame( API_BitmapBox_CreateBitmapBox( ModuleHandle(), this, bm.handle, parent.handle, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateBitmapBox" );
@@ -37,42 +37,42 @@ BitmapBox::BitmapBox( const Bitmap& bm, Control& parent )
 
 Bitmap BitmapBox::CurrentBitmap() const
 {
-   return Bitmap( (*API->BitmapBox->GetBitmapBoxBitmap)( handle ) );
+   return Bitmap( API_BitmapBox_GetBitmapBoxBitmap( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void BitmapBox::SetBitmap( const Bitmap& pm )
 {
-   (*API->BitmapBox->SetBitmapBoxBitmap)( handle, pm.handle );
+   API_BitmapBox_SetBitmapBoxBitmap( handle, pm.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int BitmapBox::Margin() const
 {
-   return (*API->BitmapBox->GetBitmapBoxMargin)( handle );
+   return API_BitmapBox_GetBitmapBoxMargin( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void BitmapBox::SetMargin( int px )
 {
-   (*API->BitmapBox->SetBitmapBoxMargin)( handle, px );
+   API_BitmapBox_SetBitmapBoxMargin( handle, px );
 }
 
 // ----------------------------------------------------------------------------
 
 bool BitmapBox::IsAutoFitEnabled() const
 {
-   return (*API->BitmapBox->GetBitmapBoxAutoFitEnabled)( handle ) != api_false;
+   return API_BitmapBox_GetBitmapBoxAutoFitEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void BitmapBox::EnableAutoFit( bool enable )
 {
-   (*API->BitmapBox->SetBitmapBoxAutoFitEnabled)( handle, enable );
+   API_BitmapBox_SetBitmapBoxAutoFitEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------

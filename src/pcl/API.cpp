@@ -35,8 +35,6 @@ namespace pcl
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-PCL_DATA const APIInterface* API = nullptr;
-
 static api_handle s_moduleHandle = nullptr;
 
 api_handle PCL_FUNC ModuleHandle()
@@ -52,10 +50,7 @@ api_handle PCL_FUNC ModuleHandle()
 
 void APIError::GetAPIErrorCode()
 {
-   if ( API != nullptr && API->Global != nullptr && API->Global->LastError != 0 )
-      apiErrorCode = (*API->Global->LastError)();
-   else
-      apiErrorCode = 0;
+  apiErrorCode = API_Global_LastError();
 }
 
 String APIError::FormatInfo() const
@@ -73,11 +68,11 @@ String APIError::FormatInfo() const
       if ( apiErrorCode != 0 )
       {
          size_type len = 0;
-         (*API->Global->ErrorMessage)( apiErrorCode, 0, &len );
+         API_Global_ErrorMessage( apiErrorCode, 0, &len );
          if ( len > 0 )
          {
             apiMessage.SetLength( len );
-            (*API->Global->ErrorMessage)( apiErrorCode, apiMessage.Begin(), &len );
+            API_Global_ErrorMessage( apiErrorCode, apiMessage.Begin(), &len );
             apiMessage.ResizeToNullTerminated();
          }
       }
@@ -108,12 +103,6 @@ public:
    {
       try
       {
-         if ( API != nullptr )
-            HackingError( "Unexpected API module initialization call." );
-
-         if ( R == nullptr )
-            HackingError( "Invalid API function resolver address." );
-
          if ( apiVersion < PCL_API_Version )
             throw Error( String().Format( "Unsupported API version %X (expected >= %X).",
                                           apiVersion, PCL_API_Version ) );
@@ -121,8 +110,6 @@ public:
          if ( Module == nullptr )
             throw Error( "Module metadata not available. "
                          "Please instantiate a MetaModule descendant upon module installation." );
-
-         API = new APIInterface( R );
 
          Module->PerformAPIDefinitions();
 
@@ -139,11 +126,6 @@ public:
       }
 
       ERROR_CLEANUP(
-         if ( API != nullptr )
-         {
-            delete API;
-            API = nullptr;
-         }
       )
       return 1;
    }
@@ -152,9 +134,6 @@ public:
    {
       try
       {
-         if ( description != nullptr )
-            HackingError( "Invalid API identification call (phase 0)." );
-
          if ( Module == nullptr )
             throw Error( "Module metadata not available. "
                          "Please instantiate a MetaModule descendent class upon module installation." );

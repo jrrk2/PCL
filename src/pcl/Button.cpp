@@ -29,13 +29,13 @@ namespace pcl
 String Button::Text() const
 {
    size_type len = 0;
-   (*API->Button->GetButtonText)( handle, 0, &len );
+   API_Button_GetButtonText( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->Button->GetButtonText)( handle, text.Begin(), &len ) == api_false )
+      if ( API_Button_GetButtonText( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetButtonText" );
       text.ResizeToNullTerminated();
    }
@@ -46,77 +46,77 @@ String Button::Text() const
 
 void Button::SetText( const String& text )
 {
-   (*API->Button->SetButtonText)( handle, text.c_str() );
+   API_Button_SetButtonText( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 Bitmap Button::Icon() const
 {
-   return Bitmap( (*API->Button->GetButtonIcon)( handle ) );
+   return Bitmap( API_Button_GetButtonIcon( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void Button::SetIcon( const Bitmap& icon )
 {
-   (*API->Button->SetButtonIcon)( handle, icon.handle );
+   API_Button_SetButtonIcon( handle, icon.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Button::GetIconSize( int& w, int& h ) const
 {
-   (*API->Button->GetButtonIconSize)( handle, &w, &h );
+   API_Button_GetButtonIconSize( handle, &w, &h );
 }
 
 // ----------------------------------------------------------------------------
 
 void Button::SetIconSize( int w, int h )
 {
-   (*API->Button->SetButtonIconSize)( handle, w, h );
+   API_Button_SetButtonIconSize( handle, w, h );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Button::IsPushed() const
 {
-   return (*API->Button->GetButtonPushed)( handle ) != api_false;
+   return API_Button_GetButtonPushed( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Button::SetPushed( bool pushed )
 {
-   (*API->Button->SetButtonPushed)( handle, pushed );
+   API_Button_SetButtonPushed( handle, pushed );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Button::IsChecked() const
 {
-   return (*API->Button->GetButtonChecked)( handle ) == 1;
+   return API_Button_GetButtonChecked( handle ) == 1;
 }
 
 // ----------------------------------------------------------------------------
 
 void Button::SetChecked( bool checked )
 {
-   (*API->Button->SetButtonChecked)( handle, checked ? 1 : 0 );
+   API_Button_SetButtonChecked( handle, checked ? 1 : 0 );
 }
 
 // ----------------------------------------------------------------------------
 
 Button::check_state Button::State() const
 {
-   return check_state( (*API->Button->GetButtonChecked)( handle ) );
+   return check_state( API_Button_GetButtonChecked( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void Button::SetState( Button::check_state state )
 {
-   (*API->Button->SetButtonChecked)( handle, uint32( state ) );
+   API_Button_SetButtonChecked( handle, uint32( state ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -168,7 +168,7 @@ public:
 void Button::OnClick( click_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Button->SetButtonClickEventRoutine)( handle, &receiver,
+   if ( API_Button_SetButtonClickEventRoutine( handle, &receiver,
                   (f != nullptr) ? ButtonEventDispatcher::Click : nullptr ) == api_false )
       throw APIFunctionError( "SetButtonClickEventRoutine" );
    m_handlers->onClick = f;
@@ -177,7 +177,7 @@ void Button::OnClick( click_event_handler f, Control& receiver )
 void Button::OnPress( press_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Button->SetButtonPressEventRoutine)( handle, &receiver,
+   if ( API_Button_SetButtonPressEventRoutine( handle, &receiver,
                   (f != nullptr) ? ButtonEventDispatcher::Press : nullptr ) == api_false )
       throw APIFunctionError( "SetButtonPressEventRoutine" );
    m_handlers->onPress = f;
@@ -186,7 +186,7 @@ void Button::OnPress( press_event_handler f, Control& receiver )
 void Button::OnRelease( press_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Button->SetButtonReleaseEventRoutine)( handle, &receiver,
+   if ( API_Button_SetButtonReleaseEventRoutine( handle, &receiver,
                   (f != nullptr) ? ButtonEventDispatcher::Release : nullptr ) == api_false )
       throw APIFunctionError( "SetButtonReleaseEventRoutine" );
    m_handlers->onRelease = f;
@@ -195,7 +195,7 @@ void Button::OnRelease( press_event_handler f, Control& receiver )
 void Button::OnCheck( check_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Button->SetButtonCheckEventRoutine)( handle, &receiver,
+   if ( API_Button_SetButtonCheckEventRoutine( handle, &receiver,
                   (f != nullptr) ? ButtonEventDispatcher::Check : nullptr ) == api_false )
       throw APIFunctionError( "SetButtonCheckEventRoutine" );
    m_handlers->onCheck = f;

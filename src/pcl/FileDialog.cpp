@@ -306,7 +306,7 @@ bool OpenFileDialog::Execute()
 
    if ( q->multipleSelections )
    {
-      if ( (*API->Dialog->ExecuteOpenMultipleFilesDialog)( fileName.Begin(),
+      if ( API_Dialog_ExecuteOpenMultipleFilesDialog( fileName.Begin(),
                AddFileNameToList, &q->fileNames,
                p->caption.c_str(),
                p->initialPath.c_str(), apiFilters.c_str(), p->fileExtension.c_str() ) == api_false )
@@ -316,7 +316,7 @@ bool OpenFileDialog::Execute()
    }
    else
    {
-      if ( (*API->Dialog->ExecuteOpenFileDialog)( fileName.Begin(),
+      if ( API_Dialog_ExecuteOpenFileDialog( fileName.Begin(),
                p->caption.c_str(),
                p->initialPath.c_str(), apiFilters.c_str(), p->fileExtension.c_str() ) == api_false )
       {
@@ -406,7 +406,7 @@ bool SaveFileDialog::Execute()
    q->fileName.Reserve( MAX_PATH_LENGTH );
    *q->fileName.Begin() = CharTraits::Null();
 
-   if ( (*API->Dialog->ExecuteSaveFileDialog)( q->fileName.Begin(),
+   if ( API_Dialog_ExecuteSaveFileDialog( q->fileName.Begin(),
                p->caption.c_str(),
                p->initialPath.c_str(), apiFilters.c_str(), p->fileExtension.c_str(),
                q->overwritePrompt ) != api_false )
@@ -460,7 +460,7 @@ bool GetDirectoryDialog::Execute()
    q->directory.Reserve( MAX_PATH_LENGTH );
    *q->directory.Begin() = CharTraits::Null();
 
-   if ( (*API->Dialog->ExecuteGetDirectoryDialog)( q->directory.Begin(),
+   if ( API_Dialog_ExecuteGetDirectoryDialog( q->directory.Begin(),
                         p->caption.c_str(), p->initialPath.c_str() ) != api_false )
    {
       q->directory.ResizeToNullTerminated();

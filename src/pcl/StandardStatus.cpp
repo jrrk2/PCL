@@ -33,7 +33,7 @@ inline static
 bool ThreadAborted( void* thread )
 {
    uint32 status;
-   return (*API->Thread->GetThreadStatusEx)( thread, &status, 0x00000001 ) != api_false &&
+   return API_Thread_GetThreadStatusEx( thread, &status, 0x00000001 ) != api_false &&
           (status & 0x80000000) != 0;
 }
 
@@ -41,7 +41,7 @@ bool ThreadAborted( void* thread )
 
 int StandardStatus::Initialized( const StatusMonitor& monitor ) const
 {
-   m_thread = (*API->Thread->GetCurrentThread)();
+   m_thread = API_Thread_GetCurrentThread();
    if ( m_thread != 0 )
    {
       if ( ThreadAborted( m_thread ) )

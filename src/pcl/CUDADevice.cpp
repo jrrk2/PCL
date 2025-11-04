@@ -52,8 +52,8 @@ static void EnsureInitialized() noexcept
       volatile AutoLock lock( s_mutex );
       if ( s_initialized.Load() == 0 )
       {
-         if ( (*API->GPU->IsCUDADeviceAvailable)( ModuleHandle() ) )
-            s_deviceHandle = (*API->GPU->GetCUDASelectedDevice)( ModuleHandle() );
+         if ( API_GPU_IsCUDADeviceAvailable( ModuleHandle() ) )
+            s_deviceHandle = API_GPU_GetCUDASelectedDevice( ModuleHandle() );
          s_initialized.Store( 1 );
       }
    }
@@ -79,7 +79,7 @@ IsoString CUDADevice::Name()
    if ( s_deviceHandle == 0 )
       return IsoString();
    cudaDeviceProp properties;
-   if ( (*API->GPU->GetCUDADeviceProperties)( ModuleHandle(), s_deviceHandle, &properties, sizeof( cudaDeviceProp ) ) == api_false )
+   if ( API_GPU_GetCUDADeviceProperties( ModuleHandle(), s_deviceHandle, &properties, sizeof( cudaDeviceProp ) ) == api_false )
       throw APIFunctionError( "GetCUDADeviceProperties" );
 
    return IsoString( properties.name );
@@ -98,7 +98,7 @@ size_type CUDADevice::TotalGlobalMemory() noexcept
    EnsureInitialized();
    if ( s_deviceHandle == 0 )
       return 0;
-   return (*API->GPU->GetCUDADeviceTotalGlobalMem)( ModuleHandle(), s_deviceHandle );
+   return API_GPU_GetCUDADeviceTotalGlobalMem( ModuleHandle(), s_deviceHandle );
 }
 
 // ----------------------------------------------------------------------------
@@ -108,7 +108,7 @@ size_type CUDADevice::SharedMemoryPerBlock() noexcept
    EnsureInitialized();
    if ( s_deviceHandle == 0 )
       return 0;
-   return (*API->GPU->GetCUDADeviceSharedMemoryPerBlock)( ModuleHandle(), s_deviceHandle );
+   return API_GPU_GetCUDADeviceSharedMemoryPerBlock( ModuleHandle(), s_deviceHandle );
 }
 
 // ----------------------------------------------------------------------------
@@ -118,7 +118,7 @@ int CUDADevice::MaxThreadsPerBlock() noexcept
    EnsureInitialized();
    if ( s_deviceHandle == 0 )
       return 0;
-   return (*API->GPU->GetCUDADeviceMaxThreadsPerBlock)( ModuleHandle(), s_deviceHandle );
+   return API_GPU_GetCUDADeviceMaxThreadsPerBlock( ModuleHandle(), s_deviceHandle );
 }
 
 // ----------------------------------------------------------------------------

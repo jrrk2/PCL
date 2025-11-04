@@ -71,7 +71,7 @@ bool MetaProcess::EditPreferences() const
 bool MetaProcess::BrowseDocumentation() const
 {
 #if PCL_API_Version >= 0x0126
-   return (*API->Global->BrowseProcessDocumentation)( this, 0/*flags*/ ) != api_false;
+   return API_Global_BrowseProcessDocumentation( this, 0/*flags*/ ) != api_false;
 #else
    return false;
 #endif
@@ -555,7 +555,7 @@ public:
       {
          uint32 bitsPerSample;
          api_bool isFloat;
-         if ( !(*API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
+         if ( !API_SharedImage_GetImageFormat( hImage, &bitsPerSample, &isFloat ) )
             throw 0;
 
          ImageVariant image;
@@ -610,7 +610,7 @@ public:
       {
          uint32 bitsPerSample;
          api_bool isFloat;
-         if ( !(*API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
+         if ( !API_SharedImage_GetImageFormat( hImage, &bitsPerSample, &isFloat ) )
             throw 0;
 
          ImageVariant image;
@@ -955,11 +955,11 @@ public:
 
 void MetaProcess::PerformAPIDefinitions() const
 {
-   (*API->ProcessDefinition->EnterProcessDefinitionContext)();
+   API_ProcessDefinition_EnterProcessDefinitionContext();
 
    {
       IsoString id = Id();
-      (*API->ProcessDefinition->BeginProcessDefinition)( this, id.c_str() );
+      API_ProcessDefinition_BeginProcessDefinition( this, id.c_str() );
    }
 
    {
@@ -967,140 +967,140 @@ void MetaProcess::PerformAPIDefinitions() const
       if ( cats.IsEmpty() )
          cats = Category(); // ### NB: Required for compatibility with PCL 1.x
       if ( !cats.IsEmpty() )
-         (*API->ProcessDefinition->SetProcessCategory)( cats.c_str() );
+         API_ProcessDefinition_SetProcessCategory( cats.c_str() );
    }
 
-   (*API->ProcessDefinition->SetProcessVersion)( Version() );
+   API_ProcessDefinition_SetProcessVersion( Version() );
 
    {
       IsoString aliases = Aliases().Trimmed();
       if ( !aliases.IsEmpty() )
-         (*API->ProcessDefinition->SetProcessAliasIdentifiers)( aliases.c_str() );
+         API_ProcessDefinition_SetProcessAliasIdentifiers( aliases.c_str() );
    }
 
    {
       String desc = Description();
       if ( !desc.IsEmpty() )
-         (*API->ProcessDefinition->SetProcessDescription)( desc.c_str() );
+         API_ProcessDefinition_SetProcessDescription( desc.c_str() );
    }
 
    {
       String cmnt = ScriptComment();
       if ( !cmnt.IsEmpty() )
-         (*API->ProcessDefinition->SetProcessScriptComment)( cmnt.c_str() );
+         API_ProcessDefinition_SetProcessScriptComment( cmnt.c_str() );
    }
 
    {
       IsoString svg = IconImageSVG();
       if ( !svg.IsEmpty() )
-         (*API->ProcessDefinition->SetProcessIconSVG)( svg.c_str() );
+         API_ProcessDefinition_SetProcessIconSVG( svg.c_str() );
       else
       {
          String filePath = IconImageSVGFile();
          if ( !filePath.IsEmpty() )
-            (*API->ProcessDefinition->SetProcessIconSVGFile)( filePath.c_str() );
+            API_ProcessDefinition_SetProcessIconSVGFile( filePath.c_str() );
          else
          {
             // ### DEPRECATED - Process icon images in raster bitmap formats.
 
             const char** xpm = IconImageXPM();
             if ( xpm != nullptr )
-               (*API->ProcessDefinition->SetProcessIconImage)( xpm );
+               API_ProcessDefinition_SetProcessIconImage( xpm );
             else
             {
                String path = IconImageFile();
                if ( !path.IsEmpty() )
-                  (*API->ProcessDefinition->SetProcessIconImageFile)( path.c_str() );
+                  API_ProcessDefinition_SetProcessIconImageFile( path.c_str() );
             }
 
             xpm = SmallIconImageXPM();
             if ( xpm != nullptr )
-               (*API->ProcessDefinition->SetProcessIconSmallImage)( xpm );
+               API_ProcessDefinition_SetProcessIconSmallImage( xpm );
             else
             {
                String path = SmallIconImageFile();
                if ( !path.IsEmpty() )
-                  (*API->ProcessDefinition->SetProcessIconSmallImageFile)( path.c_str() );
+                  API_ProcessDefinition_SetProcessIconSmallImageFile( path.c_str() );
             }
          }
       }
    }
 
-   (*API->ProcessDefinition->SetProcessClassInitializationRoutine)( ProcessContextDispatcher::InitializeClass );
-   (*API->ProcessDefinition->SetProcessCreationRoutine)( ProcessContextDispatcher::CreateProcess );
-   (*API->ProcessDefinition->SetProcessDestructionRoutine)( ProcessContextDispatcher::DestroyProcess );
-   (*API->ProcessDefinition->SetProcessClonationRoutine)( ProcessContextDispatcher::CloneProcess );
-   (*API->ProcessDefinition->SetProcessTestClonationRoutine)( ProcessContextDispatcher::TestCloneProcess );
-   (*API->ProcessDefinition->SetProcessSetServerHandleRoutine)( ProcessContextDispatcher::SetProcessServerHandle );
+   API_ProcessDefinition_SetProcessClassInitializationRoutine( ProcessContextDispatcher::InitializeClass );
+   API_ProcessDefinition_SetProcessCreationRoutine( ProcessContextDispatcher::CreateProcess );
+   API_ProcessDefinition_SetProcessDestructionRoutine( ProcessContextDispatcher::DestroyProcess );
+   API_ProcessDefinition_SetProcessClonationRoutine( ProcessContextDispatcher::CloneProcess );
+   API_ProcessDefinition_SetProcessTestClonationRoutine( ProcessContextDispatcher::TestCloneProcess );
+   API_ProcessDefinition_SetProcessSetServerHandleRoutine( ProcessContextDispatcher::SetProcessServerHandle );
 
    if ( IsAssignable() )
-      (*API->ProcessDefinition->SetProcessAssignmentRoutine)( ProcessContextDispatcher::AssignProcess );
+      API_ProcessDefinition_SetProcessAssignmentRoutine( ProcessContextDispatcher::AssignProcess );
 
    if ( NeedsInitialization() )
-      (*API->ProcessDefinition->SetProcessInitializationRoutine)( ProcessContextDispatcher::InitializeProcess );
+      API_ProcessDefinition_SetProcessInitializationRoutine( ProcessContextDispatcher::InitializeProcess );
 
    if ( NeedsValidation() )
-      (*API->ProcessDefinition->SetProcessValidationRoutine)( ProcessContextDispatcher::ValidateProcess );
+      API_ProcessDefinition_SetProcessValidationRoutine( ProcessContextDispatcher::ValidateProcess );
 
    if ( CanProcessCommandLines() )
-      (*API->ProcessDefinition->SetProcessCommandLineProcessingRoutine)( ProcessContextDispatcher::ProcessCommandLine, 0 );
+      API_ProcessDefinition_SetProcessCommandLineProcessingRoutine( ProcessContextDispatcher::ProcessCommandLine, 0 );
 
    if ( CanEditPreferences() )
-      (*API->ProcessDefinition->SetProcessEditPreferencesRoutine)( ProcessContextDispatcher::EditProcessPreferences );
+      API_ProcessDefinition_SetProcessEditPreferencesRoutine( ProcessContextDispatcher::EditProcessPreferences );
 
    if ( CanBrowseDocumentation() )
-      (*API->ProcessDefinition->SetProcessBrowseDocumentationRoutine)( ProcessContextDispatcher::BrowseProcessDocumentation );
+      API_ProcessDefinition_SetProcessBrowseDocumentationRoutine( ProcessContextDispatcher::BrowseProcessDocumentation );
 
-   (*API->ProcessDefinition->SetProcessExecutionPreferencesRoutine)( ProcessContextDispatcher::ProcessExecutionPreferences );
+   API_ProcessDefinition_SetProcessExecutionPreferencesRoutine( ProcessContextDispatcher::ProcessExecutionPreferences );
 
    if ( CanProcessViews() )
    {
-      (*API->ProcessDefinition->SetProcessExecutionValidationRoutine)( ProcessContextDispatcher::ValidateProcessExecution );
-      (*API->ProcessDefinition->SetProcessMaskValidationRoutine)( ProcessContextDispatcher::ValidateProcessMask );
-      (*API->ProcessDefinition->SetProcessHistoryUpdateValidationRoutine)( ProcessContextDispatcher::ValidateProcessHistoryUpdate );
-      (*API->ProcessDefinition->SetProcessUndoModeRoutine)( ProcessContextDispatcher::ProcessUndoMode );
-      (*API->ProcessDefinition->SetProcessPreExecutionRoutine)( ProcessContextDispatcher::BeforeProcessExecution );
-      (*API->ProcessDefinition->SetProcessExecutionRoutine)( ProcessContextDispatcher::ExecuteProcess );
-      (*API->ProcessDefinition->SetProcessPostExecutionRoutine)( ProcessContextDispatcher::AfterProcessExecution );
+      API_ProcessDefinition_SetProcessExecutionValidationRoutine( ProcessContextDispatcher::ValidateProcessExecution );
+      API_ProcessDefinition_SetProcessMaskValidationRoutine( ProcessContextDispatcher::ValidateProcessMask );
+      API_ProcessDefinition_SetProcessHistoryUpdateValidationRoutine( ProcessContextDispatcher::ValidateProcessHistoryUpdate );
+      API_ProcessDefinition_SetProcessUndoModeRoutine( ProcessContextDispatcher::ProcessUndoMode );
+      API_ProcessDefinition_SetProcessPreExecutionRoutine( ProcessContextDispatcher::BeforeProcessExecution );
+      API_ProcessDefinition_SetProcessExecutionRoutine( ProcessContextDispatcher::ExecuteProcess );
+      API_ProcessDefinition_SetProcessPostExecutionRoutine( ProcessContextDispatcher::AfterProcessExecution );
    }
 
    if ( CanProcessGlobal() )
    {
-      (*API->ProcessDefinition->SetProcessGlobalExecutionValidationRoutine)( ProcessContextDispatcher::ValidateProcessGlobalExecution );
-      (*API->ProcessDefinition->SetProcessPreGlobalExecutionRoutine)( ProcessContextDispatcher::BeforeProcessGlobalExecution );
-      (*API->ProcessDefinition->SetProcessGlobalExecutionRoutine)( ProcessContextDispatcher::ExecuteProcessGlobal );
-      (*API->ProcessDefinition->SetProcessPostGlobalExecutionRoutine)( ProcessContextDispatcher::AfterProcessGlobalExecution );
+      API_ProcessDefinition_SetProcessGlobalExecutionValidationRoutine( ProcessContextDispatcher::ValidateProcessGlobalExecution );
+      API_ProcessDefinition_SetProcessPreGlobalExecutionRoutine( ProcessContextDispatcher::BeforeProcessGlobalExecution );
+      API_ProcessDefinition_SetProcessGlobalExecutionRoutine( ProcessContextDispatcher::ExecuteProcessGlobal );
+      API_ProcessDefinition_SetProcessPostGlobalExecutionRoutine( ProcessContextDispatcher::AfterProcessGlobalExecution );
    }
 
    if ( CanProcessImages() )
    {
-      (*API->ProcessDefinition->SetProcessImageExecutionValidationRoutine)( ProcessContextDispatcher::ValidateProcessImageExecution );
-      (*API->ProcessDefinition->SetProcessImageExecutionRoutine)( ProcessContextDispatcher::ExecuteProcessImage );
+      API_ProcessDefinition_SetProcessImageExecutionValidationRoutine( ProcessContextDispatcher::ValidateProcessImageExecution );
+      API_ProcessDefinition_SetProcessImageExecutionRoutine( ProcessContextDispatcher::ExecuteProcessImage );
    }
 
-   (*API->ProcessDefinition->SetProcessDefaultInterfaceSelectionRoutine)( ProcessContextDispatcher::DefaultProcessInterface );
-   (*API->ProcessDefinition->SetProcessInterfaceSelectionRoutine)( ProcessContextDispatcher::SelectProcessInterface );
-   (*API->ProcessDefinition->SetProcessInterfaceValidationRoutine)( ProcessContextDispatcher::ValidateProcessInterface );
+   API_ProcessDefinition_SetProcessDefaultInterfaceSelectionRoutine( ProcessContextDispatcher::DefaultProcessInterface );
+   API_ProcessDefinition_SetProcessInterfaceSelectionRoutine( ProcessContextDispatcher::SelectProcessInterface );
+   API_ProcessDefinition_SetProcessInterfaceValidationRoutine( ProcessContextDispatcher::ValidateProcessInterface );
 
-   (*API->ProcessDefinition->SetProcessPreReadingRoutine)( ProcessContextDispatcher::BeforeReadingProcess );
-   (*API->ProcessDefinition->SetProcessPostReadingRoutine)( ProcessContextDispatcher::AfterReadingProcess );
-   (*API->ProcessDefinition->SetProcessPreWritingRoutine)( ProcessContextDispatcher::BeforeWritingProcess );
-   (*API->ProcessDefinition->SetProcessPostWritingRoutine)( ProcessContextDispatcher::AfterWritingProcess );
+   API_ProcessDefinition_SetProcessPreReadingRoutine( ProcessContextDispatcher::BeforeReadingProcess );
+   API_ProcessDefinition_SetProcessPostReadingRoutine( ProcessContextDispatcher::AfterReadingProcess );
+   API_ProcessDefinition_SetProcessPreWritingRoutine( ProcessContextDispatcher::BeforeWritingProcess );
+   API_ProcessDefinition_SetProcessPostWritingRoutine( ProcessContextDispatcher::AfterWritingProcess );
 
    if ( CanProcessIPCMessages() )
    {
-      (*API->ProcessDefinition->SetProcessIPCStartRoutine)( ProcessContextDispatcher::IPCStart );
-      (*API->ProcessDefinition->SetProcessIPCStopRoutine)( ProcessContextDispatcher::IPCStop );
-      (*API->ProcessDefinition->SetProcessIPCSetParametersRoutine)( ProcessContextDispatcher::IPCSetParameters );
-      (*API->ProcessDefinition->SetProcessIPCGetStatusRoutine)( ProcessContextDispatcher::IPCGetStatus );
+      API_ProcessDefinition_SetProcessIPCStartRoutine( ProcessContextDispatcher::IPCStart );
+      API_ProcessDefinition_SetProcessIPCStopRoutine( ProcessContextDispatcher::IPCStop );
+      API_ProcessDefinition_SetProcessIPCSetParametersRoutine( ProcessContextDispatcher::IPCSetParameters );
+      API_ProcessDefinition_SetProcessIPCGetStatusRoutine( ProcessContextDispatcher::IPCGetStatus );
    }
 
    for ( size_type j = 0; j < Length(); ++j )
       (*this)[j]->PerformAPIDefinitions();
 
-   (*API->ProcessDefinition->EndProcessDefinition)();
+   API_ProcessDefinition_EndProcessDefinition();
 
-   (*API->ProcessDefinition->ExitProcessDefinitionContext)();
+   API_ProcessDefinition_ExitProcessDefinitionContext();
 }
 
 // ----------------------------------------------------------------------------

@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 PushButton::PushButton( const String& text, const pcl::Bitmap& icon, Control& parent )
-   : Button( (*API->Button->CreatePushButton)( ModuleHandle(), this, text.c_str(), icon.handle, parent.handle, 0/*flags*/ ) )
+   : Button( API_Button_CreatePushButton( ModuleHandle(), this, text.c_str(), icon.handle, parent.handle, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreatePushButton" );
@@ -37,14 +37,14 @@ PushButton::PushButton( const String& text, const pcl::Bitmap& icon, Control& pa
 
 bool PushButton::IsDefault() const
 {
-   return (*API->Button->GetButtonDefaultEnabled)( handle ) != api_false;
+   return API_Button_GetButtonDefaultEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void PushButton::SetDefault( bool defButton )
 {
-   (*API->Button->SetButtonDefaultEnabled)( handle, defButton );
+   API_Button_SetButtonDefaultEnabled( handle, defButton );
 }
 
 // ----------------------------------------------------------------------------

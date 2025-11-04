@@ -104,11 +104,9 @@ static void Initialize()
       volatile AutoLock lock( s_mutex );
       if ( s_initialized.Load() == 0 )
       {
-         if ( API != nullptr )
-         {
             uint32 major, minor, release, revision, beta, conf, le;
             char lang[ 8 ];
-            (*API->Global->GetPixInsightVersion)( &major, &minor, &release, &revision, &beta, &conf, &le, lang );
+            API_Global_GetPixInsightVersion( &major, &minor, &release, &revision, &beta, &conf, &le, lang );
             s_major = int( major );
             s_minor = int( minor );
             s_release = int( release );
@@ -118,14 +116,13 @@ static void Initialize()
             s_le = le != 0u;
             s_language = lang;
 
-            char16_type* s = (*API->Global->GetPixInsightCodename)( ModuleHandle() );
+            char16_type* s = API_Global_GetPixInsightCodename( ModuleHandle() );
             if ( s != nullptr )
             {
                s_codename = String( s );
                if ( Module != nullptr )
                   Module->Deallocate( s );
             }
-         }
 
          s_initialized.Store( 1 );
       }

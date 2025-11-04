@@ -125,14 +125,14 @@ bool ProcessInterface::BrowseDocumentation() const
 
 bool ProcessInterface::Launch( unsigned flags )
 {
-   return (*API->Global->LaunchProcessInterface)( reinterpret_cast<interface_handle>( this ), flags ) != api_false;
+   return API_Global_LaunchProcessInterface( reinterpret_cast<interface_handle>( this ), flags ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ProcessInterface::BroadcastImageUpdated( const View& v )
 {
-   (*API->Global->BroadcastImageUpdated)( v.handle, nullptr /*reserved*/ );
+   API_Global_BroadcastImageUpdated( v.handle, nullptr /*reserved*/ );
 }
 
 // ----------------------------------------------------------------------------
@@ -1041,193 +1041,193 @@ public:
 
 void ProcessInterface::PerformAPIDefinitions() const
 {
-   (*API->InterfaceDefinition->EnterInterfaceDefinitionContext)();
+   API_InterfaceDefinition_EnterInterfaceDefinitionContext();
 
    {
       IsoString id = Id();
-      (*API->InterfaceDefinition->BeginInterfaceDefinition)( this, id.c_str(), 0 );
+      API_InterfaceDefinition_BeginInterfaceDefinition( this, id.c_str(), 0 );
    }
 
-   (*API->InterfaceDefinition->SetInterfaceVersion)( Version() );
+   API_InterfaceDefinition_SetInterfaceVersion( Version() );
 
    {
       IsoString aliases = Aliases().Trimmed();
       if ( !aliases.IsEmpty() )
-         (*API->InterfaceDefinition->SetInterfaceAliasIdentifiers)( aliases.c_str() );
+         API_InterfaceDefinition_SetInterfaceAliasIdentifiers( aliases.c_str() );
    }
 
    {
       String desc = Description();
       if ( !desc.IsEmpty() )
-         (*API->InterfaceDefinition->SetInterfaceDescription)( desc.c_str() );
+         API_InterfaceDefinition_SetInterfaceDescription( desc.c_str() );
    }
 
    {
       IsoString svg = IconImageSVG();
       if ( !svg.IsEmpty() )
-         (*API->InterfaceDefinition->SetInterfaceIconSVG)( svg.c_str() );
+         API_InterfaceDefinition_SetInterfaceIconSVG( svg.c_str() );
       else
       {
          String filePath = IconImageSVGFile();
          if ( !filePath.IsEmpty() )
-            (*API->InterfaceDefinition->SetInterfaceIconSVGFile)( filePath.c_str() );
+            API_InterfaceDefinition_SetInterfaceIconSVGFile( filePath.c_str() );
          else
          {
             // ### DEPRECATED - Interface icon images in raster bitmap formats.
 
             const char** xpm = IconImageXPM();
             if ( xpm != nullptr )
-               (*API->InterfaceDefinition->SetInterfaceIconImage)( xpm );
+               API_InterfaceDefinition_SetInterfaceIconImage( xpm );
             else
             {
                String path = IconImageFile();
                if ( !path.IsEmpty() )
-                  (*API->InterfaceDefinition->SetInterfaceIconImageFile)( path.c_str() );
+                  API_InterfaceDefinition_SetInterfaceIconImageFile( path.c_str() );
             }
 
             xpm = SmallIconImageXPM();
             if ( xpm != nullptr )
-               (*API->InterfaceDefinition->SetInterfaceIconSmallImage)( xpm );
+               API_InterfaceDefinition_SetInterfaceIconSmallImage( xpm );
             else
             {
                String path = SmallIconImageFile();
                if ( !path.IsEmpty() )
-                  (*API->InterfaceDefinition->SetInterfaceIconSmallImageFile)( path.c_str() );
+                  API_InterfaceDefinition_SetInterfaceIconSmallImageFile( path.c_str() );
             }
          }
       }
    }
 
-   (*API->InterfaceDefinition->SetInterfaceFeatures)( unsigned( Features() ), 0 );
+   API_InterfaceDefinition_SetInterfaceFeatures( unsigned( Features() ), 0 );
 
-   (*API->InterfaceDefinition->SetInterfaceInitializationRoutine)( InterfaceDispatcher::Initialize );
-   (*API->InterfaceDefinition->SetInterfaceLaunchRoutine)( InterfaceDispatcher::Launch );
+   API_InterfaceDefinition_SetInterfaceInitializationRoutine( InterfaceDispatcher::Initialize );
+   API_InterfaceDefinition_SetInterfaceLaunchRoutine( InterfaceDispatcher::Launch );
 
    if ( IsInstanceGenerator() )
    {
-      (*API->InterfaceDefinition->SetInterfaceProcessInstantiationRoutine)( InterfaceDispatcher::NewProcess );
+      API_InterfaceDefinition_SetInterfaceProcessInstantiationRoutine( InterfaceDispatcher::NewProcess );
 
       if ( DistinguishesTestInstances() )
-         (*API->InterfaceDefinition->SetInterfaceProcessTestInstantiationRoutine)( InterfaceDispatcher::NewTestProcess );
+         API_InterfaceDefinition_SetInterfaceProcessTestInstantiationRoutine( InterfaceDispatcher::NewTestProcess );
    }
 
    if ( CanImportInstances() )
    {
       if ( RequiresInstanceValidation() )
-         (*API->InterfaceDefinition->SetInterfaceProcessValidationRoutine)( InterfaceDispatcher::ValidateProcess );
+         API_InterfaceDefinition_SetInterfaceProcessValidationRoutine( InterfaceDispatcher::ValidateProcess );
 
-      (*API->InterfaceDefinition->SetInterfaceProcessImportRoutine)( InterfaceDispatcher::ImportProcess );
+      API_InterfaceDefinition_SetInterfaceProcessImportRoutine( InterfaceDispatcher::ImportProcess );
    }
 
-   (*API->InterfaceDefinition->SetInterfaceApplyRoutine)( InterfaceDispatcher::ApplyInstance );
-   (*API->InterfaceDefinition->SetInterfaceApplyGlobalRoutine)( InterfaceDispatcher::ApplyInstanceGlobal );
-   (*API->InterfaceDefinition->SetInterfaceExecuteRoutine)( InterfaceDispatcher::Execute );
-   (*API->InterfaceDefinition->SetInterfaceCancelRoutine)( InterfaceDispatcher::Cancel );
-   (*API->InterfaceDefinition->SetInterfaceBrowseDocumentationRoutine)( InterfaceDispatcher::BrowseDocumentation );
-   (*API->InterfaceDefinition->SetInterfaceRealTimePreviewUpdatedRoutine)( InterfaceDispatcher::RealTimePreviewUpdated );
-   (*API->InterfaceDefinition->SetInterfaceTrackViewUpdatedRoutine)( InterfaceDispatcher::TrackViewUpdated );
-   (*API->InterfaceDefinition->SetInterfaceEditPreferencesRoutine)( InterfaceDispatcher::EditPreferences );
-   (*API->InterfaceDefinition->SetInterfaceResetRoutine)( InterfaceDispatcher::ResetInstance );
+   API_InterfaceDefinition_SetInterfaceApplyRoutine( InterfaceDispatcher::ApplyInstance );
+   API_InterfaceDefinition_SetInterfaceApplyGlobalRoutine( InterfaceDispatcher::ApplyInstanceGlobal );
+   API_InterfaceDefinition_SetInterfaceExecuteRoutine( InterfaceDispatcher::Execute );
+   API_InterfaceDefinition_SetInterfaceCancelRoutine( InterfaceDispatcher::Cancel );
+   API_InterfaceDefinition_SetInterfaceBrowseDocumentationRoutine( InterfaceDispatcher::BrowseDocumentation );
+   API_InterfaceDefinition_SetInterfaceRealTimePreviewUpdatedRoutine( InterfaceDispatcher::RealTimePreviewUpdated );
+   API_InterfaceDefinition_SetInterfaceTrackViewUpdatedRoutine( InterfaceDispatcher::TrackViewUpdated );
+   API_InterfaceDefinition_SetInterfaceEditPreferencesRoutine( InterfaceDispatcher::EditPreferences );
+   API_InterfaceDefinition_SetInterfaceResetRoutine( InterfaceDispatcher::ResetInstance );
 
-   (*API->InterfaceDefinition->SetInterfaceRealTimeUpdateQueryRoutine)( InterfaceDispatcher::RequiresRealTimePreviewUpdate );
-   (*API->InterfaceDefinition->SetInterfaceRealTimeGenerationFlagsRoutine)( InterfaceDispatcher::RealTimePreviewGenerationFlags );
-   (*API->InterfaceDefinition->SetInterfaceRealTimeGenerationRoutine)( InterfaceDispatcher::GenerateRealTimePreview );
-   (*API->InterfaceDefinition->SetInterfaceRealTimeCancelRoutine)( InterfaceDispatcher::CancelRealTimePreview );
+   API_InterfaceDefinition_SetInterfaceRealTimeUpdateQueryRoutine( InterfaceDispatcher::RequiresRealTimePreviewUpdate );
+   API_InterfaceDefinition_SetInterfaceRealTimeGenerationFlagsRoutine( InterfaceDispatcher::RealTimePreviewGenerationFlags );
+   API_InterfaceDefinition_SetInterfaceRealTimeGenerationRoutine( InterfaceDispatcher::GenerateRealTimePreview );
+   API_InterfaceDefinition_SetInterfaceRealTimeCancelRoutine( InterfaceDispatcher::CancelRealTimePreview );
 
    if ( IsDynamicInterface() )
    {
-      (*API->InterfaceDefinition->SetInterfaceDynamicModeEnterRoutine)( InterfaceDispatcher::EnterDynamicMode );
-      (*API->InterfaceDefinition->SetInterfaceDynamicModeExitRoutine)( InterfaceDispatcher::ExitDynamicMode );
-      (*API->InterfaceDefinition->SetInterfaceDynamicMouseEnterRoutine)( InterfaceDispatcher::DynamicMouseEnter );
-      (*API->InterfaceDefinition->SetInterfaceDynamicMouseLeaveRoutine)( InterfaceDispatcher::DynamicMouseLeave );
-      (*API->InterfaceDefinition->SetInterfaceDynamicMouseMoveRoutine)( InterfaceDispatcher::DynamicMouseMove );
-      (*API->InterfaceDefinition->SetInterfaceDynamicMousePressRoutine)( InterfaceDispatcher::DynamicMousePress );
-      (*API->InterfaceDefinition->SetInterfaceDynamicMouseReleaseRoutine)( InterfaceDispatcher::DynamicMouseRelease );
-      (*API->InterfaceDefinition->SetInterfaceDynamicMouseDoubleClickRoutine)( InterfaceDispatcher::DynamicMouseDoubleClick );
-      (*API->InterfaceDefinition->SetInterfaceDynamicKeyPressRoutine)( InterfaceDispatcher::DynamicKeyPress );
-      (*API->InterfaceDefinition->SetInterfaceDynamicKeyReleaseRoutine)( InterfaceDispatcher::DynamicKeyRelease );
-      (*API->InterfaceDefinition->SetInterfaceDynamicMouseWheelRoutine)( InterfaceDispatcher::DynamicMouseWheel );
-      (*API->InterfaceDefinition->SetInterfaceDynamicUpdateQueryRoutine)( InterfaceDispatcher::RequiresDynamicUpdate );
-      (*API->InterfaceDefinition->SetInterfaceDynamicPaintRoutine)( InterfaceDispatcher::DynamicPaint );
+      API_InterfaceDefinition_SetInterfaceDynamicModeEnterRoutine( InterfaceDispatcher::EnterDynamicMode );
+      API_InterfaceDefinition_SetInterfaceDynamicModeExitRoutine( InterfaceDispatcher::ExitDynamicMode );
+      API_InterfaceDefinition_SetInterfaceDynamicMouseEnterRoutine( InterfaceDispatcher::DynamicMouseEnter );
+      API_InterfaceDefinition_SetInterfaceDynamicMouseLeaveRoutine( InterfaceDispatcher::DynamicMouseLeave );
+      API_InterfaceDefinition_SetInterfaceDynamicMouseMoveRoutine( InterfaceDispatcher::DynamicMouseMove );
+      API_InterfaceDefinition_SetInterfaceDynamicMousePressRoutine( InterfaceDispatcher::DynamicMousePress );
+      API_InterfaceDefinition_SetInterfaceDynamicMouseReleaseRoutine( InterfaceDispatcher::DynamicMouseRelease );
+      API_InterfaceDefinition_SetInterfaceDynamicMouseDoubleClickRoutine( InterfaceDispatcher::DynamicMouseDoubleClick );
+      API_InterfaceDefinition_SetInterfaceDynamicKeyPressRoutine( InterfaceDispatcher::DynamicKeyPress );
+      API_InterfaceDefinition_SetInterfaceDynamicKeyReleaseRoutine( InterfaceDispatcher::DynamicKeyRelease );
+      API_InterfaceDefinition_SetInterfaceDynamicMouseWheelRoutine( InterfaceDispatcher::DynamicMouseWheel );
+      API_InterfaceDefinition_SetInterfaceDynamicUpdateQueryRoutine( InterfaceDispatcher::RequiresDynamicUpdate );
+      API_InterfaceDefinition_SetInterfaceDynamicPaintRoutine( InterfaceDispatcher::DynamicPaint );
    }
 
    if ( WantsImageNotifications() )
    {
-      (*API->InterfaceDefinition->SetImageCreatedNotificationRoutine)( InterfaceDispatcher::ImageCreated );
-      (*API->InterfaceDefinition->SetImageUpdatedNotificationRoutine)( InterfaceDispatcher::ImageUpdated );
-      (*API->InterfaceDefinition->SetImageRenamedNotificationRoutine)( InterfaceDispatcher::ImageRenamed );
-      (*API->InterfaceDefinition->SetImageDeletedNotificationRoutine)( InterfaceDispatcher::ImageDeleted );
-      (*API->InterfaceDefinition->SetImageFocusedNotificationRoutine)( InterfaceDispatcher::ImageFocused );
-      (*API->InterfaceDefinition->SetImageLockedNotificationRoutine)( InterfaceDispatcher::ImageLocked );
-      (*API->InterfaceDefinition->SetImageUnlockedNotificationRoutine)( InterfaceDispatcher::ImageUnlocked );
-      (*API->InterfaceDefinition->SetImageSTFEnabledNotificationRoutine)( InterfaceDispatcher::ImageSTFEnabled );
-      (*API->InterfaceDefinition->SetImageSTFDisabledNotificationRoutine)( InterfaceDispatcher::ImageSTFDisabled );
-      (*API->InterfaceDefinition->SetImageSTFUpdatedNotificationRoutine)( InterfaceDispatcher::ImageSTFUpdated );
-      (*API->InterfaceDefinition->SetImageRGBWSUpdatedNotificationRoutine)( InterfaceDispatcher::ImageRGBWSUpdated );
-      (*API->InterfaceDefinition->SetImageCMEnabledNotificationRoutine)( InterfaceDispatcher::ImageCMEnabled );
-      (*API->InterfaceDefinition->SetImageCMDisabledNotificationRoutine)( InterfaceDispatcher::ImageCMDisabled );
-      (*API->InterfaceDefinition->SetImageCMUpdatedNotificationRoutine)( InterfaceDispatcher::ImageCMUpdated );
-      (*API->InterfaceDefinition->SetImageSavedNotificationRoutine)( InterfaceDispatcher::ImageSaved );
+      API_InterfaceDefinition_SetImageCreatedNotificationRoutine( InterfaceDispatcher::ImageCreated );
+      API_InterfaceDefinition_SetImageUpdatedNotificationRoutine( InterfaceDispatcher::ImageUpdated );
+      API_InterfaceDefinition_SetImageRenamedNotificationRoutine( InterfaceDispatcher::ImageRenamed );
+      API_InterfaceDefinition_SetImageDeletedNotificationRoutine( InterfaceDispatcher::ImageDeleted );
+      API_InterfaceDefinition_SetImageFocusedNotificationRoutine( InterfaceDispatcher::ImageFocused );
+      API_InterfaceDefinition_SetImageLockedNotificationRoutine( InterfaceDispatcher::ImageLocked );
+      API_InterfaceDefinition_SetImageUnlockedNotificationRoutine( InterfaceDispatcher::ImageUnlocked );
+      API_InterfaceDefinition_SetImageSTFEnabledNotificationRoutine( InterfaceDispatcher::ImageSTFEnabled );
+      API_InterfaceDefinition_SetImageSTFDisabledNotificationRoutine( InterfaceDispatcher::ImageSTFDisabled );
+      API_InterfaceDefinition_SetImageSTFUpdatedNotificationRoutine( InterfaceDispatcher::ImageSTFUpdated );
+      API_InterfaceDefinition_SetImageRGBWSUpdatedNotificationRoutine( InterfaceDispatcher::ImageRGBWSUpdated );
+      API_InterfaceDefinition_SetImageCMEnabledNotificationRoutine( InterfaceDispatcher::ImageCMEnabled );
+      API_InterfaceDefinition_SetImageCMDisabledNotificationRoutine( InterfaceDispatcher::ImageCMDisabled );
+      API_InterfaceDefinition_SetImageCMUpdatedNotificationRoutine( InterfaceDispatcher::ImageCMUpdated );
+      API_InterfaceDefinition_SetImageSavedNotificationRoutine( InterfaceDispatcher::ImageSaved );
    }
 
    if ( WantsMaskNotifications() )
    {
-      (*API->InterfaceDefinition->SetMaskUpdatedNotificationRoutine)( InterfaceDispatcher::MaskUpdated );
-      (*API->InterfaceDefinition->SetMaskEnabledNotificationRoutine)( InterfaceDispatcher::MaskEnabled );
-      (*API->InterfaceDefinition->SetMaskDisabledNotificationRoutine)( InterfaceDispatcher::MaskDisabled );
-      (*API->InterfaceDefinition->SetMaskShownNotificationRoutine)( InterfaceDispatcher::MaskShown );
-      (*API->InterfaceDefinition->SetMaskHiddenNotificationRoutine)( InterfaceDispatcher::MaskHidden );
+      API_InterfaceDefinition_SetMaskUpdatedNotificationRoutine( InterfaceDispatcher::MaskUpdated );
+      API_InterfaceDefinition_SetMaskEnabledNotificationRoutine( InterfaceDispatcher::MaskEnabled );
+      API_InterfaceDefinition_SetMaskDisabledNotificationRoutine( InterfaceDispatcher::MaskDisabled );
+      API_InterfaceDefinition_SetMaskShownNotificationRoutine( InterfaceDispatcher::MaskShown );
+      API_InterfaceDefinition_SetMaskHiddenNotificationRoutine( InterfaceDispatcher::MaskHidden );
    }
 
    if ( WantsTransparencyNotifications() )
    {
-      (*API->InterfaceDefinition->SetTransparencyHiddenNotificationRoutine)( InterfaceDispatcher::TransparencyHidden );
-      (*API->InterfaceDefinition->SetTransparencyModeUpdatedNotificationRoutine)( InterfaceDispatcher::TransparencyModeUpdated );
+      API_InterfaceDefinition_SetTransparencyHiddenNotificationRoutine( InterfaceDispatcher::TransparencyHidden );
+      API_InterfaceDefinition_SetTransparencyModeUpdatedNotificationRoutine( InterfaceDispatcher::TransparencyModeUpdated );
    }
 
    if ( WantsViewPropertyNotifications() )
    {
-      (*API->InterfaceDefinition->SetViewPropertyUpdatedNotificationRoutine)( InterfaceDispatcher::ViewPropertyUpdated );
-      (*API->InterfaceDefinition->SetViewPropertyDeletedNotificationRoutine)( InterfaceDispatcher::ViewPropertyDeleted );
+      API_InterfaceDefinition_SetViewPropertyUpdatedNotificationRoutine( InterfaceDispatcher::ViewPropertyUpdated );
+      API_InterfaceDefinition_SetViewPropertyDeletedNotificationRoutine( InterfaceDispatcher::ViewPropertyDeleted );
    }
 
    if ( WantsReadoutNotifications() )
    {
-      (*API->InterfaceDefinition->SetBeginReadoutNotificationRoutine)( InterfaceDispatcher::BeginReadout );
-      (*API->InterfaceDefinition->SetUpdateReadoutNotificationRoutine)( InterfaceDispatcher::UpdateReadout );
-      (*API->InterfaceDefinition->SetEndReadoutNotificationRoutine)( InterfaceDispatcher::EndReadout );
+      API_InterfaceDefinition_SetBeginReadoutNotificationRoutine( InterfaceDispatcher::BeginReadout );
+      API_InterfaceDefinition_SetUpdateReadoutNotificationRoutine( InterfaceDispatcher::UpdateReadout );
+      API_InterfaceDefinition_SetEndReadoutNotificationRoutine( InterfaceDispatcher::EndReadout );
    }
 
    if ( WantsProcessNotifications() )
    {
-      (*API->InterfaceDefinition->SetProcessCreatedNotificationRoutine)( InterfaceDispatcher::ProcessCreated );
-      (*API->InterfaceDefinition->SetProcessUpdatedNotificationRoutine)( InterfaceDispatcher::ProcessUpdated );
-      (*API->InterfaceDefinition->SetProcessDeletedNotificationRoutine)( InterfaceDispatcher::ProcessDeleted );
-      (*API->InterfaceDefinition->SetProcessSavedNotificationRoutine)( InterfaceDispatcher::ProcessSaved );
+      API_InterfaceDefinition_SetProcessCreatedNotificationRoutine( InterfaceDispatcher::ProcessCreated );
+      API_InterfaceDefinition_SetProcessUpdatedNotificationRoutine( InterfaceDispatcher::ProcessUpdated );
+      API_InterfaceDefinition_SetProcessDeletedNotificationRoutine( InterfaceDispatcher::ProcessDeleted );
+      API_InterfaceDefinition_SetProcessSavedNotificationRoutine( InterfaceDispatcher::ProcessSaved );
    }
 
    if ( WantsRealTimePreviewNotifications() )
    {
-      (*API->InterfaceDefinition->SetRealTimePreviewOwnerChangeNotificationRoutine)( InterfaceDispatcher::RealTimePreviewOwnerChanged );
-      (*API->InterfaceDefinition->SetRealTimePreviewLUTUpdatedNotificationRoutine)( InterfaceDispatcher::RealTimePreviewLUTUpdated );
-      (*API->InterfaceDefinition->SetRealTimePreviewGenerationStartNotificationRoutine)( InterfaceDispatcher::RealTimePreviewGenerationStarted );
-      (*API->InterfaceDefinition->SetRealTimePreviewGenerationFinishNotificationRoutine)( InterfaceDispatcher::RealTimePreviewGenerationFinished );
+      API_InterfaceDefinition_SetRealTimePreviewOwnerChangeNotificationRoutine( InterfaceDispatcher::RealTimePreviewOwnerChanged );
+      API_InterfaceDefinition_SetRealTimePreviewLUTUpdatedNotificationRoutine( InterfaceDispatcher::RealTimePreviewLUTUpdated );
+      API_InterfaceDefinition_SetRealTimePreviewGenerationStartNotificationRoutine( InterfaceDispatcher::RealTimePreviewGenerationStarted );
+      API_InterfaceDefinition_SetRealTimePreviewGenerationFinishNotificationRoutine( InterfaceDispatcher::RealTimePreviewGenerationFinished );
    }
 
    if ( WantsGlobalNotifications() )
    {
-      (*API->InterfaceDefinition->SetGlobalRGBWSUpdatedNotificationRoutine)( InterfaceDispatcher::GlobalRGBWSUpdated );
-      (*API->InterfaceDefinition->SetGlobalCMEnabledNotificationRoutine)( InterfaceDispatcher::GlobalCMEnabled );
-      (*API->InterfaceDefinition->SetGlobalCMDisabledNotificationRoutine)( InterfaceDispatcher::GlobalCMDisabled );
-      (*API->InterfaceDefinition->SetGlobalCMUpdatedNotificationRoutine)( InterfaceDispatcher::GlobalCMUpdated );
-      (*API->InterfaceDefinition->SetReadoutOptionsUpdatedNotificationRoutine)( InterfaceDispatcher::ReadoutOptionsUpdated );
-      (*API->InterfaceDefinition->SetGlobalPreferencesUpdatedNotificationRoutine)( InterfaceDispatcher::GlobalPreferencesUpdated );
-      (*API->InterfaceDefinition->SetGlobalFiltersUpdatedNotificationRoutine)( InterfaceDispatcher::GlobalFiltersUpdated );
+      API_InterfaceDefinition_SetGlobalRGBWSUpdatedNotificationRoutine( InterfaceDispatcher::GlobalRGBWSUpdated );
+      API_InterfaceDefinition_SetGlobalCMEnabledNotificationRoutine( InterfaceDispatcher::GlobalCMEnabled );
+      API_InterfaceDefinition_SetGlobalCMDisabledNotificationRoutine( InterfaceDispatcher::GlobalCMDisabled );
+      API_InterfaceDefinition_SetGlobalCMUpdatedNotificationRoutine( InterfaceDispatcher::GlobalCMUpdated );
+      API_InterfaceDefinition_SetReadoutOptionsUpdatedNotificationRoutine( InterfaceDispatcher::ReadoutOptionsUpdated );
+      API_InterfaceDefinition_SetGlobalPreferencesUpdatedNotificationRoutine( InterfaceDispatcher::GlobalPreferencesUpdated );
+      API_InterfaceDefinition_SetGlobalFiltersUpdatedNotificationRoutine( InterfaceDispatcher::GlobalFiltersUpdated );
    }
 
-   (*API->InterfaceDefinition->EndInterfaceDefinition)();
+   API_InterfaceDefinition_EndInterfaceDefinition();
 
-   (*API->InterfaceDefinition->ExitInterfaceDefinitionContext)();
+   API_InterfaceDefinition_ExitInterfaceDefinitionContext();
 }
 
 // ----------------------------------------------------------------------------

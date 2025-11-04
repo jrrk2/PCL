@@ -33,7 +33,7 @@ namespace pcl
  */
 
 Slider::Slider( Control& parent, bool vertical )
-   : Control( (*API->Slider->CreateSlider)( ModuleHandle(), this, vertical, parent.handle, 0/*flags*/ ) )
+   : Control( API_Slider_CreateSlider( ModuleHandle(), this, vertical, parent.handle, 0/*flags*/ ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateSlider" );
@@ -43,14 +43,14 @@ Slider::Slider( Control& parent, bool vertical )
 
 int Slider::Value() const
 {
-   return (*API->Slider->GetSliderValue)( handle );
+   return API_Slider_GetSliderValue( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Slider::SetValue( int value )
 {
-   (*API->Slider->SetSliderValue)( handle, value );
+   API_Slider_SetSliderValue( handle, value );
 }
 
 // ----------------------------------------------------------------------------
@@ -73,84 +73,84 @@ void Slider::SetNormalizedValue( double f )
 
 void Slider::GetRange( int& minValue, int& maxValue ) const
 {
-   (*API->Slider->GetSliderRange)( handle, &minValue, &maxValue );
+   API_Slider_GetSliderRange( handle, &minValue, &maxValue );
 }
 
 // ----------------------------------------------------------------------------
 
 void Slider::SetRange( int minValue, int maxValue )
 {
-   (*API->Slider->SetSliderRange)( handle, minValue, maxValue );
+   API_Slider_SetSliderRange( handle, minValue, maxValue );
 }
 
 // ----------------------------------------------------------------------------
 
 int Slider::StepSize() const
 {
-   return (*API->Slider->GetSliderStepSize)( handle );
+   return API_Slider_GetSliderStepSize( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Slider::SetStepSize( int stepSize )
 {
-   (*API->Slider->SetSliderStepSize)( handle, stepSize );
+   API_Slider_SetSliderStepSize( handle, stepSize );
 }
 
 // ----------------------------------------------------------------------------
 
 int Slider::PageSize() const
 {
-   return (*API->Slider->GetSliderPageSize)( handle );
+   return API_Slider_GetSliderPageSize( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Slider::SetPageSize( int pageSize )
 {
-   (*API->Slider->SetSliderPageSize)( handle, pageSize );
+   API_Slider_SetSliderPageSize( handle, pageSize );
 }
 
 // ----------------------------------------------------------------------------
 
 int Slider::TickInterval() const
 {
-   return (*API->Slider->GetSliderTickInterval)( handle );
+   return API_Slider_GetSliderTickInterval( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Slider::SetTickInterval( int interval )
 {
-   (*API->Slider->SetSliderTickInterval)( handle, interval );
+   API_Slider_SetSliderTickInterval( handle, interval );
 }
 
 // ----------------------------------------------------------------------------
 
 TickStyles Slider::TickStyle() const
 {
-   return TickStyle::mask_type( (*API->Slider->GetSliderTickStyle)( handle ) );
+   return TickStyle::mask_type( API_Slider_GetSliderTickStyle( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void Slider::SetTickStyle( TickStyles style )
 {
-   (*API->Slider->SetSliderTickStyle)( handle, style );
+   API_Slider_SetSliderTickStyle( handle, style );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Slider::IsTrackingEnabled() const
 {
-   return (*API->Slider->GetSliderTrackingEnabled)( handle ) != api_false;
+   return API_Slider_GetSliderTrackingEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Slider::EnableTracking ( bool enable )
 {
-   (*API->Slider->SetSliderTrackingEnabled)( handle, enable );
+   API_Slider_SetSliderTrackingEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
@@ -191,7 +191,7 @@ public:
 void Slider::OnValueUpdated( value_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Slider->SetSliderValueUpdatedEventRoutine)( handle, &receiver,
+   if ( API_Slider_SetSliderValueUpdatedEventRoutine( handle, &receiver,
                   (f != nullptr) ? SliderEventDispatcher::ValueUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetSliderValueUpdatedEventRoutine" );
    m_handlers->onValueUpdated = f;
@@ -200,7 +200,7 @@ void Slider::OnValueUpdated( value_event_handler f, Control& receiver )
 void Slider::OnRangeUpdated( range_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Slider->SetSliderRangeUpdatedEventRoutine)( handle, &receiver,
+   if ( API_Slider_SetSliderRangeUpdatedEventRoutine( handle, &receiver,
                   (f != nullptr) ? SliderEventDispatcher::RangeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetSliderRangeUpdatedEventRoutine" );
    m_handlers->onRangeUpdated = f;

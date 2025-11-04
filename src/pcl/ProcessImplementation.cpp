@@ -44,7 +44,7 @@ static void MandatoryError( const IsoString& procId, const char* funcName )
 uint32 ProcessImplementation::Version() const
 {
    return (m_serverHandle != 0) ?
-      (*API->Process->GetProcessInstanceVersion)( m_serverHandle ) : meta->Version();
+      API_Process_GetProcessInstanceVersion( m_serverHandle ) : meta->Version();
 }
 
 // ----------------------------------------------------------------------------
@@ -156,34 +156,34 @@ size_type ProcessImplementation::ParameterLength( const MetaParameter*, size_typ
 
 void ProcessImplementation::Launch() const
 {
-   (*API->Global->LaunchProcessInstance)( meta, this, InstanceLaunchMode::Default, 0 );
+   API_Global_LaunchProcessInstance4( meta, this, InstanceLaunchMode::Default, 0 );
 }
 
 void ProcessImplementation::LaunchInterface() const
 {
-   (*API->Global->LaunchProcessInstance)( meta, this, InstanceLaunchMode::Interface, 0 );
+   API_Global_LaunchProcessInstance4( meta, this, InstanceLaunchMode::Interface, 0 );
 }
 
 void ProcessImplementation::LaunchGlobal() const
 {
-   (*API->Global->LaunchProcessInstance)( meta, this, InstanceLaunchMode::Global, 0 );
+   API_Global_LaunchProcessInstance4( meta, this, InstanceLaunchMode::Global, 0 );
 }
 
 void ProcessImplementation::LaunchOnCurrentView() const
 {
-   (*API->Global->LaunchProcessInstance)( meta, this, InstanceLaunchMode::CurrentView, 0 );
+   API_Global_LaunchProcessInstance4( meta, this, InstanceLaunchMode::CurrentView, 0 );
 }
 
 void ProcessImplementation::LaunchOnCurrentWindow() const
 {
-   (*API->Global->LaunchProcessInstance)( meta, this, InstanceLaunchMode::CurrentWindow, 0 );
+   API_Global_LaunchProcessInstance4( meta, this, InstanceLaunchMode::CurrentWindow, 0 );
 }
 
 // ----------------------------------------------------------------------------
 
 void ProcessImplementation::LaunchOn( View& v ) const
 {
-   (*API->Global->LaunchProcessInstanceOnView)( meta, this, v.handle, 0 );
+   API_Global_LaunchProcessInstanceOnView( meta, this, v.handle, 0 );
 }
 
 void ProcessImplementation::LaunchOn( ImageWindow& w ) const
@@ -196,7 +196,7 @@ void ProcessImplementation::LaunchOn( ImageWindow& w ) const
 
 String ProcessImplementation::ToSource( const IsoString& language, const IsoString& varId, int indent ) const
 {
-   char16_type* s = (*API->Process->GetProcessInstanceSourceCode)(
+   char16_type* s = API_Process_GetProcessInstanceSourceCode(
                               ModuleHandle(), m_serverHandle, language.c_str(), varId.c_str(), indent );
    if ( s == nullptr )
       throw APIFunctionError( "GetProcessInstanceSourceCode" );

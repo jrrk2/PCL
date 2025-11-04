@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 ComboBox::ComboBox( Control& parent )
-   : Control( (*API->ComboBox->CreateComboBox)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
+   : Control( API_ComboBox_CreateComboBox( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
 {
    if ( handle == nullptr )
       throw APIFunctionError( "CreateComboBox" );
@@ -37,49 +37,49 @@ ComboBox::ComboBox( Control& parent )
 
 int ComboBox::NumberOfItems() const
 {
-   return (*API->ComboBox->GetComboBoxLength)( handle );
+   return API_ComboBox_GetComboBoxLength( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int ComboBox::CurrentItem() const
 {
-   return (*API->ComboBox->GetComboBoxCurrentItem)( handle );
+   return API_ComboBox_GetComboBoxCurrentItem( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::SetCurrentItem( int idx )
 {
-   (*API->ComboBox->SetComboBoxCurrentItem)( handle, idx );
+   API_ComboBox_SetComboBoxCurrentItem( handle, idx );
 }
 
 // ----------------------------------------------------------------------------
 
 int ComboBox::FindItem( const String& text, int fromIdx, bool exactMatch, bool caseSensitive ) const
 {
-   return (*API->ComboBox->FindComboBoxItem)( handle, text.c_str(), fromIdx, exactMatch, caseSensitive );
+   return API_ComboBox_FindComboBoxItem( handle, text.c_str(), fromIdx, exactMatch, caseSensitive );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::InsertItem( int idx, const String& text, const Bitmap& icon )
 {
-   (*API->ComboBox->InsertComboBoxItem)( handle, idx, text.c_str(), icon.handle );
+   API_ComboBox_InsertComboBoxItem( handle, idx, text.c_str(), icon.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::RemoveItem( int idx )
 {
-   (*API->ComboBox->RemoveComboBoxItem)( handle, idx );
+   API_ComboBox_RemoveComboBoxItem( handle, idx );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::Clear()
 {
-   (*API->ComboBox->ClearComboBox)( handle );
+   API_ComboBox_ClearComboBox( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -87,13 +87,13 @@ void ComboBox::Clear()
 String ComboBox::ItemText( int idx ) const
 {
    size_type len = 0;
-   (*API->ComboBox->GetComboBoxItemText)( handle, idx, 0, &len );
+   API_ComboBox_GetComboBoxItemText( handle, idx, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->ComboBox->GetComboBoxItemText)( handle, idx, text.Begin(), &len ) == api_false )
+      if ( API_ComboBox_GetComboBoxItemText( handle, idx, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetComboBoxItemText" );
       text.ResizeToNullTerminated();
    }
@@ -104,35 +104,35 @@ String ComboBox::ItemText( int idx ) const
 
 void ComboBox::SetItemText( int idx, const String& text )
 {
-   (*API->ComboBox->SetComboBoxItemText)( handle, idx, text.c_str() );
+   API_ComboBox_SetComboBoxItemText( handle, idx, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 Bitmap ComboBox::ItemIcon( int idx ) const
 {
-   return Bitmap( (*API->ComboBox->GetComboBoxItemIcon)( handle, idx ) );
+   return Bitmap( API_ComboBox_GetComboBoxItemIcon( handle, idx ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::SetItemIcon( int idx, const Bitmap& icon )
 {
-   (*API->ComboBox->SetComboBoxItemIcon)( handle, idx, icon.handle );
+   API_ComboBox_SetComboBoxItemIcon( handle, idx, icon.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ComboBox::IsEditEnabled() const
 {
-   return (*API->ComboBox->GetComboBoxEditEnabled)( handle ) != api_false;
+   return API_ComboBox_GetComboBoxEditEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::EnableEdit( bool enable )
 {
-   (*API->ComboBox->SetComboBoxEditEnabled)( handle, enable );
+   API_ComboBox_SetComboBoxEditEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
@@ -140,13 +140,13 @@ void ComboBox::EnableEdit( bool enable )
 String ComboBox::EditText() const
 {
    size_type len = 0;
-   (*API->ComboBox->GetComboBoxEditText)( handle, 0, &len );
+   API_ComboBox_GetComboBoxEditText( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->ComboBox->GetComboBoxEditText)( handle, text.Begin(), &len ) == api_false )
+      if ( API_ComboBox_GetComboBoxEditText( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetComboBoxEditText" );
       text.ResizeToNullTerminated();
    }
@@ -157,77 +157,77 @@ String ComboBox::EditText() const
 
 void ComboBox::SetEditText( const String& text )
 {
-   (*API->ComboBox->SetComboBoxEditText)( handle, text.c_str() );
+   API_ComboBox_SetComboBoxEditText( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ComboBox::IsAutoCompletionEnabled() const
 {
-   return (*API->ComboBox->GetComboBoxAutoCompletionEnabled)( handle ) != api_false;
+   return API_ComboBox_GetComboBoxAutoCompletionEnabled( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::EnableAutoCompletion( bool enable )
 {
-   (*API->ComboBox->SetComboBoxAutoCompletionEnabled)( handle, enable );
+   API_ComboBox_SetComboBoxAutoCompletionEnabled( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::GetIconSize( int& width, int& height ) const
 {
-   (*API->ComboBox->GetComboBoxIconSize)( handle, &width, &height );
+   API_ComboBox_GetComboBoxIconSize( handle, &width, &height );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::SetIconSize( int width, int height )
 {
-   (*API->ComboBox->SetComboBoxIconSize)( handle, width, height );
+   API_ComboBox_SetComboBoxIconSize( handle, width, height );
 }
 
 // ----------------------------------------------------------------------------
 
 int ComboBox::MaxVisibleItemCount() const
 {
-   return (*API->ComboBox->GetComboBoxMaxVisibleItemCount)( handle );
+   return API_ComboBox_GetComboBoxMaxVisibleItemCount( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::SetMaxVisibleItemCount( int n )
 {
-   (*API->ComboBox->SetComboBoxMaxVisibleItemCount)( handle, n );
+   API_ComboBox_SetComboBoxMaxVisibleItemCount( handle, n );
 }
 
 // ----------------------------------------------------------------------------
 
 int ComboBox::MinItemCharWidth() const
 {
-   return (*API->ComboBox->GetComboBoxMinItemCharWidth)( handle );
+   return API_ComboBox_GetComboBoxMinItemCharWidth( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::SetMinItemCharWidth( int n )
 {
-   (*API->ComboBox->SetComboBoxMinItemCharWidth)( handle, n );
+   API_ComboBox_SetComboBoxMinItemCharWidth( handle, n );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::ShowList()
 {
-   (*API->ComboBox->SetComboBoxListVisible)( handle, api_true );
+   API_ComboBox_SetComboBoxListVisible( handle, api_true );
 }
 
 // ----------------------------------------------------------------------------
 
 void ComboBox::HideList()
 {
-   (*API->ComboBox->SetComboBoxListVisible)( handle, api_false );
+   API_ComboBox_SetComboBoxListVisible( handle, api_false );
 }
 
 // ----------------------------------------------------------------------------
@@ -273,7 +273,7 @@ public:
 void ComboBox::OnItemSelected( item_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ComboBox->SetComboBoxItemSelectedEventRoutine)( handle, &receiver,
+   if ( API_ComboBox_SetComboBoxItemSelectedEventRoutine( handle, &receiver,
                   (f != nullptr) ? ComboBoxEventDispatcher::ItemSelected : nullptr ) == api_false )
       throw APIFunctionError( "SetComboBoxItemSelectedEventRoutine" );
    m_handlers->onItemSelected = f;
@@ -282,7 +282,7 @@ void ComboBox::OnItemSelected( item_event_handler f, Control& receiver )
 void ComboBox::OnItemHighlighted( item_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ComboBox->SetComboBoxItemHighlightedEventRoutine)( handle, &receiver,
+   if ( API_ComboBox_SetComboBoxItemHighlightedEventRoutine( handle, &receiver,
                   (f != nullptr) ? ComboBoxEventDispatcher::ItemHighlighted : nullptr ) == api_false )
       throw APIFunctionError( "SetComboBoxItemHighlightedEventRoutine" );
    m_handlers->onItemHighlighted = f;
@@ -291,7 +291,7 @@ void ComboBox::OnItemHighlighted( item_event_handler f, Control& receiver )
 void ComboBox::OnEditTextUpdated( edit_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ComboBox->SetComboBoxEditTextUpdatedEventRoutine)( handle, &receiver,
+   if ( API_ComboBox_SetComboBoxEditTextUpdatedEventRoutine( handle, &receiver,
                   (f != nullptr) ? ComboBoxEventDispatcher::EditTextUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetComboBoxEditTextUpdatedEventRoutine" );
    m_handlers->onEditTextUpdated = f;

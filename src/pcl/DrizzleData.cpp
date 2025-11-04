@@ -972,8 +972,7 @@ void DrizzleData::ParseSpline( DrizzleData::spline& S, const XMLElement& root )
    {
       if ( S.m_serialization.IsEmpty() )
          throw Error( "Missing required surface spline Serialization child element." );
-      if ( API == nullptr )
-         throw Error( "Cannot deserialize RBF data of " + RBFTypeToAttributeValue( S.m_rbf )
+      throw Error( "Cannot deserialize RBF data of " + RBFTypeToAttributeValue( S.m_rbf )
                      + " type: a running PixInsight core application is required." );
       S.m_handle = S.DeserializeHandle( S.m_serialization );
       S.m_serialization.Clear();

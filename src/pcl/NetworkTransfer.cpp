@@ -66,7 +66,7 @@ public:
 // ----------------------------------------------------------------------------
 
 NetworkTransfer::NetworkTransfer()
-   : UIObject( (*API->NetworkTransfer->CreateNetworkTransfer)( ModuleHandle(), this ) )
+   : UIObject( API_NetworkTransfer_CreateNetworkTransfer( ModuleHandle(), this ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateNetworkTransfer" );
@@ -88,7 +88,7 @@ NetworkTransfer& NetworkTransfer::Null()
 
 void NetworkTransfer::SetURL( const String& url, const String& userName, const String& userPassword )
 {
-   if ( (*API->NetworkTransfer->SetNetworkTransferURL)( handle, url.c_str(), userName.c_str(), userPassword.c_str() ) == api_false )
+   if ( API_NetworkTransfer_SetNetworkTransferURL( handle, url.c_str(), userName.c_str(), userPassword.c_str() ) == api_false )
       throw APIFunctionError( "SetNetworkTransferURL" );
 }
 
@@ -96,7 +96,7 @@ void NetworkTransfer::SetURL( const String& url, const String& userName, const S
 
 void NetworkTransfer::SetProxyURL( const String& url, const String& userName, const String& userPassword )
 {
-   if ( (*API->NetworkTransfer->SetNetworkTransferProxyURL)( handle, url.c_str(), userName.c_str(), userPassword.c_str() ) == api_false )
+   if ( API_NetworkTransfer_SetNetworkTransferProxyURL( handle, url.c_str(), userName.c_str(), userPassword.c_str() ) == api_false )
       throw APIFunctionError( "SetNetworkTransferProxyURL" );
 }
 
@@ -104,7 +104,7 @@ void NetworkTransfer::SetProxyURL( const String& url, const String& userName, co
 
 void NetworkTransfer::SetSSL( bool useSSL, bool forceSSL, bool verifyPeer, bool verifyHost )
 {
-   if ( (*API->NetworkTransfer->SetNetworkTransferSSL)( handle, useSSL, forceSSL, verifyPeer, verifyHost ) == api_false )
+   if ( API_NetworkTransfer_SetNetworkTransferSSL( handle, useSSL, forceSSL, verifyPeer, verifyHost ) == api_false )
       throw APIFunctionError( "SetNetworkTransferSSL" );
 }
 
@@ -112,7 +112,7 @@ void NetworkTransfer::SetSSL( bool useSSL, bool forceSSL, bool verifyPeer, bool 
 
 void NetworkTransfer::SetCustomHTTPHeaders( const String& nlsHeaders )
 {
-   if ( (*API->NetworkTransfer->SetNetworkTransferCustomHTTPHeaders)( handle, nlsHeaders.c_str() ) == api_false )
+   if ( API_NetworkTransfer_SetNetworkTransferCustomHTTPHeaders( handle, nlsHeaders.c_str() ) == api_false )
       throw APIFunctionError( "SetNetworkTransferCustomHTTPHeaders" );
 }
 
@@ -120,7 +120,7 @@ void NetworkTransfer::SetCustomHTTPHeaders( const String& nlsHeaders )
 
 void NetworkTransfer::SetConnectionTimeout( int seconds )
 {
-   if ( (*API->NetworkTransfer->SetNetworkTransferConnectionTimeout)( handle, seconds ) == api_false )
+   if ( API_NetworkTransfer_SetNetworkTransferConnectionTimeout( handle, seconds ) == api_false )
       throw APIFunctionError( "SetNetworkTransferConnectionTimeout" );
 }
 
@@ -128,21 +128,21 @@ void NetworkTransfer::SetConnectionTimeout( int seconds )
 
 bool NetworkTransfer::Download()
 {
-   return (*API->NetworkTransfer->PerformNetworkTransferDownload)( handle ) != api_false;
+   return API_NetworkTransfer_PerformNetworkTransferDownload( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool NetworkTransfer::Upload( fsize_type uploadSize )
 {
-   return (*API->NetworkTransfer->PerformNetworkTransferUpload)( handle, uploadSize ) != api_false;
+   return API_NetworkTransfer_PerformNetworkTransferUpload( handle, uploadSize ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool NetworkTransfer::POST( const String& fields )
 {
-   return (*API->NetworkTransfer->PerformNetworkTransferPOST)( handle, fields.c_str() ) != api_false;
+   return API_NetworkTransfer_PerformNetworkTransferPOST( handle, fields.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -151,14 +151,14 @@ bool NetworkTransfer::SMTP( const String& mailFrom, const StringList& mailRecipi
 {
    String csRecipients;
    mailRecipients.ToCommaSeparated( csRecipients );
-   return (*API->NetworkTransfer->PerformNetworkTransferSMTP)( handle, mailFrom.c_str(), csRecipients.c_str() ) != api_false;
+   return API_NetworkTransfer_PerformNetworkTransferSMTP( handle, mailFrom.c_str(), csRecipients.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void NetworkTransfer::CloseConnection()
 {
-   (*API->NetworkTransfer->CloseNetworkTransferConnection)( handle );
+   API_NetworkTransfer_CloseNetworkTransferConnection( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -166,13 +166,13 @@ void NetworkTransfer::CloseConnection()
 String NetworkTransfer::URL() const
 {
    size_type len = 0;
-   (*API->NetworkTransfer->GetNetworkTransferURL)( handle, 0, &len );
+   API_NetworkTransfer_GetNetworkTransferURL( handle, 0, &len );
 
    String url;
    if ( len > 0 )
    {
       url.SetLength( len );
-      if ( (*API->NetworkTransfer->GetNetworkTransferURL)( handle, url.Begin(), &len ) == api_false )
+      if ( API_NetworkTransfer_GetNetworkTransferURL( handle, url.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetNetworkTransferURL" );
       url.ResizeToNullTerminated();
    }
@@ -184,13 +184,13 @@ String NetworkTransfer::URL() const
 String NetworkTransfer::ProxyURL() const
 {
    size_type len = 0;
-   (*API->NetworkTransfer->GetNetworkTransferProxyURL)( handle, 0, &len );
+   API_NetworkTransfer_GetNetworkTransferProxyURL( handle, 0, &len );
 
    String url;
    if ( len > 0 )
    {
       url.SetLength( len );
-      if ( (*API->NetworkTransfer->GetNetworkTransferProxyURL)( handle, url.Begin(), &len ) == api_false )
+      if ( API_NetworkTransfer_GetNetworkTransferProxyURL( handle, url.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetNetworkTransferProxyURL" );
       url.ResizeToNullTerminated();
    }
@@ -202,13 +202,13 @@ String NetworkTransfer::ProxyURL() const
 String NetworkTransfer::CustomHTTPHeaders() const
 {
    size_type len = 0;
-   (*API->NetworkTransfer->GetNetworkTransferCustomHTTPHeaders)( handle, 0, &len );
+   API_NetworkTransfer_GetNetworkTransferCustomHTTPHeaders( handle, 0, &len );
 
    String nlsHeaders;
    if ( len > 0 )
    {
       nlsHeaders.SetLength( len );
-      if ( (*API->NetworkTransfer->GetNetworkTransferCustomHTTPHeaders)( handle, nlsHeaders.Begin(), &len ) == api_false )
+      if ( API_NetworkTransfer_GetNetworkTransferCustomHTTPHeaders( handle, nlsHeaders.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetNetworkTransferCustomHTTPHeaders" );
       nlsHeaders.ResizeToNullTerminated();
    }
@@ -219,21 +219,21 @@ String NetworkTransfer::CustomHTTPHeaders() const
 
 bool NetworkTransfer::PerformedOK() const
 {
-   return (*API->NetworkTransfer->GetNetworkTransferStatus)( handle ) != api_false;
+   return API_NetworkTransfer_GetNetworkTransferStatus( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool NetworkTransfer::WasAborted() const
 {
-   return (*API->NetworkTransfer->GetNetworkTransferIsAborted)( handle ) != api_false;
+   return API_NetworkTransfer_GetNetworkTransferIsAborted( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int NetworkTransfer::ResponseCode() const
 {
-   return (*API->NetworkTransfer->GetNetworkTransferResponseCode)( handle );
+   return API_NetworkTransfer_GetNetworkTransferResponseCode( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -241,13 +241,13 @@ int NetworkTransfer::ResponseCode() const
 String NetworkTransfer::ContentType() const
 {
    size_type len = 0;
-   (*API->NetworkTransfer->GetNetworkTransferContentType)( handle, 0, &len );
+   API_NetworkTransfer_GetNetworkTransferContentType( handle, 0, &len );
 
    String contentType;
    if ( len > 0 )
    {
       contentType.SetLength( len );
-      if ( (*API->NetworkTransfer->GetNetworkTransferContentType)( handle, contentType.Begin(), &len ) == api_false )
+      if ( API_NetworkTransfer_GetNetworkTransferContentType( handle, contentType.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetNetworkTransferContentType" );
       contentType.ResizeToNullTerminated();
    }
@@ -258,7 +258,7 @@ String NetworkTransfer::ContentType() const
 
 fsize_type NetworkTransfer::BytesTransferred() const
 {
-   return (*API->NetworkTransfer->GetNetworkTransferBytesTransferred)( handle );
+   return API_NetworkTransfer_GetNetworkTransferBytesTransferred( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -266,7 +266,7 @@ fsize_type NetworkTransfer::BytesTransferred() const
 double NetworkTransfer::TotalSpeed() const
 {
    double KiBPerSec = 0;
-   (*API->NetworkTransfer->GetNetworkTransferTotalSpeed)( handle, &KiBPerSec );
+   API_NetworkTransfer_GetNetworkTransferTotalSpeed( handle, &KiBPerSec );
    return KiBPerSec;
 }
 
@@ -275,7 +275,7 @@ double NetworkTransfer::TotalSpeed() const
 double NetworkTransfer::TotalTime() const
 {
    double totalSecs = 0;
-   (*API->NetworkTransfer->GetNetworkTransferTotalTime)( handle, &totalSecs );
+   API_NetworkTransfer_GetNetworkTransferTotalTime( handle, &totalSecs );
    return totalSecs;
 }
 
@@ -284,13 +284,13 @@ double NetworkTransfer::TotalTime() const
 String NetworkTransfer::ErrorInformation() const
 {
    size_type len = 0;
-   (*API->NetworkTransfer->GetNetworkTransferErrorInformation)( handle, 0, &len );
+   API_NetworkTransfer_GetNetworkTransferErrorInformation( handle, 0, &len );
 
    String errorInfo;
    if ( len > 0 )
    {
       errorInfo.SetLength( len );
-      if ( (*API->NetworkTransfer->GetNetworkTransferErrorInformation)( handle, errorInfo.Begin(), &len ) == api_false )
+      if ( API_NetworkTransfer_GetNetworkTransferErrorInformation( handle, errorInfo.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetNetworkTransferErrorInformation" );
       errorInfo.ResizeToNullTerminated();
    }
@@ -303,7 +303,7 @@ void NetworkTransfer::OnDownloadDataAvailable( download_event_handler handler, C
 {
    __PCL_NO_ALIAS_HANDLERS;
    onDownloadDataAvailable = nullptr;
-   if ( (*API->NetworkTransfer->SetNetworkTransferDownloadEventRoutine)( handle, &receiver,
+   if ( API_NetworkTransfer_SetNetworkTransferDownloadEventRoutine( handle, &receiver,
                      (handler != nullptr) ? NetworkTransferEventDispatcher::DownloadDataAvailable : nullptr ) == api_false )
       throw APIFunctionError( "SetNetworkTransferDownloadEventRoutine" );
    onDownloadDataAvailable = handler;
@@ -315,7 +315,7 @@ void NetworkTransfer::OnUploadDataRequested( upload_event_handler handler, Contr
 {
    __PCL_NO_ALIAS_HANDLERS;
    onUploadDataRequested = nullptr;
-   if ( (*API->NetworkTransfer->SetNetworkTransferUploadEventRoutine)( handle, &receiver,
+   if ( API_NetworkTransfer_SetNetworkTransferUploadEventRoutine( handle, &receiver,
                      (handler != nullptr) ? NetworkTransferEventDispatcher::UploadDataRequested : nullptr ) == api_false )
       throw APIFunctionError( "SetNetworkTransferUploadEventRoutine" );
    onUploadDataRequested = handler;
@@ -327,7 +327,7 @@ void NetworkTransfer::OnTransferProgress( progress_event_handler handler, Contro
 {
    __PCL_NO_ALIAS_HANDLERS;
    onTransferProgress = nullptr;
-   if ( (*API->NetworkTransfer->SetNetworkTransferProgressEventRoutine)( handle, &receiver,
+   if ( API_NetworkTransfer_SetNetworkTransferProgressEventRoutine( handle, &receiver,
                      (handler != nullptr) ? NetworkTransferEventDispatcher::TransferProgress : nullptr ) == api_false )
       throw APIFunctionError( "SetNetworkTransferProgressEventRoutine" );
    onTransferProgress = handler;

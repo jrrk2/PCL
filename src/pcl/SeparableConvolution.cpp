@@ -651,16 +651,14 @@ void SeparableConvolution::ValidateFilter() const
 
 int SeparableConvolution::FasterThanNonseparableFilterSize( int width, int height )
 {
-   if ( API != nullptr )
    {
-      int kernelSize = (*API->Thread->PerformanceAnalysisValue)( PerformanceAnalysisAlgorithm::SeparableConvolutionFasterThanNonseparable,
+      int kernelSize = API_Thread_PerformanceAnalysisValue( PerformanceAnalysisAlgorithm::SeparableConvolutionFasterThanNonseparable,
                                                                  0/*length*/,
                                                                  4/*itemSize*/, api_true/*floatingPoint*/,
                                                                  0/*kernelSize*/, width, height );
       if ( kernelSize > 0 )
          return kernelSize;
    }
-
    return 5;
 }
 

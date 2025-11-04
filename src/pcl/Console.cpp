@@ -30,9 +30,9 @@ namespace pcl
 
 Console::Console()
 {
-   if ( (m_handle = (*API->Global->GetConsole)()) == nullptr )
+   if ( (m_handle = API_Global_GetConsole()) == nullptr )
       throw APIFunctionError( "GetConsole" );
-   m_thread = (*API->Thread->GetCurrentThread)();
+   m_thread = API_Thread_GetCurrentThread();
 }
 
 // ----------------------------------------------------------------------------
@@ -48,11 +48,11 @@ void Console::Write( const String& s )
 {
    if ( m_thread == nullptr )
    {
-      if ( (*API->Global->WriteConsole)( m_handle, s.c_str(), api_false ) == api_false )
+      if ( API_Global_WriteConsole( m_handle, s.c_str(), api_false ) == api_false )
          throw APIFunctionError( "WriteConsole" );
    }
    else
-      (*API->Thread->AppendThreadConsoleOutputText)( m_thread, s.c_str(), api_false );
+      API_Thread_AppendThreadConsoleOutputText( m_thread, s.c_str(), api_false );
 }
 
 // ----------------------------------------------------------------------------
@@ -61,11 +61,11 @@ void Console::WriteLn( const String& s )
 {
    if ( m_thread == nullptr )
    {
-      if ( (*API->Global->WriteConsole)( m_handle, s.c_str(), api_true ) == api_false )
+      if ( API_Global_WriteConsole( m_handle, s.c_str(), api_true ) == api_false )
          throw APIFunctionError( "WriteConsole" );
    }
    else
-      (*API->Thread->AppendThreadConsoleOutputText)( m_thread, s.c_str(), api_true );
+      API_Thread_AppendThreadConsoleOutputText( m_thread, s.c_str(), api_true );
 }
 
 // ----------------------------------------------------------------------------
@@ -74,11 +74,11 @@ void Console::WriteLn()
 {
    if ( m_thread == nullptr )
    {
-      if ( (*API->Global->WriteConsole)( m_handle, 0, api_true ) == api_false )
+      if ( API_Global_WriteConsole( m_handle, 0, api_true ) == api_false )
          throw APIFunctionError( "WriteConsole" );
    }
    else
-      (*API->Thread->AppendThreadConsoleOutputText)( m_thread, 0, api_true );
+      API_Thread_AppendThreadConsoleOutputText( m_thread, 0, api_true );
 }
 
 // ----------------------------------------------------------------------------
@@ -86,7 +86,7 @@ void Console::WriteLn()
 int Console::ReadChar()
 {
    if ( m_thread == nullptr )
-      return (*API->Global->ReadConsoleChar)( m_handle );
+      return API_Global_ReadConsoleChar( m_handle );
    return 0;
 }
 
@@ -96,7 +96,7 @@ String Console::ReadString()
 {
    if ( m_thread == nullptr )
    {
-      char16_type* s = (*API->Global->ReadConsoleString)( ModuleHandle(), m_handle );
+      char16_type* s = API_Global_ReadConsoleString( ModuleHandle(), m_handle );
       if ( s != nullptr )
       {
          String str( s );
@@ -119,7 +119,7 @@ String Console::Text() const
 {
    if ( m_thread == nullptr )
    {
-      char16_type* s = (*API->Global->GetConsoleText)( ModuleHandle(), m_handle );
+      char16_type* s = API_Global_GetConsoleText( ModuleHandle(), m_handle );
       if ( s != nullptr )
       {
          String str( s );
@@ -135,28 +135,28 @@ String Console::Text() const
 
 bool Console::Suspended() const
 {
-   return ((*API->Global->GetProcessStatus)() & 0x00000002) != 0;
+   return (API_Global_GetProcessStatus() & 0x00000002) != 0;
 }
 
 // ----------------------------------------------------------------------------
 
 bool Console::Waiting() const
 {
-   return ((*API->Global->GetProcessStatus)() & 0x00000004) != 0;
+   return (API_Global_GetProcessStatus() & 0x00000004) != 0;
 }
 
 // ----------------------------------------------------------------------------
 
 bool Console::AbortEnabled() const
 {
-   return ((*API->Global->GetProcessStatus)() & 0x40000000) != 0;
+   return (API_Global_GetProcessStatus() & 0x40000000) != 0;
 }
 
 // ----------------------------------------------------------------------------
 
 bool Console::AbortRequested() const
 {
-   return ((*API->Global->GetProcessStatus)() & 0x80000000) != 0;
+   return (API_Global_GetProcessStatus() & 0x80000000) != 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -164,7 +164,7 @@ bool Console::AbortRequested() const
 void Console::ResetStatus()
 {
    if ( m_thread == nullptr )
-      if ( (*API->Global->ResetProcessStatus)() == api_false )
+      if ( API_Global_ResetProcessStatus() == api_false )
          throw APIFunctionError( "ResetProcessStatus" );
 }
 
@@ -173,7 +173,7 @@ void Console::ResetStatus()
 void Console::EnableAbort()
 {
    if ( m_thread == nullptr )
-      if ( (*API->Global->EnableAbort)() == api_false )
+      if ( API_Global_EnableAbort() == api_false )
          throw APIFunctionError( "EnableAbort" );
 }
 
@@ -182,7 +182,7 @@ void Console::EnableAbort()
 void Console::DisableAbort()
 {
    if ( m_thread == nullptr )
-      if ( (*API->Global->DisableAbort)() == api_false )
+      if ( API_Global_DisableAbort() == api_false )
          throw APIFunctionError( "DisableAbort" );
 }
 
@@ -191,7 +191,7 @@ void Console::DisableAbort()
 void Console::Abort()
 {
    if ( m_thread == nullptr )
-      if ( (*API->Global->Abort)() == api_false )
+      if ( API_Global_Abort() == api_false )
          throw APIFunctionError( "Abort" );
 }
 
@@ -199,14 +199,14 @@ void Console::Abort()
 
 bool Console::IsValid() const
 {
-   return m_handle != nullptr && (*API->Global->ValidateConsole)( m_handle ) != api_false;
+   return m_handle != nullptr && API_Global_ValidateConsole( m_handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool Console::IsCurrentThreadConsole() const
 {
-   return m_handle != nullptr && m_thread == (*API->Thread->GetCurrentThread)();
+   return m_handle != nullptr && m_thread == API_Thread_GetCurrentThread();
 }
 
 // ----------------------------------------------------------------------------
@@ -214,7 +214,7 @@ bool Console::IsCurrentThreadConsole() const
 void Console::Flush()
 {
    if ( m_thread == nullptr )
-      if ( (*API->Global->FlushConsole)( m_handle ) == api_false )
+      if ( API_Global_FlushConsole( m_handle ) == api_false )
          throw APIFunctionError( "FlushConsole" );
 }
 
@@ -223,7 +223,7 @@ void Console::Flush()
 bool Console::Show( bool show )
 {
    if ( m_thread == nullptr )
-      return (*API->Global->ShowConsole)( m_handle, api_bool( show ) ) != api_false;
+      return API_Global_ShowConsole( m_handle, api_bool( show ) ) != api_false;
    return false;
 }
 
@@ -242,7 +242,7 @@ void Console::ExecuteCommand( const String& command )
    if ( m_thread != nullptr )
       throw Error( "Console::ExecuteCommand() can only be invoked from the root thread." );
 
-   if ( (*API->Global->ExecuteCommand)( ModuleHandle(), m_handle, command.c_str() ) == api_false )
+   if ( API_Global_ExecuteCommand( ModuleHandle(), m_handle, command.c_str() ) == api_false )
       throw APIFunctionError( "ExecuteCommand" );
 }
 
