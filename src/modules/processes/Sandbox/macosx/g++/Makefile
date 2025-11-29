@@ -13,6 +13,10 @@
 # Targets
 #
 
+export PCLSRCDIR=/Users/jonathan/PCL/src
+export PCLINCDIR=/Users/jonathan/PCL/include
+export PCLLIBDIR64=/Users/jonathan/PCL/src/pcl/macosx/g++/arm64/Release
+
 .PHONY: all
 all: 
 	$(MAKE) -f ./makefile-x64 --no-print-directory
