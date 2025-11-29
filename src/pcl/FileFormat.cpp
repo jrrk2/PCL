@@ -52,7 +52,7 @@ public:
 
    void GetCapabilities()
    {
-      if ( !(*API->FileFormat->GetFileFormatCapabilities)( handle, &capabilities ) )
+      if ( !(API->FileFormat->GetFileFormatCapabilities)( handle, &capabilities ) )
          throw APIFunctionError( "GetFileFormatCapabilities" );
    }
 
@@ -98,14 +98,14 @@ FileFormat::FileFormat( const String& nameExtOrMime, bool toRead, bool toWrite )
    if ( nameExtOrMime.Contains( '/' ) )
    {
       IsoString mimeType( nameExtOrMime );
-      m_data->handle = (*API->FileFormat->GetFileFormatByMimeType)( ModuleHandle(), mimeType.c_str(), toRead, toWrite );
+      m_data->handle = (API->FileFormat->GetFileFormatByMimeType)( ModuleHandle(), mimeType.c_str(), toRead, toWrite );
       if ( m_data->handle == nullptr )
          throw Error( "FileFormat: No installed image file format was found "
                       "for the specified MIME type \'" + nameExtOrMime + "\' and access conditions" );
    }
    else if ( nameExtOrMime.StartsWith( '.' ) )
    {
-      m_data->handle = (*API->FileFormat->GetFileFormatByFileExtension)( ModuleHandle(), nameExtOrMime.c_str(), toRead, toWrite );
+      m_data->handle = (API->FileFormat->GetFileFormatByFileExtension)( ModuleHandle(), nameExtOrMime.c_str(), toRead, toWrite );
       if ( m_data->handle == nullptr )
          throw Error( "FileFormat: No installed image file format was found "
                       "for the specified file extension \'" + nameExtOrMime + "\' and access conditions" );
@@ -113,7 +113,7 @@ FileFormat::FileFormat( const String& nameExtOrMime, bool toRead, bool toWrite )
    else
    {
       IsoString id( nameExtOrMime );
-      m_data->handle = (*API->FileFormat->GetFileFormatByName)( ModuleHandle(), id.c_str() );
+      m_data->handle = (API->FileFormat->GetFileFormatByName)( ModuleHandle(), id.c_str() );
       if ( m_data->handle == nullptr )
          throw Error( "FileFormat: No installed image file format was found "
                       "with the specified identifier \'" + nameExtOrMime + '\'' );
@@ -147,13 +147,13 @@ FileFormat::~FileFormat()
 IsoString FileFormat::Name() const
 {
    size_type len = 0;
-   (*API->FileFormat->GetFileFormatName)( m_data->handle, 0, &len );
+   (API->FileFormat->GetFileFormatName)( m_data->handle, 0, &len );
 
    IsoString name;
    if ( len > 0 )
    {
       name.SetLength( len );
-      if ( (*API->FileFormat->GetFileFormatName)( m_data->handle, name.Begin(), &len ) == api_false )
+      if ( (API->FileFormat->GetFileFormatName)( m_data->handle, name.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetFileFormatName" );
       name.ResizeToNullTerminated();
    }
@@ -166,7 +166,7 @@ StringList FileFormat::FileExtensions() const
 {
    size_type count = 0;
    size_type maxLen = 0;
-   (*API->FileFormat->GetFileFormatFileExtensions)( m_data->handle, 0, &count, &maxLen );
+   (API->FileFormat->GetFileFormatFileExtensions)( m_data->handle, 0, &count, &maxLen );
 
    StringList extensions( count );
    if ( count > 0 )
@@ -178,7 +178,7 @@ StringList FileFormat::FileExtensions() const
          ptrs.Add( extensions[i].Begin() );
       }
 
-      if ( (*API->FileFormat->GetFileFormatFileExtensions)( m_data->handle, ptrs.Begin(), &count, &maxLen ) == api_false )
+      if ( (API->FileFormat->GetFileFormatFileExtensions)( m_data->handle, ptrs.Begin(), &count, &maxLen ) == api_false )
          throw APIFunctionError( "GetFileFormatFileExtensions" );
 
       for ( String& ext : extensions )
@@ -193,7 +193,7 @@ IsoStringList FileFormat::MimeTypes() const
 {
    size_type count = 0;
    size_type maxLen = 0;
-   (*API->FileFormat->GetFileFormatMimeTypes)( m_data->handle, 0, &count, &maxLen );
+   (API->FileFormat->GetFileFormatMimeTypes)( m_data->handle, 0, &count, &maxLen );
 
    IsoStringList mimeTypes( count );
    if ( count > 0 )
@@ -205,7 +205,7 @@ IsoStringList FileFormat::MimeTypes() const
          ptrs.Add( mimeTypes[i].Begin() );
       }
 
-      if ( (*API->FileFormat->GetFileFormatMimeTypes)( m_data->handle, ptrs.Begin(), &count, &maxLen ) == api_false )
+      if ( (API->FileFormat->GetFileFormatMimeTypes)( m_data->handle, ptrs.Begin(), &count, &maxLen ) == api_false )
          throw APIFunctionError( "GetFileFormatMimeTypes" );
 
       for ( IsoString& mimeType : mimeTypes )
@@ -218,7 +218,7 @@ IsoStringList FileFormat::MimeTypes() const
 
 uint32 FileFormat::Version() const
 {
-   return (*API->FileFormat->GetFileFormatVersion)( m_data->handle );
+   return (API->FileFormat->GetFileFormatVersion)( m_data->handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -226,13 +226,13 @@ uint32 FileFormat::Version() const
 String FileFormat::Description() const
 {
    size_type len = 0;
-   (*API->FileFormat->GetFileFormatDescription)( m_data->handle, 0, &len );
+   (API->FileFormat->GetFileFormatDescription)( m_data->handle, 0, &len );
 
    String description;
    if ( len > 0 )
    {
       description.SetLength( len );
-      if ( (*API->FileFormat->GetFileFormatDescription)( m_data->handle, description.Begin(), &len ) == api_false )
+      if ( (API->FileFormat->GetFileFormatDescription)( m_data->handle, description.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetFileFormatDescription" );
       description.ResizeToNullTerminated();
    }
@@ -244,13 +244,13 @@ String FileFormat::Description() const
 String FileFormat::Implementation() const
 {
    size_type len = 0;
-   (*API->FileFormat->GetFileFormatImplementation)( m_data->handle, 0, &len );
+   (API->FileFormat->GetFileFormatImplementation)( m_data->handle, 0, &len );
 
    String implementation;
    if ( len > 0 )
    {
       implementation.SetLength( len );
-      if ( (*API->FileFormat->GetFileFormatImplementation)( m_data->handle, implementation.Begin(), &len ) == api_false )
+      if ( (API->FileFormat->GetFileFormatImplementation)( m_data->handle, implementation.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetFileFormatImplementation" );
       implementation.ResizeToNullTerminated();
    }
@@ -262,13 +262,13 @@ String FileFormat::Implementation() const
 String FileFormat::Status() const
 {
    size_type len = 0;
-   (*API->FileFormat->GetFileFormatStatus)( m_data->handle, 0, &len, 0/*reserved*/ );
+   (API->FileFormat->GetFileFormatStatus)( m_data->handle, 0, &len, 0/*reserved*/ );
 
    String status;
    if ( len > 0 )
    {
       status.SetLength( len );
-      if ( (*API->FileFormat->GetFileFormatStatus)( m_data->handle, status.Begin(), &len, 0/*reserved*/ ) == api_false )
+      if ( (API->FileFormat->GetFileFormatStatus)( m_data->handle, status.Begin(), &len, 0/*reserved*/ ) == api_false )
          throw APIFunctionError( "GetFileFormatStatus" );
       status.ResizeToNullTerminated();
    }
@@ -279,14 +279,14 @@ String FileFormat::Status() const
 
 Bitmap FileFormat::Icon() const
 {
-   return Bitmap( (*API->FileFormat->GetFileFormatIcon)( m_data->handle ) );
+   return Bitmap( (API->FileFormat->GetFileFormatIcon)( m_data->handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 Bitmap FileFormat::SmallIcon() const
 {
-   return Bitmap( (*API->FileFormat->GetFileFormatSmallIcon)( m_data->handle ) );
+   return Bitmap( (API->FileFormat->GetFileFormatSmallIcon)( m_data->handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -445,19 +445,19 @@ bool FileFormat::IsDeprecated() const
 
 bool FileFormat::ValidateFormatSpecificData( const void* block ) const
 {
-   return (*API->FileFormat->ValidateFormatSpecificData)( m_data->handle, block ) != api_false;
+   return (API->FileFormat->ValidateFormatSpecificData)( m_data->handle, block ) != api_false;
 }
 
 void FileFormat::DisposeFormatSpecificData( void* block ) const
 {
-   (*API->FileFormat->DisposeFormatSpecificData)( m_data->handle, block );
+   (API->FileFormat->DisposeFormatSpecificData)( m_data->handle, block );
 }
 
 // ----------------------------------------------------------------------------
 
 bool FileFormat::EditPreferences() const
 {
-   return (*API->FileFormat->EditFileFormatPreferences)( m_data->handle ) != api_false;
+   return (API->FileFormat->EditFileFormatPreferences)( m_data->handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -472,7 +472,7 @@ const void* FileFormat::Handle() const
 Array<FileFormat> FileFormat::AllFormats()
 {
    Array<FileFormat> formats;
-   if ( (*API->FileFormat->EnumerateFileFormats)( FileFormatPrivate::EnumerationCallback, &formats ) == api_false )
+   if ( (API->FileFormat->EnumerateFileFormats)( FileFormatPrivate::EnumerationCallback, &formats ) == api_false )
       throw APIFunctionError( "EnumerateFileFormats" );
    return formats;
 }
@@ -484,7 +484,7 @@ bool FileFormat::IsSupportedFileFormatBySuffix( const String& path, bool toRead,
    String pathOrSuffix = path.Trimmed();
    if ( pathOrSuffix.IsEmpty() )
       return false;
-   return (*API->FileFormat->GetFileFormatByFileExtension)( ModuleHandle(), pathOrSuffix.c_str(), toRead, toWrite ) != nullptr;
+   return (API->FileFormat->GetFileFormatByFileExtension)( ModuleHandle(), pathOrSuffix.c_str(), toRead, toWrite ) != nullptr;
 }
 
 // ----------------------------------------------------------------------------
@@ -515,7 +515,7 @@ FindSupportedImageFiles( StringList& list, const String& dirPath, const String& 
          }
          else
          {
-            if ( (*API->FileFormat->GetFileFormatByFileExtension)( ModuleHandle(), info.name.c_str(), toRead, toWrite ) != nullptr )
+            if ( (API->FileFormat->GetFileFormatByFileExtension)( ModuleHandle(), info.name.c_str(), toRead, toWrite ) != nullptr )
                list << File::FullPath( dirPath + '/' + info.name );
          }
 

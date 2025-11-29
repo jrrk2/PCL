@@ -62,25 +62,25 @@ public:
 // ----------------------------------------------------------------------------
 
 Action::Action( const String& menuItem, const String& iconSVGFile, const String& toolBar )
-   : UIObject( (*API->Action->CreateActionSVGFile)( ModuleHandle(), this, menuItem.c_str(), toolBar.c_str(), iconSVGFile.c_str(), 0/*flags*/ ) )
+   : UIObject( (API->Action->CreateActionSVGFile)( ModuleHandle(), this, menuItem.c_str(), toolBar.c_str(), iconSVGFile.c_str(), 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateActionSVGFile" );
 
-   (*API->Action->SetActionExecutionRoutine)( handle, ActionDispatcher::Execute );
-   (*API->Action->SetActionStateQueryRoutine)( handle, ActionDispatcher::QueryState );
+   (API->Action->SetActionExecutionRoutine)( handle, ActionDispatcher::Execute );
+   (API->Action->SetActionStateQueryRoutine)( handle, ActionDispatcher::QueryState );
 }
 
 // ----------------------------------------------------------------------------
 
 Action::Action( const String& menuItem, const IsoString& iconSVGSource, int, const String& toolBar )
-   : UIObject( (*API->Action->CreateActionSVG)( ModuleHandle(), this, menuItem.c_str(), toolBar.c_str(), iconSVGSource.c_str(), 0/*flags*/ ) )
+   : UIObject( (API->Action->CreateActionSVG)( ModuleHandle(), this, menuItem.c_str(), toolBar.c_str(), iconSVGSource.c_str(), 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateActionSVG" );
 
-   (*API->Action->SetActionExecutionRoutine)( handle, ActionDispatcher::Execute );
-   (*API->Action->SetActionStateQueryRoutine)( handle, ActionDispatcher::QueryState );
+   (API->Action->SetActionExecutionRoutine)( handle, ActionDispatcher::Execute );
+   (API->Action->SetActionStateQueryRoutine)( handle, ActionDispatcher::QueryState );
 }
 
 // ----------------------------------------------------------------------------
@@ -88,13 +88,13 @@ Action::Action( const String& menuItem, const IsoString& iconSVGSource, int, con
 #ifdef __PCL_ACTION_DEPRECATED_CTOR
 // ### DEPRECATED
 Action::Action( const String& menuItem, const Bitmap& icon, const String& toolBar )
-   : UIObject( (*API->Action->CreateAction)( ModuleHandle(), this, menuItem.c_str(), toolBar.c_str(), icon.handle, 0/*flags*/ ) )
+   : UIObject( (API->Action->CreateAction)( ModuleHandle(), this, menuItem.c_str(), toolBar.c_str(), icon.handle, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateAction" );
 
-   (*API->Action->SetActionExecutionRoutine)( handle, ActionDispatcher::Execute );
-   (*API->Action->SetActionStateQueryRoutine)( handle, ActionDispatcher::QueryState );
+   (API->Action->SetActionExecutionRoutine)( handle, ActionDispatcher::Execute );
+   (API->Action->SetActionStateQueryRoutine)( handle, ActionDispatcher::QueryState );
 }
 #endif
 
@@ -115,13 +115,13 @@ Action& Action::Null()
 String Action::MenuItem() const
 {
    size_type len = 0;
-   (*API->Action->GetActionMenuItem)( handle, 0, &len );
+   (API->Action->GetActionMenuItem)( handle, 0, &len );
 
    String menuItem;
    if ( len > 0 )
    {
       menuItem.SetLength( len );
-      if ( (*API->Action->GetActionMenuItem)( handle, menuItem.Begin(), &len ) == api_false )
+      if ( (API->Action->GetActionMenuItem)( handle, menuItem.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetActionMenuItem" );
       menuItem.ResizeToNullTerminated();
    }
@@ -133,13 +133,13 @@ String Action::MenuItem() const
 String Action::MenuText() const
 {
    size_type len = 0;
-   (*API->Action->GetActionMenuText)( handle, 0, &len );
+   (API->Action->GetActionMenuText)( handle, 0, &len );
 
    String menuText;
    if ( len > 0 )
    {
       menuText.SetLength( len );
-      if ( (*API->Action->GetActionMenuText)( handle, menuText.Begin(), &len ) == api_false )
+      if ( (API->Action->GetActionMenuText)( handle, menuText.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetActionMenuText" );
       menuText.ResizeToNullTerminated();
    }
@@ -150,7 +150,7 @@ String Action::MenuText() const
 
 void Action::SetMenuText( const String& item )
 {
-   (*API->Action->SetActionMenuText)( handle, item.c_str() );
+   (API->Action->SetActionMenuText)( handle, item.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -158,13 +158,13 @@ void Action::SetMenuText( const String& item )
 String Action::ToolBar() const
 {
    size_type len = 0;
-   (*API->Action->GetActionToolBar)( handle, 0, &len );
+   (API->Action->GetActionToolBar)( handle, 0, &len );
 
    String toolBarName;
    if ( len > 0 )
    {
       toolBarName.SetLength( len );
-      if ( (*API->Action->GetActionToolBar)( handle, toolBarName.Begin(), &len ) == api_false )
+      if ( (API->Action->GetActionToolBar)( handle, toolBarName.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetActionToolBar" );
       toolBarName.ResizeToNullTerminated();
    }
@@ -175,14 +175,14 @@ String Action::ToolBar() const
 
 void Action::GetAccelerator( int& keyModifiers, int& keyCode ) const
 {
-   (*API->Action->GetActionAccelerator)( handle, &keyModifiers, &keyCode );
+   (API->Action->GetActionAccelerator)( handle, &keyModifiers, &keyCode );
 }
 
 // ----------------------------------------------------------------------------
 
 void Action::SetAccelerator( int keyModifiers, int keyCode )
 {
-   (*API->Action->SetActionAccelerator)( handle, keyModifiers, keyCode );
+   (API->Action->SetActionAccelerator)( handle, keyModifiers, keyCode );
 }
 
 // ----------------------------------------------------------------------------
@@ -190,13 +190,13 @@ void Action::SetAccelerator( int keyModifiers, int keyCode )
 String Action::ToolTip() const
 {
    size_type len = 0;
-   (*API->Action->GetActionToolTip)( handle, 0, &len );
+   (API->Action->GetActionToolTip)( handle, 0, &len );
 
    String toolTip;
    if ( len > 0 )
    {
       toolTip.SetLength( len );
-      if ( (*API->Action->GetActionToolTip)( handle, toolTip.Begin(), &len ) == api_false )
+      if ( (API->Action->GetActionToolTip)( handle, toolTip.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetActionToolTip" );
       toolTip.ResizeToNullTerminated();
    }
@@ -207,28 +207,28 @@ String Action::ToolTip() const
 
 void Action::SetToolTip( const String& tip )
 {
-   (*API->Action->SetActionToolTip)( handle, tip.c_str() );
+   (API->Action->SetActionToolTip)( handle, tip.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 Bitmap Action::Icon() const
 {
-   return Bitmap( (*API->Action->GetActionIcon)( handle ) );
+   return Bitmap( (API->Action->GetActionIcon)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void Action::SetIconSVGFile( const String& filePath )
 {
-   (*API->Action->SetActionIconSVGFile)( handle, filePath.c_str() );
+   (API->Action->SetActionIconSVGFile)( handle, filePath.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 void Action::SetIconSVG( const IsoString& svgSource )
 {
-   (*API->Action->SetActionIconSVG)( handle, svgSource.c_str() );
+   (API->Action->SetActionIconSVG)( handle, svgSource.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -236,7 +236,7 @@ void Action::SetIconSVG( const IsoString& svgSource )
 // ### DEPRECATED
 void Action::SetIcon( const Bitmap& bmp )
 {
-   (*API->Action->SetActionIcon)( handle, bmp.handle );
+   (API->Action->SetActionIcon)( handle, bmp.handle );
 }
 
 // ----------------------------------------------------------------------------

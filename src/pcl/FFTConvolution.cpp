@@ -537,7 +537,7 @@ int FFTConvolution::FasterThanNonseparableFilterSize( int width, int height )
 {
    if ( API != nullptr )
    {
-      int kernelSize = (*API->Thread->PerformanceAnalysisValue)( PerformanceAnalysisAlgorithm::FFTConvolutionFasterThanNonseparable,
+      int kernelSize = (API->Thread->PerformanceAnalysisValue)( PerformanceAnalysisAlgorithm::FFTConvolutionFasterThanNonseparable,
                                                                  0/*length*/,
                                                                  4/*itemSize*/, api_true/*floatingPoint*/,
                                                                  0/*kernelSize*/, width, height );

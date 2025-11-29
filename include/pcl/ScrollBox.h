@@ -609,12 +609,12 @@ protected:
    /*!
     * \internal
     */
-   ScrollBox( void* );
+   ScrollBox( control_handle );
 
    /*!
     * \internal
     */
-   ScrollBox( void*, void* );
+   ScrollBox( control_handle, control_handle );
 
    friend class ScrollBoxEventDispatcher;
 };

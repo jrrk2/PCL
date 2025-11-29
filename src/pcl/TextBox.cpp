@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 TextBox::TextBox( const String& text, Control& parent )
-   : Frame( (*API->TextBox->CreateTextBox)( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
+   : Frame( (API->TextBox->CreateTextBox)( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateTextBox" );
@@ -38,13 +38,13 @@ TextBox::TextBox( const String& text, Control& parent )
 String TextBox::Text() const
 {
    size_type len = 0;
-   (*API->TextBox->GetTextBoxText)( handle, 0, &len );
+   (API->TextBox->GetTextBoxText)( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->TextBox->GetTextBoxText)( handle, text.Begin(), &len ) == api_false )
+      if ( (API->TextBox->GetTextBoxText)( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetTextBoxText" );
       text.ResizeToNullTerminated();
    }
@@ -55,28 +55,28 @@ String TextBox::Text() const
 
 void TextBox::SetText( const String& text )
 {
-   (*API->TextBox->SetTextBoxText)( handle, text.c_str() );
+   (API->TextBox->SetTextBoxText)( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool TextBox::IsReadOnly() const
 {
-   return (*API->TextBox->GetTextBoxReadOnly)( handle ) != api_false;
+   return (API->TextBox->GetTextBoxReadOnly)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void TextBox::SetReadOnly( bool readOnly )
 {
-   (*API->TextBox->SetTextBoxReadOnly)( handle, readOnly );
+   (API->TextBox->SetTextBoxReadOnly)( handle, readOnly );
 }
 
 // ----------------------------------------------------------------------------
 
 void TextBox::SelectAll( bool select )
 {
-   (*API->TextBox->SetTextBoxSelected)( handle, select );
+   (API->TextBox->SetTextBoxSelected)( handle, select );
 }
 
 // ----------------------------------------------------------------------------
@@ -84,14 +84,14 @@ void TextBox::SelectAll( bool select )
 void TextBox::GetSelection( int& selStart, int& selEnd ) const
 {
    selStart = selEnd = 0;
-   (*API->TextBox->GetTextBoxSelection)( handle, &selStart, &selEnd );
+   (API->TextBox->GetTextBoxSelection)( handle, &selStart, &selEnd );
 }
 
 // ----------------------------------------------------------------------------
 
 void TextBox::SetSelection( int selStart, int selEnd )
 {
-   (*API->TextBox->SetTextBoxSelection)( handle, selStart, selEnd );
+   (API->TextBox->SetTextBoxSelection)( handle, selStart, selEnd );
 }
 
 // ----------------------------------------------------------------------------
@@ -99,13 +99,13 @@ void TextBox::SetSelection( int selStart, int selEnd )
 String TextBox::SelectedText() const
 {
    size_type len = 0;
-   (*API->TextBox->GetTextBoxSelectedText)( handle, 0, &len );
+   (API->TextBox->GetTextBoxSelectedText)( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->TextBox->GetTextBoxSelectedText)( handle, text.Begin(), &len ) == api_false )
+      if ( (API->TextBox->GetTextBoxSelectedText)( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetTextBoxSelectedText" );
       text.ResizeToNullTerminated();
    }
@@ -116,28 +116,28 @@ String TextBox::SelectedText() const
 
 int TextBox::CaretPosition() const
 {
-   return (*API->TextBox->GetTextBoxCaretPosition)( handle );
+   return (API->TextBox->GetTextBoxCaretPosition)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void TextBox::SetCaretPosition( int pos )
 {
-   (*API->TextBox->SetTextBoxCaretPosition)( handle, pos );
+   (API->TextBox->SetTextBoxCaretPosition)( handle, pos );
 }
 
 // ----------------------------------------------------------------------------
 
 void TextBox::Insert( const String& text )
 {
-   (*API->TextBox->InsertTextBoxText)( handle, text.c_str() );
+   (API->TextBox->InsertTextBoxText)( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 void TextBox::Delete()
 {
-   (*API->TextBox->DeleteTextBoxText)( handle );
+   (API->TextBox->DeleteTextBoxText)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -186,7 +186,7 @@ public:
 void TextBox::OnTextUpdated( unicode_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TextBox->SetTextBoxUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->TextBox->SetTextBoxUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? TextBoxEventDispatcher::TextUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetTextBoxUpdatedEventRoutine" );
    m_handlers->onTextUpdated = f;
@@ -195,7 +195,7 @@ void TextBox::OnTextUpdated( unicode_event_handler f, Control& receiver )
 void TextBox::OnCaretPositionUpdated( caret_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TextBox->SetTextBoxCaretPositionUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->TextBox->SetTextBoxCaretPositionUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? TextBoxEventDispatcher::CaretPositionUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetTextBoxCaretPositionUpdatedEventRoutine" );
    m_handlers->onCaretPositionUpdated = f;
@@ -204,7 +204,7 @@ void TextBox::OnCaretPositionUpdated( caret_event_handler f, Control& receiver )
 void TextBox::OnSelectionUpdated( selection_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->TextBox->SetTextBoxSelectionUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->TextBox->SetTextBoxSelectionUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? TextBoxEventDispatcher::SelectionUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetTextBoxSelectionUpdatedEventRoutine" );
    m_handlers->onSelectionUpdated = f;

@@ -378,7 +378,7 @@ protected:
    /*!
     * \internal
     */
-   Button( void* h ) : Control( h )
+   Button( control_handle h ) : Control( h )
    {
    }
 

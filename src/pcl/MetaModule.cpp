@@ -87,12 +87,12 @@ bool MetaModule::IsInstalled() const
 
 void MetaModule::ProcessEvents( bool excludeUserInputEvents )
 {
-   thread_handle thread = (*API->Thread->GetCurrentThread)();
+   thread_handle thread = (API->Thread->GetCurrentThread)();
    if ( thread == 0 ) // if root thread
-      (*API->Global->ProcessEvents)( excludeUserInputEvents );
+      (API->Global->ProcessEvents)( excludeUserInputEvents );
    else
    {
-      uint32 threadStatus = (*API->Thread->GetThreadStatus)( thread );
+      uint32 threadStatus = (API->Thread->GetThreadStatus)( thread );
       if ( threadStatus & 0x80000000 ) // see Thread.cpp
          throw ProcessAborted();
    }
@@ -323,13 +323,13 @@ bool MetaModule::GetPhysicalMemoryStatus( size_type& totalBytes, size_type& avai
 
 void MetaModule::LoadResource( const String& filePath, const String& rootPath )
 {
-   if ( (*API->Module->LoadResource)( ModuleHandle(), filePath.c_str(), rootPath.c_str() ) == api_false )
+   if ( (API->Module->LoadResource)( ModuleHandle(), filePath.c_str(), rootPath.c_str() ) == api_false )
       throw APIFunctionError( "LoadResource" );
 }
 
 void MetaModule::UnloadResource( const String& filePath, const String& rootPath )
 {
-   if ( (*API->Module->UnloadResource)( ModuleHandle(), filePath.c_str(), rootPath.c_str() ) == api_false )
+   if ( (API->Module->UnloadResource)( ModuleHandle(), filePath.c_str(), rootPath.c_str() ) == api_false )
       throw APIFunctionError( "UnloadResource" );
 }
 
@@ -338,7 +338,7 @@ void MetaModule::UnloadResource( const String& filePath, const String& rootPath 
 Variant MetaModule::EvaluateScript( const String& sourceCode, const IsoString& language )
 {
    api_property_value result;
-   if ( (*API->Module->EvaluateScript)( ModuleHandle(), &result, sourceCode.c_str(), language.c_str() ) == api_false )
+   if ( (API->Module->EvaluateScript)( ModuleHandle(), &result, sourceCode.c_str(), language.c_str() ) == api_false )
       throw APIFunctionError( "EvaluateScript" );
    return VariantFromAPIPropertyValue( result );
 }
@@ -347,7 +347,7 @@ Variant MetaModule::EvaluateScript( const String& sourceCode, const IsoString& l
 
 bool MetaModule::HasEntitlement( const IsoString& entitlement )
 {
-   return (*API->Module->HasEntitlement)( ModuleHandle(), entitlement.c_str() ) != api_false;
+   return (API->Module->HasEntitlement)( ModuleHandle(), entitlement.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -414,12 +414,12 @@ public:
 
 void MetaModule::PerformAPIDefinitions() const
 {
-   (*API->ModuleDefinition->EnterModuleDefinitionContext)();
+   (API->ModuleDefinition->EnterModuleDefinitionContext)();
 
-   (*API->ModuleDefinition->SetModuleOnLoadRoutine)( GlobalContextDispatcher::OnLoad );
-   (*API->ModuleDefinition->SetModuleOnUnloadRoutine)( GlobalContextDispatcher::OnUnload );
-   (*API->ModuleDefinition->SetModuleAllocationRoutine)( GlobalContextDispatcher::Allocate );
-   (*API->ModuleDefinition->SetModuleDeallocationRoutine)( GlobalContextDispatcher::Deallocate );
+   (API->ModuleDefinition->SetModuleOnLoadRoutine)( GlobalContextDispatcher::OnLoad );
+   (API->ModuleDefinition->SetModuleOnUnloadRoutine)( GlobalContextDispatcher::OnUnload );
+   (API->ModuleDefinition->SetModuleAllocationRoutine)( GlobalContextDispatcher::Allocate );
+   (API->ModuleDefinition->SetModuleDeallocationRoutine)( GlobalContextDispatcher::Deallocate );
 
    /*
     * Meta object Definitions
@@ -431,7 +431,7 @@ void MetaModule::PerformAPIDefinitions() const
          o->PerformAPIDefinitions();
    }
 
-   (*API->ModuleDefinition->ExitModuleDefinitionContext)();
+   (API->ModuleDefinition->ExitModuleDefinitionContext)();
 }
 
 // ----------------------------------------------------------------------------

@@ -43,7 +43,7 @@ static void APIHackingAttempt( const String& routineId )
 // ----------------------------------------------------------------------------
 
 ProcessInstance::ProcessInstance( const Process& process )
-   : UIObject( (*API->Process->CreateProcessInstance)( ModuleHandle(), process.Handle() ) )
+   : UIObject( (API->Process->CreateProcessInstance)( ModuleHandle(), process.Handle() ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateProcessInstance" );
@@ -65,28 +65,28 @@ ProcessInstance& ProcessInstance::Null()
 
 Process ProcessInstance::ParentProcess() const
 {
-   return Process( (const void*)(*API->Process->GetProcessInstanceProcess)( handle ) );
+   return Process( (const void*)(API->Process->GetProcessInstanceProcess)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 uint32 ProcessInstance::Version() const
 {
-   return (*API->Process->GetProcessInstanceVersion)( handle );
+   return (API->Process->GetProcessInstanceVersion)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 ProcessInstance ProcessInstance::Clone() const
 {
-   return ProcessInstance( (const void*)(*API->Process->CloneProcessInstance)( ModuleHandle(), handle, 0/*flags*/ ) );
+   return ProcessInstance( (const void*)(API->Process->CloneProcessInstance)( ModuleHandle(), handle, 0/*flags*/ ) );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ProcessInstance::Assign( const ProcessInstance& p )
 {
-   return (*API->Process->AssignProcessInstance)( handle, p.handle, 0/*flags*/ ) != api_false;
+   return (API->Process->AssignProcessInstance)( handle, p.handle, 0/*flags*/ ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -94,7 +94,7 @@ bool ProcessInstance::Assign( const ProcessInstance& p )
 bool ProcessInstance::Validate( String& whyNot )
 {
    whyNot.Reserve( WHYNOT_MAXLENGTH );
-   bool result = (*API->Process->ValidateProcessInstance)( handle, whyNot.Begin(), WHYNOT_MAXLENGTH ) != api_false;
+   bool result = (API->Process->ValidateProcessInstance)( handle, whyNot.Begin(), WHYNOT_MAXLENGTH ) != api_false;
    whyNot.ResizeToNullTerminated();
    return result;
 }
@@ -103,12 +103,12 @@ bool ProcessInstance::Validate( String& whyNot )
 
 bool ProcessInstance::IsHistoryUpdater( const View& view ) const
 {
-   return (*API->Process->GetUpdatesViewHistory)( handle, view.handle ) != api_false;
+   return (API->Process->GetUpdatesViewHistory)( handle, view.handle ) != api_false;
 }
 
 bool ProcessInstance::IsMaskable( const View& view, const ImageWindow& mask ) const
 {
-   return (*API->Process->ValidateViewExecutionMask)( handle, view.handle, mask.handle ) != api_false;
+   return (API->Process->ValidateViewExecutionMask)( handle, view.handle, mask.handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -116,14 +116,14 @@ bool ProcessInstance::IsMaskable( const View& view, const ImageWindow& mask ) co
 bool ProcessInstance::CanExecuteOn( const View& view, String& whyNot ) const
 {
    whyNot.Reserve( WHYNOT_MAXLENGTH );
-   bool result = (*API->Process->ValidateViewExecution)( handle, view.handle, whyNot.Begin(), WHYNOT_MAXLENGTH ) != api_false;
+   bool result = (API->Process->ValidateViewExecution)( handle, view.handle, whyNot.Begin(), WHYNOT_MAXLENGTH ) != api_false;
    whyNot.ResizeToNullTerminated();
    return result;
 }
 
 bool ProcessInstance::ExecuteOn( View& view, bool swapFile )
 {
-   return (*API->Process->ExecuteOnView)( handle, view.handle, swapFile ? 0u : SWAPFILE_DISABLE_BIT ) != api_false;
+   return (API->Process->ExecuteOnView)( handle, view.handle, swapFile ? 0u : SWAPFILE_DISABLE_BIT ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -131,14 +131,14 @@ bool ProcessInstance::ExecuteOn( View& view, bool swapFile )
 bool ProcessInstance::CanExecuteGlobal( String& whyNot ) const
 {
    whyNot.Reserve( WHYNOT_MAXLENGTH );
-   bool result = (*API->Process->ValidateGlobalExecution)( handle, whyNot.Begin(), WHYNOT_MAXLENGTH ) != api_false;
+   bool result = (API->Process->ValidateGlobalExecution)( handle, whyNot.Begin(), WHYNOT_MAXLENGTH ) != api_false;
    whyNot.ResizeToNullTerminated();
    return result;
 }
 
 bool ProcessInstance::ExecuteGlobal()
 {
-   return (*API->Process->ExecuteGlobal)( handle, 0/*flags*/ ) != api_false;
+   return (API->Process->ExecuteGlobal)( handle, 0/*flags*/ ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -160,7 +160,7 @@ bool ProcessInstance::CanExecuteOn( const ImageVariant& image, String& whyNot ) 
    image.PopSelections();
 
    whyNot.Reserve( WHYNOT_MAXLENGTH );
-   bool ok = (*API->Process->ValidateImageExecution)( handle, image.SharedImageHandle(), whyNot.Begin(), WHYNOT_MAXLENGTH ) != api_false;
+   bool ok = (API->Process->ValidateImageExecution)( handle, image.SharedImageHandle(), whyNot.Begin(), WHYNOT_MAXLENGTH ) != api_false;
    whyNot.ResizeToNullTerminated();
 
    image.PushSelections();
@@ -188,25 +188,25 @@ bool ProcessInstance::ExecuteOn( ImageVariant& image, const IsoString& hints )
       return true;
    }
 
-   return (*API->Process->ExecuteOnImage)( handle, image.SharedImageHandle(), hints.c_str(), 0/*flags*/ ) != api_false;
+   return (API->Process->ExecuteOnImage)( handle, image.SharedImageHandle(), hints.c_str(), 0/*flags*/ ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ProcessInstance::Launch()
 {
-   return (*API->Process->LaunchProcessInstance)( handle ) != api_false;
+   return (API->Process->LaunchProcessInstance)( handle ) != api_false;
 }
 
 bool ProcessInstance::CanLaunchInterface() const
 {
-   return (*API->Process->ValidateInterfaceLaunch)( handle ) != api_false;
+   return (API->Process->ValidateInterfaceLaunch)( handle ) != api_false;
 }
 
 
 bool ProcessInstance::LaunchInterface()
 {
-   return (*API->Process->LaunchInterface)( handle ) != api_false;
+   return (API->Process->LaunchInterface)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -214,13 +214,13 @@ bool ProcessInstance::LaunchInterface()
 String ProcessInstance::Description() const
 {
    size_type len = 0;
-   (*API->Process->GetProcessInstanceDescription)( handle, 0, &len );
+   (API->Process->GetProcessInstanceDescription)( handle, 0, &len );
 
    String description;
    if ( len > 0 )
    {
       description.SetLength( len );
-      if ( (*API->Process->GetProcessInstanceDescription)( handle, description.Begin(), &len ) == api_false )
+      if ( (API->Process->GetProcessInstanceDescription)( handle, description.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetProcessInstanceDescription" );
       description.ResizeToNullTerminated();
    }
@@ -229,21 +229,21 @@ String ProcessInstance::Description() const
 
 void ProcessInstance::SetDescription( const String& text )
 {
-   (void)(*API->Process->SetProcessInstanceDescription)( handle, text.c_str() );
+   (void)(API->Process->SetProcessInstanceDescription)( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 void ProcessInstance::GetExecutionTimes( double& startJD, double& elapsedSecs ) const
 {
-   (void)(*API->Process->GetExecutionTimes)( handle, &startJD, &elapsedSecs );
+   (void)(API->Process->GetExecutionTimes)( handle, &startJD, &elapsedSecs );
 }
 
 // ----------------------------------------------------------------------------
 
 String ProcessInstance::ToSource( const IsoString& language, const IsoString& varId, int indent ) const
 {
-   char16_type* s = (*API->Process->GetProcessInstanceSourceCode)(
+   char16_type* s = (API->Process->GetProcessInstanceSourceCode)(
                               ModuleHandle(), handle, language.c_str(), varId.c_str(), indent );
    if ( s == nullptr )
       throw APIFunctionError( "GetProcessInstanceSourceCode" );
@@ -271,14 +271,14 @@ String ProcessInstance::ToHistorySource( const String& xmlSource ) const
 
 ProcessInstance ProcessInstance::FromSource( const String& source, const IsoString& language )
 {
-   return ProcessInstance( (*API->Process->CreateProcessInstanceFromSourceCode)( source.c_str(), language.c_str() ) );
+   return ProcessInstance( (API->Process->CreateProcessInstanceFromSourceCode)( source.c_str(), language.c_str() ) );
 }
 
 // ----------------------------------------------------------------------------
 
 ProcessInstance ProcessInstance::FromIcon( const IsoString& iconId )
 {
-   return ProcessInstance( (*API->Process->CreateProcessInstanceFromIcon)( ModuleHandle(), iconId.c_str() ) );
+   return ProcessInstance( (API->Process->CreateProcessInstanceFromIcon)( ModuleHandle(), iconId.c_str() ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -292,14 +292,14 @@ api_bool InternalIconEnumerator::IconCallback( const char* iconId, void* data )
 IsoStringList ProcessInstance::Icons()
 {
    size_type len = 0;
-   (*API->Process->EnumerateProcessIcons)( 0, 0, &len, 0 );
+   (API->Process->EnumerateProcessIcons)( 0, 0, &len, 0 );
 
    IsoStringList icons;
    if ( len > 0 )
    {
       IsoString iconId;
       iconId.Reserve( len );
-      if ( (*API->Process->EnumerateProcessIcons)( InternalIconEnumerator::IconCallback,
+      if ( (API->Process->EnumerateProcessIcons)( InternalIconEnumerator::IconCallback,
                                           iconId.Begin(), &len, &icons ) == api_false )
          throw APIFunctionError( "EnumerateProcessIcons" );
    }
@@ -322,7 +322,7 @@ struct ProcessIconsByProcessIdEnumerationData
 api_bool InternalIconEnumerator::ProcessCallback( const char* iconId, void* data )
 {
 #define enumeration reinterpret_cast<ProcessIconsByProcessIdEnumerationData*>( data )
-   ProcessInstance instance( (*API->Process->CreateProcessInstanceFromIcon)( ModuleHandle(), iconId ) );
+   ProcessInstance instance( (API->Process->CreateProcessInstanceFromIcon)( ModuleHandle(), iconId ) );
    if ( instance.IsNull() ) // ?! should not happen
       return api_false;
    if ( instance.ParentProcess().Id() == enumeration->processId )
@@ -334,14 +334,14 @@ api_bool InternalIconEnumerator::ProcessCallback( const char* iconId, void* data
 IsoStringList ProcessInstance::IconsByProcessId( const IsoString& processId )
 {
    size_type len = 0;
-   (*API->Process->EnumerateProcessIcons)( 0, 0, &len, 0 );
+   (API->Process->EnumerateProcessIcons)( 0, 0, &len, 0 );
 
    ProcessIconsByProcessIdEnumerationData data( processId );
    if ( len > 0 )
    {
       IsoString iconId;
       iconId.Reserve( len );
-      if ( (*API->Process->EnumerateProcessIcons)( InternalIconEnumerator::ProcessCallback,
+      if ( (API->Process->EnumerateProcessIcons)( InternalIconEnumerator::ProcessCallback,
                                           iconId.Begin(), &len, &data ) == api_false )
          throw APIFunctionError( "EnumerateProcessIcons" );
    }
@@ -358,7 +358,7 @@ Variant ProcessInstance::ParameterValue( const ProcessParameter& parameter, size
    // First call to get the parameter type and length
    uint32 apiType = 0;
    size_type len = 0;
-   (*API->Process->GetParameterValue)( handle, parameter.Handle(), rowIndex, &apiType, 0, &len );
+   (API->Process->GetParameterValue)( handle, parameter.Handle(), rowIndex, &apiType, 0, &len );
    apiType &= PTYPE_TYPE_MASK;
    if ( apiType == 0 )
       throw APIFunctionError( "GetParameterValue" );
@@ -372,7 +372,7 @@ Variant ProcessInstance::ParameterValue( const ProcessParameter& parameter, size
       if ( len > 0 )
       {
          value.SetLength( len );
-         if ( (*API->Process->GetParameterValue)( handle, parameter.Handle(),
+         if ( (API->Process->GetParameterValue)( handle, parameter.Handle(),
                                                   rowIndex, &apiType, value.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetParameterValue" );
          value.ResizeToNullTerminated();
@@ -385,7 +385,7 @@ Variant ProcessInstance::ParameterValue( const ProcessParameter& parameter, size
       ByteArray value( len );
       if ( len > 0 )
       {
-         if ( (*API->Process->GetParameterValue)( handle, parameter.Handle(),
+         if ( (API->Process->GetParameterValue)( handle, parameter.Handle(),
                                                   rowIndex, &apiType, value.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetParameterValue" );
       }
@@ -409,7 +409,7 @@ Variant ProcessInstance::ParameterValue( const ProcessParameter& parameter, size
    }
    value;
 
-   if ( (*API->Process->GetParameterValue)( handle, parameter.Handle(),
+   if ( (API->Process->GetParameterValue)( handle, parameter.Handle(),
                                             rowIndex, &apiType, &value, 0 ) == api_false )
       throw APIFunctionError( "GetParameterValue" );
 
@@ -440,7 +440,7 @@ bool ProcessInstance::SetParameterValue( const Variant& value,
    if ( !value.IsValid() )
       return false;
 
-   uint32 apiType = (*API->Process->GetParameterType)( parameter.Handle() ) & PTYPE_TYPE_MASK;
+   uint32 apiType = (API->Process->GetParameterType)( parameter.Handle() ) & PTYPE_TYPE_MASK;
    if ( apiType == 0 )
       throw APIFunctionError( "GetParameterType" );
 
@@ -450,13 +450,13 @@ bool ProcessInstance::SetParameterValue( const Variant& value,
    if ( apiType == PTYPE_STRING )
    {
       String s = value.ToString();
-      return (*API->Process->SetParameterValue)( handle, parameter.Handle(), rowIndex, s.c_str(), s.Length() ) != api_false;
+      return (API->Process->SetParameterValue)( handle, parameter.Handle(), rowIndex, s.c_str(), s.Length() ) != api_false;
    }
 
    if ( apiType == PTYPE_BLOCK )
    {
       ByteArray a = value.ToByteArray();
-      return (*API->Process->SetParameterValue)( handle, parameter.Handle(), rowIndex, a.Begin(), a.Length() ) != api_false;
+      return (API->Process->SetParameterValue)( handle, parameter.Handle(), rowIndex, a.Begin(), a.Length() ) != api_false;
    }
 
    union
@@ -506,28 +506,28 @@ bool ProcessInstance::SetParameterValue( const Variant& value,
       throw Error( "ProcessParameter::SetParameterValue(): Internal error: Unknown parameter type" );
    }
 
-   return (*API->Process->SetParameterValue)( handle, parameter.Handle(), rowIndex, &apiValue, 1 ) != api_false;
+   return (API->Process->SetParameterValue)( handle, parameter.Handle(), rowIndex, &apiValue, 1 ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 size_type ProcessInstance::TableRowCount( const ProcessParameter& table ) const
 {
-   return (*API->Process->GetTableRowCount)( handle, table.Handle() );
+   return (API->Process->GetTableRowCount)( handle, table.Handle() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ProcessInstance::AllocateTableRows( const ProcessParameter& table, size_type rowCount )
 {
-   return (*API->Process->AllocateTableRows)( handle, table.Handle(), rowCount ) != api_false;
+   return (API->Process->AllocateTableRows)( handle, table.Handle(), rowCount ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void* ProcessInstance::CloneHandle() const
 {
-   return (*API->Process->CloneProcessInstance)( ModuleHandle(), handle, 0/*flags*/ );
+   return (API->Process->CloneProcessInstance)( ModuleHandle(), handle, 0/*flags*/ );
 }
 
 // ----------------------------------------------------------------------------

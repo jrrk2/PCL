@@ -42,14 +42,14 @@ View& View::Null()
 
 bool View::IsMainView() const
 {
-   return (*API->View->IsPreview)( handle ) == api_false;
+   return (API->View->IsPreview)( handle ) == api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool View::IsPreview() const
 {
-   return (*API->View->IsPreview)( handle ) != api_false;
+   return (API->View->IsPreview)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -70,21 +70,21 @@ bool View::IsCompletePreview() const
 
 bool View::IsVolatilePreview() const
 {
-   return (*API->View->IsVolatilePreview)( handle ) != api_false;
+   return (API->View->IsVolatilePreview)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool View::IsStoredPreview() const
 {
-   return (*API->View->IsStoredPreview)( handle ) != api_false;
+   return (API->View->IsStoredPreview)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow View::Window() const
 {
-   return ImageWindow( (*API->View->GetViewParentWindow)( handle ) );
+   return ImageWindow( (API->View->GetViewParentWindow)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -92,13 +92,13 @@ ImageWindow View::Window() const
 IsoString View::Id() const
 {
    size_type len = 0;
-   (*API->View->GetViewId)( handle, 0, &len );
+   (API->View->GetViewId)( handle, 0, &len );
 
    IsoString id;
    if ( len > 0 )
    {
       id.SetLength( len );
-      if ( (*API->View->GetViewId)( handle, id.Begin(), &len ) == api_false )
+      if ( (API->View->GetViewId)( handle, id.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetViewId" );
       id.ResizeToNullTerminated();
    }
@@ -110,13 +110,13 @@ IsoString View::Id() const
 IsoString View::FullId() const
 {
    size_type len = 0;
-   (*API->View->GetViewFullId)( handle, 0, &len );
+   (API->View->GetViewFullId)( handle, 0, &len );
 
    IsoString id;
    if ( len > 0 )
    {
       id.SetLength( len );
-      if ( (*API->View->GetViewFullId)( handle, id.Begin(), &len ) == api_false )
+      if ( (API->View->GetViewFullId)( handle, id.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetViewFullId" );
       id.ResizeToNullTerminated();
    }
@@ -127,7 +127,7 @@ IsoString View::FullId() const
 
 void View::Rename( const IsoString& newId )
 {
-   (*API->View->SetViewId)( handle, newId.c_str() );
+   (API->View->SetViewId)( handle, newId.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -135,7 +135,7 @@ void View::Rename( const IsoString& newId )
 bool View::CanRead() const
 {
    api_bool rd = api_false, wr = api_false;
-   (*API->View->GetViewLocks)( handle, &rd, &wr );
+   (API->View->GetViewLocks)( handle, &rd, &wr );
    return rd != api_false;
 }
 
@@ -144,7 +144,7 @@ bool View::CanRead() const
 bool View::CanWrite() const
 {
    api_bool rd = api_false, wr = api_false;
-   (*API->View->GetViewLocks)( handle, &rd, &wr );
+   (API->View->GetViewLocks)( handle, &rd, &wr );
    return wr != api_false;
 }
 
@@ -156,19 +156,19 @@ void View::Lock( bool notify ) const
       throw Error( "Only the root thread can lock a view: " + FullId() );
 
    api_bool rd = api_false, wr = api_false;
-   (*API->View->GetViewLocks)( handle, &rd, &wr );
+   (API->View->GetViewLocks)( handle, &rd, &wr );
    if ( wr == api_false )
       if ( rd == api_false )
          throw Error( "The view is already locked for read/write operations: " + FullId() );
 
-   (*API->View->LockView)( handle, rd, wr, notify );
+   (API->View->LockView)( handle, rd, wr, notify );
 }
 
 // ----------------------------------------------------------------------------
 
 void View::Unlock( bool notify ) const
 {
-   (*API->View->UnlockView)( handle, true/*read*/, true/*write*/, notify );
+   (API->View->UnlockView)( handle, true/*read*/, true/*write*/, notify );
 }
 
 // ----------------------------------------------------------------------------
@@ -179,25 +179,25 @@ void View::LockForWrite( bool notify ) const
       throw Error( "Only the root thread can lock a view: " + FullId() );
 
    api_bool rd = api_false, wr = api_false;
-   (*API->View->GetViewLocks)( handle, &rd, &wr );
+   (API->View->GetViewLocks)( handle, &rd, &wr );
    if ( wr == api_false )
       throw Error( "The view is already locked for write operations: " + FullId() );
 
-   (*API->View->LockView)( handle, false/*read*/, true/*write*/, notify );
+   (API->View->LockView)( handle, false/*read*/, true/*write*/, notify );
 }
 
 // ----------------------------------------------------------------------------
 
 void View::UnlockForWrite( bool notify ) const
 {
-   (*API->View->UnlockView)( handle, false/*read*/, true/*write*/, notify );
+   (API->View->UnlockView)( handle, false/*read*/, true/*write*/, notify );
 }
 
 // ----------------------------------------------------------------------------
 
 void View::UnlockForRead( bool notify ) const
 {
-   (*API->View->UnlockView)( handle, true/*read*/, false/*write*/, notify );
+   (API->View->UnlockView)( handle, true/*read*/, false/*write*/, notify );
 }
 
 // ----------------------------------------------------------------------------
@@ -208,45 +208,45 @@ void View::RelockForRead( bool notify ) const
       throw Error( "Only the root thread can lock a view: " + FullId() );
 
    api_bool rd = api_false, wr = api_false;
-   (*API->View->GetViewLocks)( handle, &rd, &wr );
+   (API->View->GetViewLocks)( handle, &rd, &wr );
    if ( rd == api_false )
       throw Error( "The view is already locked for read operations: " + FullId() );
 
-   (*API->View->LockView)( handle, true/*read*/, false/*write*/, notify );
+   (API->View->LockView)( handle, true/*read*/, false/*write*/, notify );
 }
 
 // ----------------------------------------------------------------------------
 
 bool View::IsDynamicTarget() const
 {
-   return (*API->View->IsViewDynamicTarget)( handle ) != api_false;
+   return (API->View->IsViewDynamicTarget)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void View::AddToDynamicTargets()
 {
-   (*API->View->AddViewToDynamicTargets)( handle );
+   (API->View->AddViewToDynamicTargets)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void View::RemoveFromDynamicTargets()
 {
-   (*API->View->RemoveViewFromDynamicTargets)( handle );
+   (API->View->RemoveViewFromDynamicTargets)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 ImageVariant View::Image() const
 {
-   image_handle hImg = (*API->View->GetViewImage)( handle );
+   image_handle hImg = (API->View->GetViewImage)( handle );
    if ( hImg != 0 )
    {
       uint32 bitsPerSample;
       api_bool isFloat;
 
-      if ( !(*API->SharedImage->GetImageFormat)( hImg, &bitsPerSample, &isFloat ) )
+      if ( !(API->SharedImage->GetImageFormat)( hImg, &bitsPerSample, &isFloat ) )
          throw APIFunctionError( "GetImageFormat" );
 
       /*
@@ -276,14 +276,14 @@ ImageVariant View::Image() const
 
 bool View::IsColor() const
 {
-   return (*API->View->IsViewColorImage)( handle ) != api_false;
+   return (API->View->IsViewColorImage)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void View::GetSize( int& width, int& height ) const
 {
-   (*API->View->GetViewDimensions)( handle, &width, &height );
+   (API->View->GetViewDimensions)( handle, &width, &height );
 }
 
 // ----------------------------------------------------------------------------
@@ -294,7 +294,7 @@ void View::GetScreenTransferFunctions( stf_list& stf ) const
 
    double m[ 4 ], c0[ 4 ], c1[ 4 ], r0[ 4 ], r1[ 4 ];
 
-   if ( (*API->View->GetViewScreenTransferFunctions)( handle, m, c0, c1, r0, r1 ) == api_false )
+   if ( (API->View->GetViewScreenTransferFunctions)( handle, m, c0, c1, r0, r1 ) == api_false )
       throw APIFunctionError( "GetScreenTransferFunctions" );
 
    for ( size_type i = 0; i < 4; ++i )
@@ -326,7 +326,7 @@ void View::SetScreenTransferFunctions( const stf_list& stf, bool notify )
       }
    }
 
-   if ( (*API->View->SetViewScreenTransferFunctions)( handle, m, c0, c1, r0, r1, notify ) == api_false )
+   if ( (API->View->SetViewScreenTransferFunctions)( handle, m, c0, c1, r0, r1, notify ) == api_false )
       throw APIFunctionError( "SetViewScreenTransferFunctions" );
 }
 
@@ -334,7 +334,7 @@ void View::SetScreenTransferFunctions( const stf_list& stf, bool notify )
 
 void View::DestroyScreenTransferFunctions( bool notify )
 {
-   if ( (*API->View->DestroyViewScreenTransferFunctions)( handle, notify ) == api_false )
+   if ( (API->View->DestroyViewScreenTransferFunctions)( handle, notify ) == api_false )
       throw APIFunctionError( "DestroyScreenTransferFunctions" );
 }
 
@@ -342,21 +342,21 @@ void View::DestroyScreenTransferFunctions( bool notify )
 
 bool View::AreScreenTransferFunctionsEnabled() const
 {
-   return (*API->View->GetViewScreenTransferFunctionsEnabled)( handle ) != api_false;
+   return (API->View->GetViewScreenTransferFunctionsEnabled)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void View::EnableScreenTransferFunctions( bool enable, bool notify )
 {
-   (*API->View->SetViewScreenTransferFunctionsEnabled)( handle, enable, notify );
+   (API->View->SetViewScreenTransferFunctionsEnabled)( handle, enable, notify );
 }
 
 // ----------------------------------------------------------------------------
 
 bool View::IsReservedViewPropertyId( const IsoString& id )
 {
-   return (*API->View->IsReservedViewPropertyId)( id.c_str() ) != api_false;
+   return (API->View->IsReservedViewPropertyId)( id.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -375,11 +375,11 @@ PropertyDescriptionArray View::PropertyDescriptions() const
    PropertyDescriptionArray properties;
    IsoString id;
    size_type len = 0;
-   (*API->View->EnumerateViewProperties)( handle, 0, 0, &len, 0 ); // 1st call to get max identifier length
+   (API->View->EnumerateViewProperties)( handle, 0, 0, &len, 0 ); // 1st call to get max identifier length
    if ( len > 0 )
    {
       id.Reserve( len );
-      if ( (*API->View->EnumerateViewProperties)( handle, APIPropertyEnumerationCallback,
+      if ( (API->View->EnumerateViewProperties)( handle, APIPropertyEnumerationCallback,
                                                     id.Begin(), &len, &properties ) == api_false )
          throw APIFunctionError( "EnumerateViewProperties" );
    }
@@ -395,7 +395,7 @@ PropertyArray View::Properties() const
    for ( const PropertyDescription& description : descriptions )
    {
       api_property_value value;
-      if ( (*API->View->GetViewPropertyValue)( ModuleHandle(), handle, description.id.c_str(), &value ) == api_false )
+      if ( (API->View->GetViewPropertyValue)( ModuleHandle(), handle, description.id.c_str(), &value ) == api_false )
          throw APIFunctionError( "GetViewPropertyValue" );
       properties << Property( description.id, VariantFromAPIPropertyValue( value ) );
    }
@@ -411,12 +411,12 @@ PropertyArray View::StorableProperties() const
    for ( const PropertyDescription& description : descriptions )
    {
       uint32 flags = 0;
-      if ( (*API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, description.id.c_str(), &flags, 0/*type*/ ) == api_false )
+      if ( (API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, description.id.c_str(), &flags, 0/*type*/ ) == api_false )
          throw APIFunctionError( "GetViewPropertyAttributes" );
       if ( flags & ViewPropertyAttribute::Storable )
       {
          api_property_value value;
-         if ( (*API->View->GetViewPropertyValue)( ModuleHandle(), handle, description.id.c_str(), &value ) == api_false )
+         if ( (API->View->GetViewPropertyValue)( ModuleHandle(), handle, description.id.c_str(), &value ) == api_false )
             throw APIFunctionError( "GetViewPropertyValue" );
          properties << Property( description.id, VariantFromAPIPropertyValue( value ) );
       }
@@ -433,12 +433,12 @@ PropertyArray View::PermanentProperties() const
    for ( const PropertyDescription& description : descriptions )
    {
       uint32 flags = 0;
-      if ( (*API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, description.id.c_str(), &flags, 0/*type*/ ) == api_false )
+      if ( (API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, description.id.c_str(), &flags, 0/*type*/ ) == api_false )
          throw APIFunctionError( "GetViewPropertyAttributes" );
       if ( flags & ViewPropertyAttribute::Permanent )
       {
          api_property_value value;
-         if ( (*API->View->GetViewPropertyValue)( ModuleHandle(), handle, description.id.c_str(), &value ) == api_false )
+         if ( (API->View->GetViewPropertyValue)( ModuleHandle(), handle, description.id.c_str(), &value ) == api_false )
             throw APIFunctionError( "GetViewPropertyValue" );
          properties << Property( description.id, VariantFromAPIPropertyValue( value ) );
       }
@@ -455,13 +455,13 @@ PropertyArray View::StorablePermanentProperties() const
    for ( const PropertyDescription& description : descriptions )
    {
       uint32 flags = 0;
-      if ( (*API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, description.id.c_str(), &flags, 0/*type*/ ) == api_false )
+      if ( (API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, description.id.c_str(), &flags, 0/*type*/ ) == api_false )
          throw APIFunctionError( "GetViewPropertyAttributes" );
       if ( flags & ViewPropertyAttribute::Storable )
          if ( flags & ViewPropertyAttribute::Permanent )
          {
             api_property_value value;
-            if ( (*API->View->GetViewPropertyValue)( ModuleHandle(), handle, description.id.c_str(), &value ) == api_false )
+            if ( (API->View->GetViewPropertyValue)( ModuleHandle(), handle, description.id.c_str(), &value ) == api_false )
                throw APIFunctionError( "GetViewPropertyValue" );
             properties << Property( description.id, VariantFromAPIPropertyValue( value ) );
          }
@@ -478,7 +478,7 @@ void View::SetProperties( const PropertyArray& properties, bool notify, ViewProp
       {
          api_property_value apiValue;
          APIPropertyValueFromVariant( apiValue, property.Value() );
-         if ( (*API->View->SetViewPropertyValue)( ModuleHandle(), handle, property.Id().c_str(), &apiValue, attributes, notify ) == api_false )
+         if ( (API->View->SetViewPropertyValue)( ModuleHandle(), handle, property.Id().c_str(), &apiValue, attributes, notify ) == api_false )
             throw APIFunctionError( "SetViewPropertyValue" );
       }
 }
@@ -490,7 +490,7 @@ Variant View::PropertyValue( const IsoString& property ) const
    if ( !HasProperty( property ) )
       return Variant();
    api_property_value value;
-   if ( (*API->View->GetViewPropertyValue)( ModuleHandle(), handle, property.c_str(), &value ) == api_false )
+   if ( (API->View->GetViewPropertyValue)( ModuleHandle(), handle, property.c_str(), &value ) == api_false )
       throw APIFunctionError( "GetViewPropertyValue" );
    return VariantFromAPIPropertyValue( value );
 }
@@ -500,7 +500,7 @@ Variant View::PropertyValue( const IsoString& property ) const
 Variant View::ComputeProperty( const IsoString& property, bool notify )
 {
    api_property_value value;
-   if ( (*API->View->ComputeViewProperty)( ModuleHandle(), handle, property.c_str(), notify, &value ) == api_false )
+   if ( (API->View->ComputeViewProperty)( ModuleHandle(), handle, property.c_str(), notify, &value ) == api_false )
       throw APIFunctionError( "ComputeViewProperty" );
    return VariantFromAPIPropertyValue( value );
 }
@@ -511,7 +511,7 @@ void View::SetPropertyValue( const IsoString& property, const Variant& value, bo
 {
    api_property_value apiValue;
    APIPropertyValueFromVariant( apiValue, value );
-   if ( (*API->View->SetViewPropertyValue)( ModuleHandle(), handle, property.c_str(), &apiValue, attributes, notify ) == api_false )
+   if ( (API->View->SetViewPropertyValue)( ModuleHandle(), handle, property.c_str(), &apiValue, attributes, notify ) == api_false )
       throw APIFunctionError( "SetViewPropertyValue" );
 }
 
@@ -522,7 +522,7 @@ Variant::data_type View::PropertyType( const IsoString& property ) const
    if ( !HasProperty( property ) )
       return VariantType::Invalid;
    uint64 type = 0;
-   if ( (*API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, property.c_str(), 0/*flags*/, &type ) == api_false )
+   if ( (API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, property.c_str(), 0/*flags*/, &type ) == api_false )
       throw APIFunctionError( "GetViewPropertyAttributes" );
    return VariantTypeFromAPIPropertyType( type );
 }
@@ -532,7 +532,7 @@ Variant::data_type View::PropertyType( const IsoString& property ) const
 ViewPropertyAttributes View::PropertyAttributes( const IsoString& property ) const
 {
    uint32 flags = 0;
-   if ( (*API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, property.c_str(), &flags, 0/*type*/ ) == api_false )
+   if ( (API->View->GetViewPropertyAttributes)( ModuleHandle(), handle, property.c_str(), &flags, 0/*type*/ ) == api_false )
       throw APIFunctionError( "GetViewPropertyAttributes" );
    return ViewPropertyAttributes( ViewPropertyAttribute::mask_type( flags ) );
 }
@@ -541,7 +541,7 @@ ViewPropertyAttributes View::PropertyAttributes( const IsoString& property ) con
 
 void View::SetPropertyAttributes( const IsoString& property, ViewPropertyAttributes attributes, bool notify )
 {
-   if ( (*API->View->SetViewPropertyAttributes)( ModuleHandle(), handle, property.c_str(), unsigned( attributes ), notify ) == api_false )
+   if ( (API->View->SetViewPropertyAttributes)( ModuleHandle(), handle, property.c_str(), unsigned( attributes ), notify ) == api_false )
       throw APIFunctionError( "SetViewPropertyAttributes" );
 }
 
@@ -549,14 +549,14 @@ void View::SetPropertyAttributes( const IsoString& property, ViewPropertyAttribu
 
 bool View::HasProperty( const IsoString& property ) const
 {
-   return (*API->View->GetViewPropertyExists)( ModuleHandle(), handle, property.c_str(), 0/*type*/ ) != api_false;
+   return (API->View->GetViewPropertyExists)( ModuleHandle(), handle, property.c_str(), 0/*type*/ ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void View::DeleteProperty( const IsoString& property, bool notify )
 {
-   if ( (*API->View->DeleteViewProperty)( ModuleHandle(), handle, property.c_str(), notify ) == api_false )
+   if ( (API->View->DeleteViewProperty)( ModuleHandle(), handle, property.c_str(), notify ) == api_false )
       throw APIFunctionError( "DeleteViewProperty" );
 }
 
@@ -564,7 +564,7 @@ void View::DeleteProperty( const IsoString& property, bool notify )
 
 View View::ViewById( const IsoString& fullId )
 {
-   return View( (*API->View->GetViewById)( fullId.c_str() ) );
+   return View( (API->View->GetViewById)( fullId.c_str() ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -583,14 +583,14 @@ public:
 Array<View> View::AllViews( bool excludePreviews )
 {
    Array<View> a;
-   (*API->View->EnumerateViews)( InternalViewEnumerator::Callback, &a, api_true, !excludePreviews );
+   (API->View->EnumerateViews)( InternalViewEnumerator::Callback, &a, api_true, !excludePreviews );
    return a;
 }
 
 Array<View> View::AllPreviews()
 {
    Array<View> a;
-   (*API->View->EnumerateViews)( InternalViewEnumerator::Callback, &a, api_false, api_true );
+   (API->View->EnumerateViews)( InternalViewEnumerator::Callback, &a, api_false, api_true );
    return a;
 }
 

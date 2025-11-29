@@ -142,12 +142,12 @@ LCMSErrorMessage::message_list LCMSErrorMessage::s_messages;
 cmsContext                     LCMSErrorMessage::s_checkContext = nullptr;
 
 LCMSErrorMessage::LCMSErrorMessage()
-   : thread( (*API->Thread->GetCurrentThread)() )
+   : thread( (API->Thread->GetCurrentThread)() )
 {
 }
 
 LCMSErrorMessage::LCMSErrorMessage( uint32 errorCode, const char* errorText )
-   : thread( (*API->Thread->GetCurrentThread)() )
+   : thread( (API->Thread->GetCurrentThread)() )
    , message( String().Format( "LCMS Error (%u): ", errorCode ) + errorText )
 {
 }
@@ -679,13 +679,13 @@ StringList ICCProfile::ProfileDirectories()
    for ( int i = 0; ; ++i )
    {
       size_type len = 0;
-      (*API->Global->GetProfilesDirectory)( i, 0, &len );
+      (API->Global->GetProfilesDirectory)( i, 0, &len );
       if ( len == 0 )
          break;
 
       String path;
       path.SetLength( len );
-      if ( (*API->Global->GetProfilesDirectory)( i, path.Begin(), &len ) == api_false )
+      if ( (API->Global->GetProfilesDirectory)( i, path.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetProfilesDirectory" );
       path.ResizeToNullTerminated();
 

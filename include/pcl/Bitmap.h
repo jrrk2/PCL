@@ -1459,11 +1459,12 @@ public:
    static Bitmap FromSVG( const IsoString& svgSource, int width = 0, int height = 0,
                           SVGRenderOptions options = SVGRenderOption::Default );
 
-private:
 
    Bitmap( void* h ) : UIObject( h )
    {
    }
+
+private:
 
    void* CloneHandle() const override;
 

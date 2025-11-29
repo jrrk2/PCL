@@ -28,7 +28,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 Edit::Edit( const String& text, Control& parent )
-   : Frame( (*API->Edit->CreateEdit)( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
+   : Frame( (API->Edit->CreateEdit)( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateEdit" );
@@ -39,13 +39,13 @@ Edit::Edit( const String& text, Control& parent )
 String Edit::Text() const
 {
    size_type len = 0;
-   (*API->Edit->GetEditText)( handle, nullptr/*text*/, &len );
+   (API->Edit->GetEditText)( handle, nullptr/*text*/, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->Edit->GetEditText)( handle, text.Begin(), &len ) == api_false )
+      if ( (API->Edit->GetEditText)( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetEditText" );
       text.ResizeToNullTerminated();
    }
@@ -56,49 +56,49 @@ String Edit::Text() const
 
 void Edit::SetText( const String& text )
 {
-   (*API->Edit->SetEditText)( handle, text.c_str() );
+   (API->Edit->SetEditText)( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Edit::IsReadOnly() const
 {
-   return (*API->Edit->GetEditReadOnly)( handle ) != api_false;
+   return (API->Edit->GetEditReadOnly)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Edit::SetReadOnly( bool readOnly )
 {
-   (*API->Edit->SetEditReadOnly)( handle, readOnly );
+   (API->Edit->SetEditReadOnly)( handle, readOnly );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Edit::IsModified() const
 {
-   return (*API->Edit->GetEditModified)( handle ) != api_false;
+   return (API->Edit->GetEditModified)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Edit::SetModified( bool modified )
 {
-   (*API->Edit->SetEditModified)( handle, modified );
+   (API->Edit->SetEditModified)( handle, modified );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Edit::IsPasswordMode() const
 {
-   return (*API->Edit->GetEditPasswordEnabled)( handle ) != api_false;
+   return (API->Edit->GetEditPasswordEnabled)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Edit::EnablePasswordMode( bool enable )
 {
-   (*API->Edit->SetEditPasswordEnabled)( handle, enable );
+   (API->Edit->SetEditPasswordEnabled)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
@@ -106,13 +106,13 @@ void Edit::EnablePasswordMode( bool enable )
 String Edit::ValidatingRegExp() const
 {
    size_type len = 0;
-   (*API->Edit->GetEditValidatingRegExp)( handle, nullptr, &len, nullptr/*caseSensitive*/ );
+   (API->Edit->GetEditValidatingRegExp)( handle, nullptr, &len, nullptr/*caseSensitive*/ );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->Edit->GetEditValidatingRegExp)( handle, text.Begin(), &len, nullptr/*caseSensitive*/ ) == api_false )
+      if ( (API->Edit->GetEditValidatingRegExp)( handle, text.Begin(), &len, nullptr/*caseSensitive*/ ) == api_false )
          throw APIFunctionError( "GetEditValidatingRegExp" );
       text.ResizeToNullTerminated();
    }
@@ -124,14 +124,14 @@ String Edit::ValidatingRegExp() const
 String Edit::ValidatingRegExp( bool& caseSensitive ) const
 {
    size_type len = 0;
-   (*API->Edit->GetEditValidatingRegExp)( handle, nullptr, &len, nullptr/*caseSensitive*/ );
+   (API->Edit->GetEditValidatingRegExp)( handle, nullptr, &len, nullptr/*caseSensitive*/ );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
       api_bool cs = api_true;
-      if ( (*API->Edit->GetEditValidatingRegExp)( handle, text.Begin(), &len, &cs ) == api_false )
+      if ( (API->Edit->GetEditValidatingRegExp)( handle, text.Begin(), &len, &cs ) == api_false )
          throw APIFunctionError( "GetEditValidatingRegExp" );
       text.ResizeToNullTerminated();
       caseSensitive = cs != api_false;
@@ -143,7 +143,7 @@ String Edit::ValidatingRegExp( bool& caseSensitive ) const
 
 void Edit::SetValidatingRegExp( const String& rx, bool caseSensitive )
 {
-   if ( (*API->Edit->SetEditValidatingRegExp)( handle, rx.c_str(), api_bool( caseSensitive ) ) == api_false )
+   if ( (API->Edit->SetEditValidatingRegExp)( handle, rx.c_str(), api_bool( caseSensitive ) ) == api_false )
       throw APIFunctionError( "SetEditValidatingRegExp" );
 }
 
@@ -151,21 +151,21 @@ void Edit::SetValidatingRegExp( const String& rx, bool caseSensitive )
 
 bool Edit::IsValid() const
 {
-   return (*API->Edit->GetEditValid)( handle ) != api_false;
+   return (API->Edit->GetEditValid)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int Edit::MaxLength() const
 {
-   return (*API->Edit->GetEditMaxLength)( handle );
+   return (API->Edit->GetEditMaxLength)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Edit::SetMaxLength( int n )
 {
-   (*API->Edit->SetEditMaxLength)( handle, n );
+   (API->Edit->SetEditMaxLength)( handle, n );
 }
 
 // ----------------------------------------------------------------------------
@@ -173,13 +173,13 @@ void Edit::SetMaxLength( int n )
 String Edit::Mask() const
 {
    size_type len = 0;
-   (*API->Edit->GetEditMask)( handle, 0, &len );
+   (API->Edit->GetEditMask)( handle, 0, &len );
 
    String mask;
    if ( len > 0 )
    {
       mask.SetLength( len );
-      if ( (*API->Edit->GetEditMask)( handle, mask.c_str(), &len ) == api_false )
+      if ( (API->Edit->GetEditMask)( handle, mask.c_str(), &len ) == api_false )
          throw APIFunctionError( "GetEditMask" );
       mask.ResizeToNullTerminated();
    }
@@ -190,7 +190,7 @@ String Edit::Mask() const
 
 void Edit::SetMask( const String& mask )
 {
-   (*API->Edit->SetEditMask)( handle, mask.c_str() );
+   (API->Edit->SetEditMask)( handle, mask.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -204,7 +204,7 @@ bool Edit::IsValid() const
 
 void Edit::SelectAll( bool select )
 {
-   (*API->Edit->SetEditSelected)( handle, select );
+   (API->Edit->SetEditSelected)( handle, select );
 }
 
 // ----------------------------------------------------------------------------
@@ -212,14 +212,14 @@ void Edit::SelectAll( bool select )
 void Edit::GetSelection( int& selStart, int& selEnd ) const
 {
    selStart = selEnd = 0;
-   (*API->Edit->GetEditSelection)( handle, &selStart, &selEnd );
+   (API->Edit->GetEditSelection)( handle, &selStart, &selEnd );
 }
 
 // ----------------------------------------------------------------------------
 
 void Edit::SetSelection( int selStart, int selEnd )
 {
-   (*API->Edit->SetEditSelection)( handle, selStart, selEnd );
+   (API->Edit->SetEditSelection)( handle, selStart, selEnd );
 }
 
 // ----------------------------------------------------------------------------
@@ -227,13 +227,13 @@ void Edit::SetSelection( int selStart, int selEnd )
 String Edit::SelectedText() const
 {
    size_type len = 0;
-   (*API->Edit->GetEditSelectedText)( handle, 0, &len );
+   (API->Edit->GetEditSelectedText)( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->Edit->GetEditSelectedText)( handle, text.Begin(), &len ) == api_false )
+      if ( (API->Edit->GetEditSelectedText)( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetEditSelectedText" );
       text.ResizeToNullTerminated();
    }
@@ -244,28 +244,28 @@ String Edit::SelectedText() const
 
 int Edit::CaretPosition() const
 {
-   return (*API->Edit->GetEditCaretPosition)( handle );
+   return (API->Edit->GetEditCaretPosition)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Edit::SetCaretPosition( int pos )
 {
-   (*API->Edit->SetEditCaretPosition)( handle, pos );
+   (API->Edit->SetEditCaretPosition)( handle, pos );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Edit::IsRightAligned() const
 {
-   return (*API->Edit->GetEditAlignment)( handle ) == TextAlign::Right;
+   return (API->Edit->GetEditAlignment)( handle ) == TextAlign::Right;
 }
 
 // ----------------------------------------------------------------------------
 
 void Edit::SetRightAlignment( bool right )
 {
-   (*API->Edit->SetEditAlignment)( handle, right ? TextAlign::Right : TextAlign::Left );
+   (API->Edit->SetEditAlignment)( handle, right ? TextAlign::Right : TextAlign::Left );
 }
 
 // ----------------------------------------------------------------------------
@@ -326,7 +326,7 @@ public:
 void Edit::OnEditCompleted( edit_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Edit->SetEditCompletedEventRoutine)( handle, &receiver,
+   if ( (API->Edit->SetEditCompletedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? EditEventDispatcher::EditCompleted : nullptr ) == api_false )
       throw APIFunctionError( "SetEditCompletedEventRoutine" );
    m_handlers->onEditCompleted = f;
@@ -335,7 +335,7 @@ void Edit::OnEditCompleted( edit_event_handler f, Control& receiver )
 void Edit::OnReturnPressed( edit_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Edit->SetReturnPressedEventRoutine)( handle, &receiver,
+   if ( (API->Edit->SetReturnPressedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? EditEventDispatcher::ReturnPressed : nullptr ) == api_false )
       throw APIFunctionError( "SetReturnPressedEventRoutine" );
    m_handlers->onReturnPressed = f;
@@ -344,7 +344,7 @@ void Edit::OnReturnPressed( edit_event_handler f, Control& receiver )
 void Edit::OnTextUpdated( text_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Edit->SetTextUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->Edit->SetTextUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? EditEventDispatcher::TextUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetTextUpdatedEventRoutine" );
    m_handlers->onTextUpdated = f;
@@ -353,7 +353,7 @@ void Edit::OnTextUpdated( text_event_handler f, Control& receiver )
 void Edit::OnCaretPositionUpdated( caret_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Edit->SetCaretPositionUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->Edit->SetCaretPositionUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? EditEventDispatcher::CaretPositionUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetCaretPositionUpdatedEventRoutine" );
    m_handlers->onCaretPositionUpdated = f;
@@ -362,7 +362,7 @@ void Edit::OnCaretPositionUpdated( caret_event_handler f, Control& receiver )
 void Edit::OnSelectionUpdated( selection_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->Edit->SetSelectionUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->Edit->SetSelectionUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? EditEventDispatcher::SelectionUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetSelectionUpdatedEventRoutine" );
    m_handlers->onSelectionUpdated = f;

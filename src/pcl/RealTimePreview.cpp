@@ -30,56 +30,56 @@ namespace pcl
 bool RealTimePreview::SetOwner( ProcessInterface& iface )
 {
    interface_handle h = iface.IsNull() ? 0 : reinterpret_cast<interface_handle>( &iface );
-   return (*API->RealTimePreview->SetRealTimePreviewOwner)( h, 0/*flags*/ ) != api_false;
+   return (API->RealTimePreview->SetRealTimePreviewOwner)( h, 0/*flags*/ ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void RealTimePreview::Update()
 {
-   (*API->RealTimePreview->UpdateRealTimePreview)();
+   (API->RealTimePreview->UpdateRealTimePreview)();
 }
 
 // ----------------------------------------------------------------------------
 
 bool RealTimePreview::IsUpdating()
 {
-   return (*API->RealTimePreview->IsRealTimePreviewUpdating)() != api_false;
+   return (API->RealTimePreview->IsRealTimePreviewUpdating)() != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void RealTimePreview::ShowProgressDialog( const String& title, const String& text, size_type totalCount )
 {
-   (*API->RealTimePreview->ShowRealTimePreviewProgressDialog)( title.c_str(), text.c_str(), totalCount, 0/*flags*/ );
+   (API->RealTimePreview->ShowRealTimePreviewProgressDialog)( title.c_str(), text.c_str(), totalCount, 0/*flags*/ );
 }
 
 // ----------------------------------------------------------------------------
 
 void RealTimePreview::CloseProgressDialog()
 {
-   (*API->RealTimePreview->CloseRealTimePreviewProgressDialog)();
+   (API->RealTimePreview->CloseRealTimePreviewProgressDialog)();
 }
 
 // ----------------------------------------------------------------------------
 
 bool RealTimePreview::IsProgressDialogVisible()
 {
-   return (*API->RealTimePreview->IsRealTimePreviewProgressDialogVisible)() != api_false;
+   return (API->RealTimePreview->IsRealTimePreviewProgressDialogVisible)() != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void RealTimePreview::SetProgressCount( size_type count )
 {
-   (*API->RealTimePreview->SetRealTimePreviewProgressCount)( count, 0/*flags*/ );
+   (API->RealTimePreview->SetRealTimePreviewProgressCount)( count, 0/*flags*/ );
 }
 
 // ----------------------------------------------------------------------------
 
 void RealTimePreview::SetProgressText( const String& text )
 {
-   (*API->RealTimePreview->SetRealTimePreviewProgressText)( text.c_str(), 0/*flags*/ );
+   (API->RealTimePreview->SetRealTimePreviewProgressText)( text.c_str(), 0/*flags*/ );
 }
 
 // ----------------------------------------------------------------------------

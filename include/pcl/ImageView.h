@@ -1404,12 +1404,12 @@ protected:
    /*!
     * \internal
     */
-   ImageView( void* );
+   ImageView( control_handle );
 
    /*!
     * \internal
     */
-   ImageView( void*, void* );
+   ImageView( control_handle, control_handle );
 
    friend class ImageViewEventDispatcher;
 };

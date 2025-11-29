@@ -528,18 +528,18 @@ SettingsData::SettingsData( const IsoString& identifier, bool universal )
    if ( !m_identifier.IsValidIdentifier() )
       throw Error( "SettingsData: Invalid file identifier" );
 
-   int instance = (*API->Global->ApplicationInstanceSlot)( ModuleHandle() );
+   int instance = (API->Global->ApplicationInstanceSlot)( ModuleHandle() );
    if ( instance <= 0 )
       throw Error( "SettingsData: Invalid application instance" );
 
    size_type len = 0;
-   (*API->Global->GetApplicationConfigurationDirectory)( 0, &len );
+   (API->Global->GetApplicationConfigurationDirectory)( 0, &len );
    if ( len == 0 )
       throw Error( "SettingsData: Internal error: Unable to get the application configuration directory" );
 
    String confDirPath;
    confDirPath.SetLength( len );
-   if ( (*API->Global->GetApplicationConfigurationDirectory)( confDirPath.Begin(), &len ) == api_false )
+   if ( (API->Global->GetApplicationConfigurationDirectory)( confDirPath.Begin(), &len ) == api_false )
       throw APIFunctionError( "GetApplicationConfigurationDirectory" );
    confDirPath.ResizeToNullTerminated();
 
@@ -722,7 +722,7 @@ void SettingsData::Load()
 void SettingsData::Save() const
 {
    if ( m_universal )
-      if ( (*API->Global->ApplicationInstanceSlot)( ModuleHandle() ) != 1 )
+      if ( (API->Global->ApplicationInstanceSlot)( ModuleHandle() ) != 1 )
          throw Error( String( "SettingsData::Save(): " ) + "Universal settings files can only be written by the first core application instance." );
 
    AutoPointer<XMLDocument> xml = new XMLDocument;
@@ -761,7 +761,7 @@ void SettingsData::Save() const
 void SettingsData::Purge()
 {
    if ( m_universal )
-      if ( (*API->Global->ApplicationInstanceSlot)( ModuleHandle() ) != 1 )
+      if ( (API->Global->ApplicationInstanceSlot)( ModuleHandle() ) != 1 )
          throw Error( String( "SettingsData::Purge(): " ) + "Universal settings files can only be written by the first core application instance." );
 
    {

@@ -27,7 +27,7 @@ namespace pcl
 
 int MuteStatus::Initialized( const StatusMonitor& unused ) const
 {
-   m_thread = (*API->Thread->GetCurrentThread)();
+   m_thread = (API->Thread->GetCurrentThread)();
    return Updated( unused );
 }
 
@@ -39,7 +39,7 @@ int MuteStatus::Updated( const StatusMonitor& ) const
    {
       // Non-blocking thread status
       uint32 status;
-      if ( (*API->Thread->GetThreadStatusEx)( m_thread, &status, 0x00000001 ) != api_false )
+      if ( (API->Thread->GetThreadStatusEx)( m_thread, &status, 0x00000001 ) != api_false )
          if ( (status & 0x80000000) != 0 )
             return 1;
    }

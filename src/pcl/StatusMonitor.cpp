@@ -128,7 +128,7 @@ void StatusMonitor::Initialize( const String& s, size_type n )
 {
    // Fetch the current thread. Monitors initialized from a running thread are
    // excluded for real-time updates.
-   m_thread = (*API->Thread->GetCurrentThread)();
+   m_thread = (API->Thread->GetCurrentThread)();
 
    if ( !IsInitializationEnabled() )
       return;
@@ -184,7 +184,7 @@ void StatusMonitor::Initialize( const String& s, size_type n )
 
 void StatusMonitor::SetRefreshRate( unsigned ms )
 {
-   if ( (*API->Thread->GetCurrentThread)() == nullptr )
+   if ( (API->Thread->GetCurrentThread)() == nullptr )
    {
       volatile AutoLock lock( s_mutex );
       s_msRefreshRate = Range( ms, 25U, 999U );

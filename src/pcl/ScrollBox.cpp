@@ -27,30 +27,30 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 ScrollBox::ScrollBox( Control& parent )
-   : Frame( (*API->ScrollBox->CreateScrollBox)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
+   : Frame( (API->ScrollBox->CreateScrollBox)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
    , m_viewport( nullptr )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateScrollBox" );
 
-   m_viewport.TransferHandle( (*API->ScrollBox->CreateScrollBoxViewport)( handle, &m_viewport ) );
+   m_viewport.TransferHandle( (API->ScrollBox->CreateScrollBoxViewport)( handle, &m_viewport ) );
    if ( m_viewport.IsNull() )
       throw APIFunctionError( "CreateScrollBoxViewport" );
 }
 
-ScrollBox::ScrollBox( void* h )
+ScrollBox::ScrollBox( control_handle h )
    : Frame( h )
    , m_viewport( nullptr )
 {
    if ( !IsNull() )
    {
-      m_viewport.TransferHandle( (*API->ScrollBox->CreateScrollBoxViewport)( handle, &m_viewport ) );
+      m_viewport.TransferHandle( (API->ScrollBox->CreateScrollBoxViewport)( handle, &m_viewport ) );
       if ( m_viewport.IsNull() )
          throw APIFunctionError( "CreateScrollBoxViewport" );
    }
 }
 
-ScrollBox::ScrollBox( void* h, void* hV )
+ScrollBox::ScrollBox( control_handle h, control_handle hV )
    : Frame( h )
    , m_viewport( hV )
 {
@@ -61,7 +61,7 @@ ScrollBox::ScrollBox( void* h, void* hV )
 bool ScrollBox::IsHorizontalScrollBarVisible() const
 {
    api_bool h, v;
-   (*API->ScrollBox->GetScrollBarsVisible)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBarsVisible)( handle, &h, &v );
    return h != api_false;
 }
 
@@ -70,7 +70,7 @@ bool ScrollBox::IsHorizontalScrollBarVisible() const
 bool ScrollBox::IsVerticalScrollBarVisible() const
 {
    api_bool h, v;
-   (*API->ScrollBox->GetScrollBarsVisible)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBarsVisible)( handle, &h, &v );
    return v != api_false;
 }
 
@@ -78,7 +78,7 @@ bool ScrollBox::IsVerticalScrollBarVisible() const
 
 void ScrollBox::ShowScrollBars( bool showHorz, bool showVert )
 {
-   (*API->ScrollBox->SetScrollBarsVisible)( handle, showHorz, showVert );
+   (API->ScrollBox->SetScrollBarsVisible)( handle, showHorz, showVert );
 }
 
 // ----------------------------------------------------------------------------
@@ -86,7 +86,7 @@ void ScrollBox::ShowScrollBars( bool showHorz, bool showVert )
 bool ScrollBox::IsHorizontalAutoScrollEnabled() const
 {
    api_bool h, v;
-   (*API->ScrollBox->GetScrollBoxAutoScrollEnabled)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBoxAutoScrollEnabled)( handle, &h, &v );
    return h != api_false;
 }
 
@@ -95,7 +95,7 @@ bool ScrollBox::IsHorizontalAutoScrollEnabled() const
 bool ScrollBox::IsVerticalAutoScrollEnabled() const
 {
    api_bool h, v;
-   (*API->ScrollBox->GetScrollBoxAutoScrollEnabled)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBoxAutoScrollEnabled)( handle, &h, &v );
    return v != api_false;
 }
 
@@ -103,35 +103,35 @@ bool ScrollBox::IsVerticalAutoScrollEnabled() const
 
 void ScrollBox::EnableAutoScroll( bool enableHorz, bool enableVert )
 {
-   (*API->ScrollBox->SetScrollBoxAutoScrollEnabled)( handle, enableHorz, enableVert );
+   (API->ScrollBox->SetScrollBoxAutoScrollEnabled)( handle, enableHorz, enableVert );
 }
 
 // ----------------------------------------------------------------------------
 
 void ScrollBox::GetHorizontalScrollRange( int& minPos, int& maxPos ) const
 {
-   (*API->ScrollBox->GetScrollBoxHorizontalRange)( handle, &minPos, &maxPos );
+   (API->ScrollBox->GetScrollBoxHorizontalRange)( handle, &minPos, &maxPos );
 }
 
 // ----------------------------------------------------------------------------
 
 void ScrollBox::GetVerticalScrollRange( int& minPos, int& maxPos ) const
 {
-   (*API->ScrollBox->GetScrollBoxVerticalRange)( handle, &minPos, &maxPos );
+   (API->ScrollBox->GetScrollBoxVerticalRange)( handle, &minPos, &maxPos );
 }
 
 // ----------------------------------------------------------------------------
 
 void ScrollBox::SetHorizontalScrollRange( int minPos, int maxPos )
 {
-   (*API->ScrollBox->SetScrollBoxHorizontalRange)( handle, minPos, maxPos );
+   (API->ScrollBox->SetScrollBoxHorizontalRange)( handle, minPos, maxPos );
 }
 
 // ----------------------------------------------------------------------------
 
 void ScrollBox::SetVerticalScrollRange( int minPos, int maxPos )
 {
-   (*API->ScrollBox->SetScrollBoxVerticalRange)( handle, minPos, maxPos );
+   (API->ScrollBox->SetScrollBoxVerticalRange)( handle, minPos, maxPos );
 }
 
 // ----------------------------------------------------------------------------
@@ -139,7 +139,7 @@ void ScrollBox::SetVerticalScrollRange( int minPos, int maxPos )
 int ScrollBox::PageWidth() const
 {
    int32 h, v;
-   (*API->ScrollBox->GetScrollBoxPageSize)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBoxPageSize)( handle, &h, &v );
    return h;
 }
 
@@ -148,7 +148,7 @@ int ScrollBox::PageWidth() const
 int ScrollBox::PageHeight() const
 {
    int32 h, v;
-   (*API->ScrollBox->GetScrollBoxPageSize)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBoxPageSize)( handle, &h, &v );
    return v;
 }
 
@@ -156,7 +156,7 @@ int ScrollBox::PageHeight() const
 
 void ScrollBox::SetPageSize( int width, int height )
 {
-   (*API->ScrollBox->SetScrollBoxPageSize)( handle, width, height );
+   (API->ScrollBox->SetScrollBoxPageSize)( handle, width, height );
 }
 
 // ----------------------------------------------------------------------------
@@ -164,7 +164,7 @@ void ScrollBox::SetPageSize( int width, int height )
 int ScrollBox::LineWidth() const
 {
    int32 h, v;
-   (*API->ScrollBox->GetScrollBoxLineSize)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBoxLineSize)( handle, &h, &v );
    return h;
 }
 
@@ -173,7 +173,7 @@ int ScrollBox::LineWidth() const
 int ScrollBox::LineHeight() const
 {
    int32 h, v;
-   (*API->ScrollBox->GetScrollBoxLineSize)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBoxLineSize)( handle, &h, &v );
    return v;
 }
 
@@ -181,7 +181,7 @@ int ScrollBox::LineHeight() const
 
 void ScrollBox::SetLineSize( int width, int height )
 {
-   (*API->ScrollBox->SetScrollBoxLineSize)( handle, width, height );
+   (API->ScrollBox->SetScrollBoxLineSize)( handle, width, height );
 }
 
 // ----------------------------------------------------------------------------
@@ -189,7 +189,7 @@ void ScrollBox::SetLineSize( int width, int height )
 pcl::Point ScrollBox::ScrollPosition() const
 {
    pcl::Point p;
-   (*API->ScrollBox->GetScrollBoxPosition)( handle, &p.x, &p.y );
+   (API->ScrollBox->GetScrollBoxPosition)( handle, &p.x, &p.y );
    return p;
 }
 
@@ -197,7 +197,7 @@ pcl::Point ScrollBox::ScrollPosition() const
 
 void ScrollBox::SetScrollPosition( int horzPos, int vertPos )
 {
-   (*API->ScrollBox->SetScrollBoxPosition)( handle, horzPos, vertPos );
+   (API->ScrollBox->SetScrollBoxPosition)( handle, horzPos, vertPos );
 }
 
 // ----------------------------------------------------------------------------
@@ -205,7 +205,7 @@ void ScrollBox::SetScrollPosition( int horzPos, int vertPos )
 bool ScrollBox::IsHorizontalTrackingEnabled() const
 {
    api_bool h, v;
-   (*API->ScrollBox->GetScrollBoxTrackingEnabled)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBoxTrackingEnabled)( handle, &h, &v );
    return h != api_false;
 }
 
@@ -214,7 +214,7 @@ bool ScrollBox::IsHorizontalTrackingEnabled() const
 bool ScrollBox::IsVerticalTrackingEnabled() const
 {
    api_bool h, v;
-   (*API->ScrollBox->GetScrollBoxTrackingEnabled)( handle, &h, &v );
+   (API->ScrollBox->GetScrollBoxTrackingEnabled)( handle, &h, &v );
    return v != api_false;
 }
 
@@ -222,7 +222,7 @@ bool ScrollBox::IsVerticalTrackingEnabled() const
 
 void ScrollBox::EnableTracking( bool enableHorz, bool enableVert )
 {
-   (*API->ScrollBox->SetScrollBoxTrackingEnabled)( handle, enableHorz, enableVert );
+   (API->ScrollBox->SetScrollBoxTrackingEnabled)( handle, enableHorz, enableVert );
 }
 
 // ----------------------------------------------------------------------------
@@ -274,7 +274,7 @@ public:
 void ScrollBox::OnHorizontalScrollPosUpdated( pos_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ScrollBox->SetScrollBoxHorizontalPosUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->ScrollBox->SetScrollBoxHorizontalPosUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ScrollBoxEventDispatcher::HorizontalScrollPosUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetScrollBoxHorizontalPosUpdatedEventRoutine" );
    m_handlers->onHorizontalScrollPosUpdated = f;
@@ -283,7 +283,7 @@ void ScrollBox::OnHorizontalScrollPosUpdated( pos_event_handler f, Control& rece
 void ScrollBox::OnVerticalScrollPosUpdated( pos_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ScrollBox->SetScrollBoxVerticalPosUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->ScrollBox->SetScrollBoxVerticalPosUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ScrollBoxEventDispatcher::VerticalScrollPosUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetScrollBoxVerticalPosUpdatedEventRoutine" );
    m_handlers->onVerticalScrollPosUpdated = f;
@@ -292,7 +292,7 @@ void ScrollBox::OnVerticalScrollPosUpdated( pos_event_handler f, Control& receiv
 void ScrollBox::OnHorizontalScrollRangeUpdated( range_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ScrollBox->SetScrollBoxHorizontalRangeUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->ScrollBox->SetScrollBoxHorizontalRangeUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ScrollBoxEventDispatcher::HorizontalScrollRangeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetScrollBoxHorizontalRangeUpdatedEventRoutine" );
    m_handlers->onHorizontalScrollRangeUpdated = f;
@@ -301,7 +301,7 @@ void ScrollBox::OnHorizontalScrollRangeUpdated( range_event_handler f, Control& 
 void ScrollBox::OnVerticalScrollRangeUpdated( range_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ScrollBox->SetScrollBoxVerticalRangeUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->ScrollBox->SetScrollBoxVerticalRangeUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ScrollBoxEventDispatcher::VerticalScrollRangeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetScrollBoxVerticalRangeUpdatedEventRoutine" );
    m_handlers->onVerticalScrollRangeUpdated = f;

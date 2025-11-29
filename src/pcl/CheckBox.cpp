@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 CheckBox::CheckBox( const String& text, Control& parent )
-   : Button( (*API->Button->CreateCheckBox)( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
+   : Button( (API->Button->CreateCheckBox)( ModuleHandle(), this, text.c_str(), parent.handle, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateCheckBox" );
@@ -37,14 +37,14 @@ CheckBox::CheckBox( const String& text, Control& parent )
 
 bool CheckBox::IsTristateMode() const
 {
-   return (*API->Button->GetButtonTristateEnabled)( handle ) != api_false;
+   return (API->Button->GetButtonTristateEnabled)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void CheckBox::SetTristateMode( bool tristate )
 {
-   (*API->Button->SetButtonTristateEnabled)( handle, tristate );
+   (API->Button->SetButtonTristateEnabled)( handle, tristate );
 }
 
 // ----------------------------------------------------------------------------

@@ -28,7 +28,7 @@ namespace pcl
 ReadoutOptions ReadoutOptions::GetCurrentOptions()
 {
    api_readout_options a;
-   (*API->Global->GetReadoutOptions)( &a );
+   (API->Global->GetReadoutOptions)( &a );
 
    ReadoutOptions o;
    o.data                = ReadoutOptions::readout_data( a.data );
@@ -78,7 +78,7 @@ void ReadoutOptions::SetCurrentOptions( const ReadoutOptions& o )
    a.real                = o.real;
    a.__r__               = 0;
 
-   (*API->Global->SetReadoutOptions)( &a );
+   (API->Global->SetReadoutOptions)( &a );
 }
 
 // ----------------------------------------------------------------------------

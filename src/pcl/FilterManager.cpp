@@ -326,7 +326,7 @@ void FilterManager::SaveToConfigurationFiltersDatabaseFile()
 
    m_modified &= ~1;
 
-   (*API->Global->BroadcastGlobalFiltersUpdated)( nullptr /*reserved*/ );
+   (API->Global->BroadcastGlobalFiltersUpdated)( nullptr /*reserved*/ );
 }
 
 void FilterManager::SaveToConfigurationWhiteReferencesDatabaseFile()
@@ -336,7 +336,7 @@ void FilterManager::SaveToConfigurationWhiteReferencesDatabaseFile()
 
    m_modified &= ~2;
 
-   (*API->Global->BroadcastGlobalFiltersUpdated)( nullptr /*reserved*/ );
+   (API->Global->BroadcastGlobalFiltersUpdated)( nullptr /*reserved*/ );
 }
 
 // ----------------------------------------------------------------------------

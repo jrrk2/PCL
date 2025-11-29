@@ -280,7 +280,7 @@ UIObject::UIObject( const UIObject& x )
 {
    if ( handle != nullptr )
    {
-      if ( (*API->UI->AttachToUIObject)( ModuleHandle(), handle ) == api_false )
+      if ( (API->UI->AttachToUIObject)( ModuleHandle(), handle ) == api_false )
       {
          handle = nullptr;
          throw APIFunctionError( "AttachToUIObject" );
@@ -300,8 +300,8 @@ UIObject::~UIObject() noexcept( false )
 
       s_objects.Remove( this );
 
-      if ( (*API->UI->GetUIObjectRefCount)( theHandle ) > 0 )
-         if ( (*API->UI->DetachFromUIObject)( ModuleHandle(), theHandle ) == api_false )
+      if ( (API->UI->GetUIObjectRefCount)( theHandle ) > 0 )
+         if ( (API->UI->DetachFromUIObject)( ModuleHandle(), theHandle ) == api_false )
             throw APIFunctionError( "DetachFromUIObject" );
    }
 }
@@ -322,7 +322,7 @@ UIObject& UIObject::Null()
 
 size_type UIObject::RefCount() const
 {
-   return (handle != nullptr) ? (*API->UI->GetUIObjectRefCount)( handle ) : size_type( 0 );
+   return (handle != nullptr) ? (API->UI->GetUIObjectRefCount)( handle ) : size_type( 0 );
 }
 
 // ----------------------------------------------------------------------------
@@ -342,13 +342,13 @@ IsoString UIObject::ObjectType() const
       return "Null";
 
    size_type len = 0;
-   (*API->UI->GetUIObjectType)( handle, nullptr, &len );
+   (API->UI->GetUIObjectType)( handle, nullptr, &len );
    if ( len == 0 )
       throw APIFunctionError( "GetUIObjectType" );
 
    IsoString objType;
    objType.SetLength( len );
-   if ( (*API->UI->GetUIObjectType)( handle, objType.Begin(), &len ) == api_false )
+   if ( (API->UI->GetUIObjectType)( handle, objType.Begin(), &len ) == api_false )
       throw APIFunctionError( "GetUIObjectType" );
    objType.ResizeToNullTerminated();
    return objType;
@@ -362,13 +362,13 @@ String UIObject::ObjectId() const
       return String();
 
    size_type len = 0;
-   (*API->UI->GetUIObjectId)( handle, nullptr, &len );
+   (API->UI->GetUIObjectId)( handle, nullptr, &len );
 
    String objId;
    if ( len > 0 )
    {
       objId.SetLength( len );
-      if ( (*API->UI->GetUIObjectId)( handle, objId.Begin(), &len ) == api_false )
+      if ( (API->UI->GetUIObjectId)( handle, objId.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetUIObjectId" );
       objId.ResizeToNullTerminated();
    }
@@ -379,7 +379,7 @@ String UIObject::ObjectId() const
 
 void UIObject::SetObjectId( const String& id )
 {
-   if ( (*API->UI->SetUIObjectId)( handle, id.c_str() ) == api_false )
+   if ( (API->UI->SetUIObjectId)( handle, id.c_str() ) == api_false )
       throw APIFunctionError( "SetUIObjectId" );
 }
 
@@ -395,14 +395,14 @@ void UIObject::SetHandle( void* newHandle )
 
          s_objects.Remove( this );
 
-         if ( (*API->UI->GetUIObjectRefCount)( oldHandle ) > 0 )
-            if ( (*API->UI->DetachFromUIObject)( ModuleHandle(), oldHandle ) == api_false )
+         if ( (API->UI->GetUIObjectRefCount)( oldHandle ) > 0 )
+            if ( (API->UI->DetachFromUIObject)( ModuleHandle(), oldHandle ) == api_false )
                throw APIFunctionError( "DetachFromUIObject" );
       }
 
       if ( newHandle != nullptr )
       {
-         if ( (*API->UI->AttachToUIObject)( ModuleHandle(), newHandle ) == api_false )
+         if ( (API->UI->AttachToUIObject)( ModuleHandle(), newHandle ) == api_false )
             throw APIFunctionError( "AttachToUIObject" );
 
          handle = newHandle;
@@ -423,8 +423,8 @@ void UIObject::TransferHandle( void* newHandle )
 
          s_objects.Remove( this );
 
-         if ( (*API->UI->GetUIObjectRefCount)( oldHandle ) > 0 )
-            if ( (*API->UI->DetachFromUIObject)( ModuleHandle(), oldHandle ) == api_false )
+         if ( (API->UI->GetUIObjectRefCount)( oldHandle ) > 0 )
+            if ( (API->UI->DetachFromUIObject)( ModuleHandle(), oldHandle ) == api_false )
                throw APIFunctionError( "DetachFromUIObject" );
       }
 

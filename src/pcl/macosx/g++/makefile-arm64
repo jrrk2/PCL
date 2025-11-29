@@ -193,6 +193,7 @@ SRC_FILES= \
 ../../UCLowercase.cpp \
 ../../UCUppercase.cpp \
 ../../UIObject.cpp \
+../../UIControlObject.cpp \
 ../../UIScaling.cpp \
 ../../UnixSignalException.cpp \
 ../../Variant.cpp \
@@ -610,15 +611,10 @@ DEP_FILES= \
 
 $(OBJ_DIR)/libPCL-pxi.a: $(OBJ_FILES)
 	ar r $(OBJ_DIR)/libPCL-pxi.a $(OBJ_FILES)
-	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
 
 .PHONY: clean
 clean:
 	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/libPCL-pxi.a
-
-.PHONY: post-build
-post-build:
-	cp $(OBJ_DIR)/libPCL-pxi.a $(PCLLIBDIR64)
 
 ./arm64/Release/%.o: ../../%.cpp
 	clang++ -g -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -I/ -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fno-math-errno -funsafe-math-optimizations -fno-rounding-math -fvisibility=hidden -fvisibility-inlines-hidden -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"

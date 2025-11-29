@@ -1,0 +1,273 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:47.514Z
+# Project id ...... FITS
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+# --------------------------------------------------------------------
+# Additional preprocessor definitions:
+# f2cFortran
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/modules/file-formats/FITS/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/libFITS-pxm.a
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../FITS.cpp \
+../../FITSFormat.cpp \
+../../FITSInstance.cpp \
+../../FITSModule.cpp \
+../../FITSOptionsDialog.cpp \
+../../FITSPreferencesDialog.cpp \
+../../FITSRangeOptionsDialog.cpp \
+../../cfitsio/buffers.c \
+../../cfitsio/cfileio.c \
+../../cfitsio/checksum.c \
+../../cfitsio/drvrfile.c \
+../../cfitsio/drvrmem.c \
+../../cfitsio/drvrnet.c \
+../../cfitsio/drvrsmem.c \
+../../cfitsio/editcol.c \
+../../cfitsio/edithdu.c \
+../../cfitsio/eval_f.c \
+../../cfitsio/eval_l.c \
+../../cfitsio/eval_y.c \
+../../cfitsio/f77_wrap1.c \
+../../cfitsio/f77_wrap2.c \
+../../cfitsio/f77_wrap3.c \
+../../cfitsio/f77_wrap4.c \
+../../cfitsio/fits_hcompress.c \
+../../cfitsio/fits_hdecompress.c \
+../../cfitsio/fitscore.c \
+../../cfitsio/getcol.c \
+../../cfitsio/getcolb.c \
+../../cfitsio/getcold.c \
+../../cfitsio/getcole.c \
+../../cfitsio/getcoli.c \
+../../cfitsio/getcolj.c \
+../../cfitsio/getcolk.c \
+../../cfitsio/getcoll.c \
+../../cfitsio/getcols.c \
+../../cfitsio/getcolsb.c \
+../../cfitsio/getcolui.c \
+../../cfitsio/getcoluj.c \
+../../cfitsio/getcoluk.c \
+../../cfitsio/getkey.c \
+../../cfitsio/group.c \
+../../cfitsio/grparser.c \
+../../cfitsio/histo.c \
+../../cfitsio/imcompress.c \
+../../cfitsio/iraffits.c \
+../../cfitsio/modkey.c \
+../../cfitsio/pliocomp.c \
+../../cfitsio/putcol.c \
+../../cfitsio/putcolb.c \
+../../cfitsio/putcold.c \
+../../cfitsio/putcole.c \
+../../cfitsio/putcoli.c \
+../../cfitsio/putcolj.c \
+../../cfitsio/putcolk.c \
+../../cfitsio/putcoll.c \
+../../cfitsio/putcols.c \
+../../cfitsio/putcolsb.c \
+../../cfitsio/putcolu.c \
+../../cfitsio/putcolui.c \
+../../cfitsio/putcoluj.c \
+../../cfitsio/putcoluk.c \
+../../cfitsio/putkey.c \
+../../cfitsio/quantize.c \
+../../cfitsio/region.c \
+../../cfitsio/ricecomp.c \
+../../cfitsio/scalnull.c \
+../../cfitsio/simplerng.c \
+../../cfitsio/swapproc.c \
+../../cfitsio/wcssub.c \
+../../cfitsio/wcsutil.c \
+../../cfitsio/zcompress.c \
+../../cfitsio/zuncompress.c
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/FITS.o \
+./arm64/Release/FITSFormat.o \
+./arm64/Release/FITSInstance.o \
+./arm64/Release/FITSModule.o \
+./arm64/Release/FITSOptionsDialog.o \
+./arm64/Release/FITSPreferencesDialog.o \
+./arm64/Release/FITSRangeOptionsDialog.o \
+./arm64/Release/cfitsio/buffers.o \
+./arm64/Release/cfitsio/cfileio.o \
+./arm64/Release/cfitsio/checksum.o \
+./arm64/Release/cfitsio/drvrfile.o \
+./arm64/Release/cfitsio/drvrmem.o \
+./arm64/Release/cfitsio/drvrnet.o \
+./arm64/Release/cfitsio/drvrsmem.o \
+./arm64/Release/cfitsio/editcol.o \
+./arm64/Release/cfitsio/edithdu.o \
+./arm64/Release/cfitsio/eval_f.o \
+./arm64/Release/cfitsio/eval_l.o \
+./arm64/Release/cfitsio/eval_y.o \
+./arm64/Release/cfitsio/f77_wrap1.o \
+./arm64/Release/cfitsio/f77_wrap2.o \
+./arm64/Release/cfitsio/f77_wrap3.o \
+./arm64/Release/cfitsio/f77_wrap4.o \
+./arm64/Release/cfitsio/fits_hcompress.o \
+./arm64/Release/cfitsio/fits_hdecompress.o \
+./arm64/Release/cfitsio/fitscore.o \
+./arm64/Release/cfitsio/getcol.o \
+./arm64/Release/cfitsio/getcolb.o \
+./arm64/Release/cfitsio/getcold.o \
+./arm64/Release/cfitsio/getcole.o \
+./arm64/Release/cfitsio/getcoli.o \
+./arm64/Release/cfitsio/getcolj.o \
+./arm64/Release/cfitsio/getcolk.o \
+./arm64/Release/cfitsio/getcoll.o \
+./arm64/Release/cfitsio/getcols.o \
+./arm64/Release/cfitsio/getcolsb.o \
+./arm64/Release/cfitsio/getcolui.o \
+./arm64/Release/cfitsio/getcoluj.o \
+./arm64/Release/cfitsio/getcoluk.o \
+./arm64/Release/cfitsio/getkey.o \
+./arm64/Release/cfitsio/group.o \
+./arm64/Release/cfitsio/grparser.o \
+./arm64/Release/cfitsio/histo.o \
+./arm64/Release/cfitsio/imcompress.o \
+./arm64/Release/cfitsio/iraffits.o \
+./arm64/Release/cfitsio/modkey.o \
+./arm64/Release/cfitsio/pliocomp.o \
+./arm64/Release/cfitsio/putcol.o \
+./arm64/Release/cfitsio/putcolb.o \
+./arm64/Release/cfitsio/putcold.o \
+./arm64/Release/cfitsio/putcole.o \
+./arm64/Release/cfitsio/putcoli.o \
+./arm64/Release/cfitsio/putcolj.o \
+./arm64/Release/cfitsio/putcolk.o \
+./arm64/Release/cfitsio/putcoll.o \
+./arm64/Release/cfitsio/putcols.o \
+./arm64/Release/cfitsio/putcolsb.o \
+./arm64/Release/cfitsio/putcolu.o \
+./arm64/Release/cfitsio/putcolui.o \
+./arm64/Release/cfitsio/putcoluj.o \
+./arm64/Release/cfitsio/putcoluk.o \
+./arm64/Release/cfitsio/putkey.o \
+./arm64/Release/cfitsio/quantize.o \
+./arm64/Release/cfitsio/region.o \
+./arm64/Release/cfitsio/ricecomp.o \
+./arm64/Release/cfitsio/scalnull.o \
+./arm64/Release/cfitsio/simplerng.o \
+./arm64/Release/cfitsio/swapproc.o \
+./arm64/Release/cfitsio/wcssub.o \
+./arm64/Release/cfitsio/wcsutil.o \
+./arm64/Release/cfitsio/zcompress.o \
+./arm64/Release/cfitsio/zuncompress.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/FITS.d \
+./arm64/Release/FITSFormat.d \
+./arm64/Release/FITSInstance.d \
+./arm64/Release/FITSModule.d \
+./arm64/Release/FITSOptionsDialog.d \
+./arm64/Release/FITSPreferencesDialog.d \
+./arm64/Release/FITSRangeOptionsDialog.d \
+./arm64/Release/cfitsio/buffers.d \
+./arm64/Release/cfitsio/cfileio.d \
+./arm64/Release/cfitsio/checksum.d \
+./arm64/Release/cfitsio/drvrfile.d \
+./arm64/Release/cfitsio/drvrmem.d \
+./arm64/Release/cfitsio/drvrnet.d \
+./arm64/Release/cfitsio/drvrsmem.d \
+./arm64/Release/cfitsio/editcol.d \
+./arm64/Release/cfitsio/edithdu.d \
+./arm64/Release/cfitsio/eval_f.d \
+./arm64/Release/cfitsio/eval_l.d \
+./arm64/Release/cfitsio/eval_y.d \
+./arm64/Release/cfitsio/f77_wrap1.d \
+./arm64/Release/cfitsio/f77_wrap2.d \
+./arm64/Release/cfitsio/f77_wrap3.d \
+./arm64/Release/cfitsio/f77_wrap4.d \
+./arm64/Release/cfitsio/fits_hcompress.d \
+./arm64/Release/cfitsio/fits_hdecompress.d \
+./arm64/Release/cfitsio/fitscore.d \
+./arm64/Release/cfitsio/getcol.d \
+./arm64/Release/cfitsio/getcolb.d \
+./arm64/Release/cfitsio/getcold.d \
+./arm64/Release/cfitsio/getcole.d \
+./arm64/Release/cfitsio/getcoli.d \
+./arm64/Release/cfitsio/getcolj.d \
+./arm64/Release/cfitsio/getcolk.d \
+./arm64/Release/cfitsio/getcoll.d \
+./arm64/Release/cfitsio/getcols.d \
+./arm64/Release/cfitsio/getcolsb.d \
+./arm64/Release/cfitsio/getcolui.d \
+./arm64/Release/cfitsio/getcoluj.d \
+./arm64/Release/cfitsio/getcoluk.d \
+./arm64/Release/cfitsio/getkey.d \
+./arm64/Release/cfitsio/group.d \
+./arm64/Release/cfitsio/grparser.d \
+./arm64/Release/cfitsio/histo.d \
+./arm64/Release/cfitsio/imcompress.d \
+./arm64/Release/cfitsio/iraffits.d \
+./arm64/Release/cfitsio/modkey.d \
+./arm64/Release/cfitsio/pliocomp.d \
+./arm64/Release/cfitsio/putcol.d \
+./arm64/Release/cfitsio/putcolb.d \
+./arm64/Release/cfitsio/putcold.d \
+./arm64/Release/cfitsio/putcole.d \
+./arm64/Release/cfitsio/putcoli.d \
+./arm64/Release/cfitsio/putcolj.d \
+./arm64/Release/cfitsio/putcolk.d \
+./arm64/Release/cfitsio/putcoll.d \
+./arm64/Release/cfitsio/putcols.d \
+./arm64/Release/cfitsio/putcolsb.d \
+./arm64/Release/cfitsio/putcolu.d \
+./arm64/Release/cfitsio/putcolui.d \
+./arm64/Release/cfitsio/putcoluj.d \
+./arm64/Release/cfitsio/putcoluk.d \
+./arm64/Release/cfitsio/putkey.d \
+./arm64/Release/cfitsio/quantize.d \
+./arm64/Release/cfitsio/region.d \
+./arm64/Release/cfitsio/ricecomp.d \
+./arm64/Release/cfitsio/scalnull.d \
+./arm64/Release/cfitsio/simplerng.d \
+./arm64/Release/cfitsio/swapproc.d \
+./arm64/Release/cfitsio/wcssub.d \
+./arm64/Release/cfitsio/wcsutil.d \
+./arm64/Release/cfitsio/zcompress.d \
+./arm64/Release/cfitsio/zuncompress.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/libFITS-pxm.a: $(OBJ_FILES)
+	ar rc $@ $(OBJ_FILES)
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/libFITS-pxm.a
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -D"f2cFortran" -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -msse4.2 -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -fvisibility=hidden -fvisibility-inlines-hidden -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+./arm64/Release/cfitsio/%.o: ../../cfitsio/%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -D"f2cFortran" -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -msse4.2 -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -fvisibility=hidden -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

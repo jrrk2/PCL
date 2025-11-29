@@ -29,7 +29,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 Pen::Pen( RGBA color, float width, Pen::style style, Pen::cap cap, Pen::join join )
-   : UIObject( (*API->Pen->CreatePen)( ModuleHandle(), color, width, style, cap, join ) )
+   : UIObject( (API->Pen->CreatePen)( ModuleHandle(), color, width, style, cap, join ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreatePen" );
@@ -52,7 +52,7 @@ Pen& Pen::Null()
 float Pen::Width() const
 {
    float width;
-   if ( (*API->Pen->GetPenWidth)( handle, &width ) == api_false )
+   if ( (API->Pen->GetPenWidth)( handle, &width ) == api_false )
       throw APIFunctionError( "GetPenWidth" );
    return width;
 }
@@ -62,14 +62,14 @@ float Pen::Width() const
 void Pen::SetWidth( float width )
 {
    EnsureUnique();
-   (*API->Pen->SetPenWidth)( handle, width );
+   (API->Pen->SetPenWidth)( handle, width );
 }
 
 // ----------------------------------------------------------------------------
 
 RGBA Pen::Color() const
 {
-   return (*API->Pen->GetPenColor)( handle );
+   return (API->Pen->GetPenColor)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -77,14 +77,14 @@ RGBA Pen::Color() const
 void Pen::SetColor( RGBA color )
 {
    EnsureUnique();
-   (*API->Pen->SetPenColor)( handle, color );
+   (API->Pen->SetPenColor)( handle, color );
 }
 
 // ----------------------------------------------------------------------------
 
 Pen::style Pen::Style() const
 {
-   return style( (*API->Pen->GetPenStyle)( handle ) );
+   return style( (API->Pen->GetPenStyle)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -92,14 +92,14 @@ Pen::style Pen::Style() const
 void Pen::SetStyle( Pen::style style )
 {
    EnsureUnique();
-   (*API->Pen->SetPenStyle)( handle, style );
+   (API->Pen->SetPenStyle)( handle, style );
 }
 
 // ----------------------------------------------------------------------------
 
 Pen::cap Pen::Cap() const
 {
-   return cap( (*API->Pen->GetPenCap)( handle ) );
+   return cap( (API->Pen->GetPenCap)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -107,14 +107,14 @@ Pen::cap Pen::Cap() const
 void Pen::SetCap( Pen::cap cap )
 {
    EnsureUnique();
-   (*API->Pen->SetPenCap)( handle, cap );
+   (API->Pen->SetPenCap)( handle, cap );
 }
 
 // ----------------------------------------------------------------------------
 
 Pen::join Pen::Join() const
 {
-   return join( (*API->Pen->GetPenJoin)( handle ) );
+   return join( (API->Pen->GetPenJoin)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -122,14 +122,14 @@ Pen::join Pen::Join() const
 void Pen::SetJoin( Pen::join join )
 {
    EnsureUnique();
-   (*API->Pen->SetPenJoin)( handle, join );
+   (API->Pen->SetPenJoin)( handle, join );
 }
 
 // ----------------------------------------------------------------------------
 
 pcl::Brush Pen::Brush() const
 {
-   return pcl::Brush( (*API->Pen->GetPenBrush)( handle ) );
+   return pcl::Brush( (API->Pen->GetPenBrush)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -137,14 +137,14 @@ pcl::Brush Pen::Brush() const
 void Pen::SetBrush( const pcl::Brush& brush )
 {
    EnsureUnique();
-   (*API->Pen->SetPenBrush)( handle, brush.handle );
+   (API->Pen->SetPenBrush)( handle, brush.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void* Pen::CloneHandle() const
 {
-   return (*API->Pen->ClonePen)( ModuleHandle(), handle );
+   return (API->Pen->ClonePen)( ModuleHandle(), handle );
 }
 
 // ----------------------------------------------------------------------------

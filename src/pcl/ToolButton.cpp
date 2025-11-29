@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 ToolButton::ToolButton( const String& text, const pcl::Bitmap& icon, bool checkable, Control& parent )
-   : Button( (*API->Button->CreateToolButton)( ModuleHandle(), this, text.c_str(), icon.handle, checkable, parent.handle, 0/*flags*/ ) )
+   : Button( (API->Button->CreateToolButton)( ModuleHandle(), this, text.c_str(), icon.handle, checkable, parent.handle, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateToolButton" );
@@ -37,14 +37,14 @@ ToolButton::ToolButton( const String& text, const pcl::Bitmap& icon, bool checka
 
 bool ToolButton::IsCheckable() const
 {
-   return (*API->Button->GetToolButtonCheckable)( handle ) != api_false;
+   return (API->Button->GetToolButtonCheckable)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ToolButton::SetCheckable( bool checkable )
 {
-   (*API->Button->SetToolButtonCheckable)( handle, checkable );
+   (API->Button->SetToolButtonCheckable)( handle, checkable );
 }
 
 // ----------------------------------------------------------------------------

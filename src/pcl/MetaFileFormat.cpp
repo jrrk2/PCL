@@ -535,7 +535,7 @@ public:
 
          uint32 bitsPerSample;
          api_bool isFloat;
-         if ( !(*API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
+         if ( !(API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
             throw 0;
 
          if ( isFloat )
@@ -1142,7 +1142,7 @@ public:
       {
          uint32 bitsPerSample;
          api_bool isFloat;
-         if ( !(*API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
+         if ( !(API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
             throw 0;
 
          if ( isFloat )
@@ -1453,7 +1453,7 @@ public:
       {
          uint32 bitsPerSample;
          api_bool isFloat;
-         if ( !(*API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
+         if ( !(API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
             throw 0;
 
          UInt8Image thumbnail;
@@ -1512,7 +1512,7 @@ public:
       {
          uint32 bitsPerSample;
          api_bool isFloat;
-         if ( !(*API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
+         if ( !(API->SharedImage->GetImageFormat)( hImage, &bitsPerSample, &isFloat ) )
             throw 0;
 
          if ( isFloat )
@@ -1653,7 +1653,7 @@ public:
 
 void MetaFileFormat::PerformAPIDefinitions() const
 {
-   (*API->FileFormatDefinition->EnterFileFormatDefinitionContext)();
+   (API->FileFormatDefinition->EnterFileFormatDefinitionContext)();
 
    {
       Array<const char16_type*> cext;
@@ -1670,54 +1670,54 @@ void MetaFileFormat::PerformAPIDefinitions() const
 
       IsoString name = Name();
 
-      (*API->FileFormatDefinition->BeginFileFormatDefinition)( this, name.c_str(), cext.Begin(), cmime.Begin() );
+      (API->FileFormatDefinition->BeginFileFormatDefinition)( this, name.c_str(), cext.Begin(), cmime.Begin() );
    }
 
-   (*API->FileFormatDefinition->SetFileFormatVersion)( Version() );
+   (API->FileFormatDefinition->SetFileFormatVersion)( Version() );
 
    {
       String desc = Description();
       if ( !desc.IsEmpty() )
-         (*API->FileFormatDefinition->SetFileFormatDescription)( desc.c_str() );
+         (API->FileFormatDefinition->SetFileFormatDescription)( desc.c_str() );
    }
 
    {
       String impl = Implementation();
       if ( !impl.IsEmpty() )
-         (*API->FileFormatDefinition->SetFileFormatImplementation)( impl.c_str() );
+         (API->FileFormatDefinition->SetFileFormatImplementation)( impl.c_str() );
    }
 
    {
       IsoString svg = IconImageSVG();
       if ( !svg.IsEmpty() )
-         (*API->FileFormatDefinition->SetFileFormatIconSVG)( svg.c_str() );
+         (API->FileFormatDefinition->SetFileFormatIconSVG)( svg.c_str() );
       else
       {
          String filePath = IconImageSVGFile();
          if ( !filePath.IsEmpty() )
-            (*API->FileFormatDefinition->SetFileFormatIconSVGFile)( filePath.c_str() );
+            (API->FileFormatDefinition->SetFileFormatIconSVGFile)( filePath.c_str() );
          else
          {
             // ### DEPRECATED - File format icon images in raster bitmap formats.
 
             const char** xpm = IconImageXPM();
             if ( xpm != nullptr )
-               (*API->FileFormatDefinition->SetFileFormatIconImage)( xpm );
+               (API->FileFormatDefinition->SetFileFormatIconImage)( xpm );
             else
             {
                String path = IconImageFile();
                if ( !path.IsEmpty() )
-                  (*API->FileFormatDefinition->SetFileFormatIconImageFile)( path.c_str() );
+                  (API->FileFormatDefinition->SetFileFormatIconImageFile)( path.c_str() );
             }
 
             xpm = SmallIconImageXPM();
             if ( xpm != nullptr )
-               (*API->FileFormatDefinition->SetFileFormatIconSmallImage)( xpm );
+               (API->FileFormatDefinition->SetFileFormatIconSmallImage)( xpm );
             else
             {
                String path = SmallIconImageFile();
                if ( !path.IsEmpty() )
-                  (*API->FileFormatDefinition->SetFileFormatIconSmallImageFile)( path.c_str() );
+                  (API->FileFormatDefinition->SetFileFormatIconSmallImageFile)( path.c_str() );
             }
          }
       }
@@ -1757,95 +1757,95 @@ void MetaFileFormat::PerformAPIDefinitions() const
    caps.__r__ = 0;
    caps.deprecated = IsDeprecated();
 
-   (*API->FileFormatDefinition->SetFileFormatCaps)( &caps );
+   (API->FileFormatDefinition->SetFileFormatCaps)( &caps );
 
-   (*API->FileFormatDefinition->SetFileFormatCreationRoutine)( FileFormatDispatcher::CreateFileFormat );
-   (*API->FileFormatDefinition->SetFileFormatDestructionRoutine)( FileFormatDispatcher::DestroyFileFormat );
-   (*API->FileFormatDefinition->SetFileFormatValidateFormatSpecificDataRoutine)( FileFormatDispatcher::ValidateFormatSpecificData );
-   (*API->FileFormatDefinition->SetFileFormatDisposeFormatSpecificDataRoutine)( FileFormatDispatcher::DisposeFormatSpecificData );
-   (*API->FileFormatDefinition->SetFileFormatEditPreferencesRoutine)( FileFormatDispatcher::EditFileFormatPreferences );
-   (*API->FileFormatDefinition->SetFileFormatOpenRoutine)( FileFormatDispatcher::Open );
-   (*API->FileFormatDefinition->SetFileFormatGetImageCountRoutine)( FileFormatDispatcher::GetImageCount );
-   (*API->FileFormatDefinition->SetFileFormatGetImageIdRoutine)( FileFormatDispatcher::GetImageId );
-   (*API->FileFormatDefinition->SetFileFormatGetImageDescriptionRoutine)( FileFormatDispatcher::GetImageDescription );
-   (*API->FileFormatDefinition->SetFileFormatCloseRoutine)( FileFormatDispatcher::Close );
-   (*API->FileFormatDefinition->SetFileFormatIsOpenRoutine)( FileFormatDispatcher::IsOpen );
-   (*API->FileFormatDefinition->SetFileFormatGetFilePathRoutine)( FileFormatDispatcher::FilePath );
-   (*API->FileFormatDefinition->SetFileFormatSetSelectedImageIndexRoutine)( FileFormatDispatcher::SelectImage );
-   (*API->FileFormatDefinition->SetFileFormatGetSelectedImageIndexRoutine)( FileFormatDispatcher::SelectedImageIndex );
-   (*API->FileFormatDefinition->SetFileFormatSetFormatSpecificDataRoutine)( FileFormatDispatcher::SetFormatSpecificData );
-   (*API->FileFormatDefinition->SetFileFormatGetFormatSpecificDataRoutine)( FileFormatDispatcher::GetFormatSpecificData );
-   (*API->FileFormatDefinition->SetFileFormatGetImageFormatInfoRoutine)( FileFormatDispatcher::GetImageFormatInfo );
-   (*API->FileFormatDefinition->SetFileFormatBeginKeywordExtractionRoutine)( FileFormatDispatcher::BeginKeywordExtraction );
-   (*API->FileFormatDefinition->SetFileFormatGetKeywordCountRoutine)( FileFormatDispatcher::GetKeywordCount );
-   (*API->FileFormatDefinition->SetFileFormatGetNextKeywordRoutine)( FileFormatDispatcher::GetNextKeyword );
-   (*API->FileFormatDefinition->SetFileFormatEndKeywordExtractionRoutine)( FileFormatDispatcher::EndKeywordExtraction );
-   (*API->FileFormatDefinition->SetFileFormatBeginICCProfileExtractionRoutine)( FileFormatDispatcher::BeginICCProfileExtraction );
-   (*API->FileFormatDefinition->SetFileFormatGetICCProfileRoutine)( FileFormatDispatcher::GetICCProfile );
-   (*API->FileFormatDefinition->SetFileFormatEndICCProfileExtractionRoutine)( FileFormatDispatcher::EndICCProfileExtraction );
-   (*API->FileFormatDefinition->SetFileFormatBeginThumbnailExtractionRoutine)( FileFormatDispatcher::BeginThumbnailExtraction );
-   (*API->FileFormatDefinition->SetFileFormatGetThumbnailRoutine)( FileFormatDispatcher::GetThumbnail );
-   (*API->FileFormatDefinition->SetFileFormatEndThumbnailExtractionRoutine)( FileFormatDispatcher::EndThumbnailExtraction );
-   (*API->FileFormatDefinition->SetFileFormatEnumeratePropertiesRoutine)( FileFormatDispatcher::EnumerateProperties );
-   (*API->FileFormatDefinition->SetFileFormatBeginPropertyExtractionRoutine)( FileFormatDispatcher::BeginPropertyExtraction );
-   (*API->FileFormatDefinition->SetFileFormatGetPropertyRoutine)( FileFormatDispatcher::GetProperty );
-   (*API->FileFormatDefinition->SetFileFormatEndPropertyExtractionRoutine)( FileFormatDispatcher::EndPropertyExtraction );
-   (*API->FileFormatDefinition->SetFileFormatBeginPropertyEmbeddingRoutine)( FileFormatDispatcher::BeginPropertyEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatSetPropertyRoutine)( FileFormatDispatcher::SetProperty );
-   (*API->FileFormatDefinition->SetFileFormatEndPropertyEmbeddingRoutine)( FileFormatDispatcher::EndPropertyEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatEnumerateImagePropertiesRoutine)( FileFormatDispatcher::EnumerateImageProperties );
-   (*API->FileFormatDefinition->SetFileFormatBeginImagePropertyExtractionRoutine)( FileFormatDispatcher::BeginImagePropertyExtraction );
-   (*API->FileFormatDefinition->SetFileFormatGetImagePropertyRoutine)( FileFormatDispatcher::GetImageProperty );
-   (*API->FileFormatDefinition->SetFileFormatEndImagePropertyExtractionRoutine)( FileFormatDispatcher::EndImagePropertyExtraction );
-   (*API->FileFormatDefinition->SetFileFormatBeginImagePropertyEmbeddingRoutine)( FileFormatDispatcher::BeginImagePropertyEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatSetImagePropertyRoutine)( FileFormatDispatcher::SetImageProperty );
-   (*API->FileFormatDefinition->SetFileFormatEndImagePropertyEmbeddingRoutine)( FileFormatDispatcher::EndImagePropertyEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatBeginRGBWSExtractionRoutine)( FileFormatDispatcher::BeginRGBWSExtraction );
-   (*API->FileFormatDefinition->SetFileFormatGetImageRGBWSRoutine)( FileFormatDispatcher::GetImageRGBWS );
-   (*API->FileFormatDefinition->SetFileFormatEndRGBWSExtractionRoutine)( FileFormatDispatcher::EndRGBWSExtraction );
-   (*API->FileFormatDefinition->SetFileFormatBeginRGBWSEmbeddingRoutine)( FileFormatDispatcher::BeginRGBWSEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatSetImageRGBWSRoutine)( FileFormatDispatcher::SetImageRGBWS );
-   (*API->FileFormatDefinition->SetFileFormatEndRGBWSEmbeddingRoutine)( FileFormatDispatcher::EndRGBWSEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatBeginDisplayFunctionExtractionRoutine)( FileFormatDispatcher::BeginDisplayFunctionExtraction );
-   (*API->FileFormatDefinition->SetFileFormatGetImageDisplayFunctionRoutine)( FileFormatDispatcher::GetImageDisplayFunction );
-   (*API->FileFormatDefinition->SetFileFormatEndDisplayFunctionExtractionRoutine)( FileFormatDispatcher::EndDisplayFunctionExtraction );
-   (*API->FileFormatDefinition->SetFileFormatBeginDisplayFunctionEmbeddingRoutine)( FileFormatDispatcher::BeginDisplayFunctionEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatSetImageDisplayFunctionRoutine)( FileFormatDispatcher::SetImageDisplayFunction );
-   (*API->FileFormatDefinition->SetFileFormatEndDisplayFunctionEmbeddingRoutine)( FileFormatDispatcher::EndDisplayFunctionEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatBeginColorFilterArrayExtractionRoutine)( FileFormatDispatcher::BeginColorFilterArrayExtraction );
-   (*API->FileFormatDefinition->SetFileFormatGetImageColorFilterArrayRoutine)( FileFormatDispatcher::GetImageColorFilterArray );
-   (*API->FileFormatDefinition->SetFileFormatEndColorFilterArrayExtractionRoutine)( FileFormatDispatcher::EndColorFilterArrayExtraction );
-   (*API->FileFormatDefinition->SetFileFormatBeginColorFilterArrayEmbeddingRoutine)( FileFormatDispatcher::BeginColorFilterArrayEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatSetImageColorFilterArrayRoutine)( FileFormatDispatcher::SetImageColorFilterArray );
-   (*API->FileFormatDefinition->SetFileFormatEndColorFilterArrayEmbeddingRoutine)( FileFormatDispatcher::EndColorFilterArrayEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatReadImageRoutine)( FileFormatDispatcher::ReadImage );
-   (*API->FileFormatDefinition->SetFileFormatAllowIncrementalReadRoutine)( FileFormatDispatcher::AllowIncrementalRead );
-   (*API->FileFormatDefinition->SetFileFormatReadSamplesRoutine)( FileFormatDispatcher::ReadSamples );
-   (*API->FileFormatDefinition->SetFileFormatQueryOptionsRoutine)( FileFormatDispatcher::QueryImageFileOptions );
-   (*API->FileFormatDefinition->SetFileFormatCreateRoutine)( FileFormatDispatcher::Create );
-   (*API->FileFormatDefinition->SetFileFormatSetImageIdRoutine)( FileFormatDispatcher::SetImageId );
-   (*API->FileFormatDefinition->SetFileFormatSetImageOptionsRoutine)( FileFormatDispatcher::SetImageOptions );
-   (*API->FileFormatDefinition->SetFileFormatCreateImageRoutine)( FileFormatDispatcher::CreateImage );
-   (*API->FileFormatDefinition->SetFileFormatCloseImageRoutine)( FileFormatDispatcher::CloseImage );
-   (*API->FileFormatDefinition->SetFileFormatBeginKeywordEmbeddingRoutine)( FileFormatDispatcher::BeginKeywordEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatAddKeywordRoutine)( FileFormatDispatcher::AddKeyword );
-   (*API->FileFormatDefinition->SetFileFormatEndKeywordEmbeddingRoutine)( FileFormatDispatcher::EndKeywordEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatBeginICCProfileEmbeddingRoutine)( FileFormatDispatcher::BeginICCProfileEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatSetICCProfileRoutine)( FileFormatDispatcher::SetICCProfile );
-   (*API->FileFormatDefinition->SetFileFormatEndICCProfileEmbeddingRoutine)( FileFormatDispatcher::EndICCProfileEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatBeginThumbnailEmbeddingRoutine)( FileFormatDispatcher::BeginThumbnailEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatSetThumbnailRoutine)( FileFormatDispatcher::SetThumbnail );
-   (*API->FileFormatDefinition->SetFileFormatEndThumbnailEmbeddingRoutine)( FileFormatDispatcher::EndThumbnailEmbedding );
-   (*API->FileFormatDefinition->SetFileFormatWriteImageRoutine)( FileFormatDispatcher::WriteImage );
-   (*API->FileFormatDefinition->SetFileFormatAllowIncrementalWriteRoutine)( FileFormatDispatcher::AllowIncrementalWrite );
-   (*API->FileFormatDefinition->SetFileFormatWriteSamplesRoutine)( FileFormatDispatcher::WriteSamples );
-   (*API->FileFormatDefinition->SetFileFormatQueryInexactReadRoutine)( FileFormatDispatcher::QueryInexactRead );
-   (*API->FileFormatDefinition->SetFileFormatQueryLossyWriteRoutine)( FileFormatDispatcher::QueryLossyWrite );
-   (*API->FileFormatDefinition->SetFileFormatQueryFormatStatusRoutine)( FileFormatDispatcher::QueryFormatStatus );
+   (API->FileFormatDefinition->SetFileFormatCreationRoutine)( FileFormatDispatcher::CreateFileFormat );
+   (API->FileFormatDefinition->SetFileFormatDestructionRoutine)( FileFormatDispatcher::DestroyFileFormat );
+   (API->FileFormatDefinition->SetFileFormatValidateFormatSpecificDataRoutine)( FileFormatDispatcher::ValidateFormatSpecificData );
+   (API->FileFormatDefinition->SetFileFormatDisposeFormatSpecificDataRoutine)( FileFormatDispatcher::DisposeFormatSpecificData );
+   (API->FileFormatDefinition->SetFileFormatEditPreferencesRoutine)( FileFormatDispatcher::EditFileFormatPreferences );
+   (API->FileFormatDefinition->SetFileFormatOpenRoutine)( FileFormatDispatcher::Open );
+   (API->FileFormatDefinition->SetFileFormatGetImageCountRoutine)( FileFormatDispatcher::GetImageCount );
+   (API->FileFormatDefinition->SetFileFormatGetImageIdRoutine)( FileFormatDispatcher::GetImageId );
+   (API->FileFormatDefinition->SetFileFormatGetImageDescriptionRoutine)( FileFormatDispatcher::GetImageDescription );
+   (API->FileFormatDefinition->SetFileFormatCloseRoutine)( FileFormatDispatcher::Close );
+   (API->FileFormatDefinition->SetFileFormatIsOpenRoutine)( FileFormatDispatcher::IsOpen );
+   (API->FileFormatDefinition->SetFileFormatGetFilePathRoutine)( FileFormatDispatcher::FilePath );
+   (API->FileFormatDefinition->SetFileFormatSetSelectedImageIndexRoutine)( FileFormatDispatcher::SelectImage );
+   (API->FileFormatDefinition->SetFileFormatGetSelectedImageIndexRoutine)( FileFormatDispatcher::SelectedImageIndex );
+   (API->FileFormatDefinition->SetFileFormatSetFormatSpecificDataRoutine)( FileFormatDispatcher::SetFormatSpecificData );
+   (API->FileFormatDefinition->SetFileFormatGetFormatSpecificDataRoutine)( FileFormatDispatcher::GetFormatSpecificData );
+   (API->FileFormatDefinition->SetFileFormatGetImageFormatInfoRoutine)( FileFormatDispatcher::GetImageFormatInfo );
+   (API->FileFormatDefinition->SetFileFormatBeginKeywordExtractionRoutine)( FileFormatDispatcher::BeginKeywordExtraction );
+   (API->FileFormatDefinition->SetFileFormatGetKeywordCountRoutine)( FileFormatDispatcher::GetKeywordCount );
+   (API->FileFormatDefinition->SetFileFormatGetNextKeywordRoutine)( FileFormatDispatcher::GetNextKeyword );
+   (API->FileFormatDefinition->SetFileFormatEndKeywordExtractionRoutine)( FileFormatDispatcher::EndKeywordExtraction );
+   (API->FileFormatDefinition->SetFileFormatBeginICCProfileExtractionRoutine)( FileFormatDispatcher::BeginICCProfileExtraction );
+   (API->FileFormatDefinition->SetFileFormatGetICCProfileRoutine)( FileFormatDispatcher::GetICCProfile );
+   (API->FileFormatDefinition->SetFileFormatEndICCProfileExtractionRoutine)( FileFormatDispatcher::EndICCProfileExtraction );
+   (API->FileFormatDefinition->SetFileFormatBeginThumbnailExtractionRoutine)( FileFormatDispatcher::BeginThumbnailExtraction );
+   (API->FileFormatDefinition->SetFileFormatGetThumbnailRoutine)( FileFormatDispatcher::GetThumbnail );
+   (API->FileFormatDefinition->SetFileFormatEndThumbnailExtractionRoutine)( FileFormatDispatcher::EndThumbnailExtraction );
+   (API->FileFormatDefinition->SetFileFormatEnumeratePropertiesRoutine)( FileFormatDispatcher::EnumerateProperties );
+   (API->FileFormatDefinition->SetFileFormatBeginPropertyExtractionRoutine)( FileFormatDispatcher::BeginPropertyExtraction );
+   (API->FileFormatDefinition->SetFileFormatGetPropertyRoutine)( FileFormatDispatcher::GetProperty );
+   (API->FileFormatDefinition->SetFileFormatEndPropertyExtractionRoutine)( FileFormatDispatcher::EndPropertyExtraction );
+   (API->FileFormatDefinition->SetFileFormatBeginPropertyEmbeddingRoutine)( FileFormatDispatcher::BeginPropertyEmbedding );
+   (API->FileFormatDefinition->SetFileFormatSetPropertyRoutine)( FileFormatDispatcher::SetProperty );
+   (API->FileFormatDefinition->SetFileFormatEndPropertyEmbeddingRoutine)( FileFormatDispatcher::EndPropertyEmbedding );
+   (API->FileFormatDefinition->SetFileFormatEnumerateImagePropertiesRoutine)( FileFormatDispatcher::EnumerateImageProperties );
+   (API->FileFormatDefinition->SetFileFormatBeginImagePropertyExtractionRoutine)( FileFormatDispatcher::BeginImagePropertyExtraction );
+   (API->FileFormatDefinition->SetFileFormatGetImagePropertyRoutine)( FileFormatDispatcher::GetImageProperty );
+   (API->FileFormatDefinition->SetFileFormatEndImagePropertyExtractionRoutine)( FileFormatDispatcher::EndImagePropertyExtraction );
+   (API->FileFormatDefinition->SetFileFormatBeginImagePropertyEmbeddingRoutine)( FileFormatDispatcher::BeginImagePropertyEmbedding );
+   (API->FileFormatDefinition->SetFileFormatSetImagePropertyRoutine)( FileFormatDispatcher::SetImageProperty );
+   (API->FileFormatDefinition->SetFileFormatEndImagePropertyEmbeddingRoutine)( FileFormatDispatcher::EndImagePropertyEmbedding );
+   (API->FileFormatDefinition->SetFileFormatBeginRGBWSExtractionRoutine)( FileFormatDispatcher::BeginRGBWSExtraction );
+   (API->FileFormatDefinition->SetFileFormatGetImageRGBWSRoutine)( FileFormatDispatcher::GetImageRGBWS );
+   (API->FileFormatDefinition->SetFileFormatEndRGBWSExtractionRoutine)( FileFormatDispatcher::EndRGBWSExtraction );
+   (API->FileFormatDefinition->SetFileFormatBeginRGBWSEmbeddingRoutine)( FileFormatDispatcher::BeginRGBWSEmbedding );
+   (API->FileFormatDefinition->SetFileFormatSetImageRGBWSRoutine)( FileFormatDispatcher::SetImageRGBWS );
+   (API->FileFormatDefinition->SetFileFormatEndRGBWSEmbeddingRoutine)( FileFormatDispatcher::EndRGBWSEmbedding );
+   (API->FileFormatDefinition->SetFileFormatBeginDisplayFunctionExtractionRoutine)( FileFormatDispatcher::BeginDisplayFunctionExtraction );
+   (API->FileFormatDefinition->SetFileFormatGetImageDisplayFunctionRoutine)( FileFormatDispatcher::GetImageDisplayFunction );
+   (API->FileFormatDefinition->SetFileFormatEndDisplayFunctionExtractionRoutine)( FileFormatDispatcher::EndDisplayFunctionExtraction );
+   (API->FileFormatDefinition->SetFileFormatBeginDisplayFunctionEmbeddingRoutine)( FileFormatDispatcher::BeginDisplayFunctionEmbedding );
+   (API->FileFormatDefinition->SetFileFormatSetImageDisplayFunctionRoutine)( FileFormatDispatcher::SetImageDisplayFunction );
+   (API->FileFormatDefinition->SetFileFormatEndDisplayFunctionEmbeddingRoutine)( FileFormatDispatcher::EndDisplayFunctionEmbedding );
+   (API->FileFormatDefinition->SetFileFormatBeginColorFilterArrayExtractionRoutine)( FileFormatDispatcher::BeginColorFilterArrayExtraction );
+   (API->FileFormatDefinition->SetFileFormatGetImageColorFilterArrayRoutine)( FileFormatDispatcher::GetImageColorFilterArray );
+   (API->FileFormatDefinition->SetFileFormatEndColorFilterArrayExtractionRoutine)( FileFormatDispatcher::EndColorFilterArrayExtraction );
+   (API->FileFormatDefinition->SetFileFormatBeginColorFilterArrayEmbeddingRoutine)( FileFormatDispatcher::BeginColorFilterArrayEmbedding );
+   (API->FileFormatDefinition->SetFileFormatSetImageColorFilterArrayRoutine)( FileFormatDispatcher::SetImageColorFilterArray );
+   (API->FileFormatDefinition->SetFileFormatEndColorFilterArrayEmbeddingRoutine)( FileFormatDispatcher::EndColorFilterArrayEmbedding );
+   (API->FileFormatDefinition->SetFileFormatReadImageRoutine)( FileFormatDispatcher::ReadImage );
+   (API->FileFormatDefinition->SetFileFormatAllowIncrementalReadRoutine)( FileFormatDispatcher::AllowIncrementalRead );
+   (API->FileFormatDefinition->SetFileFormatReadSamplesRoutine)( FileFormatDispatcher::ReadSamples );
+   (API->FileFormatDefinition->SetFileFormatQueryOptionsRoutine)( FileFormatDispatcher::QueryImageFileOptions );
+   (API->FileFormatDefinition->SetFileFormatCreateRoutine)( FileFormatDispatcher::Create );
+   (API->FileFormatDefinition->SetFileFormatSetImageIdRoutine)( FileFormatDispatcher::SetImageId );
+   (API->FileFormatDefinition->SetFileFormatSetImageOptionsRoutine)( FileFormatDispatcher::SetImageOptions );
+   (API->FileFormatDefinition->SetFileFormatCreateImageRoutine)( FileFormatDispatcher::CreateImage );
+   (API->FileFormatDefinition->SetFileFormatCloseImageRoutine)( FileFormatDispatcher::CloseImage );
+   (API->FileFormatDefinition->SetFileFormatBeginKeywordEmbeddingRoutine)( FileFormatDispatcher::BeginKeywordEmbedding );
+   (API->FileFormatDefinition->SetFileFormatAddKeywordRoutine)( FileFormatDispatcher::AddKeyword );
+   (API->FileFormatDefinition->SetFileFormatEndKeywordEmbeddingRoutine)( FileFormatDispatcher::EndKeywordEmbedding );
+   (API->FileFormatDefinition->SetFileFormatBeginICCProfileEmbeddingRoutine)( FileFormatDispatcher::BeginICCProfileEmbedding );
+   (API->FileFormatDefinition->SetFileFormatSetICCProfileRoutine)( FileFormatDispatcher::SetICCProfile );
+   (API->FileFormatDefinition->SetFileFormatEndICCProfileEmbeddingRoutine)( FileFormatDispatcher::EndICCProfileEmbedding );
+   (API->FileFormatDefinition->SetFileFormatBeginThumbnailEmbeddingRoutine)( FileFormatDispatcher::BeginThumbnailEmbedding );
+   (API->FileFormatDefinition->SetFileFormatSetThumbnailRoutine)( FileFormatDispatcher::SetThumbnail );
+   (API->FileFormatDefinition->SetFileFormatEndThumbnailEmbeddingRoutine)( FileFormatDispatcher::EndThumbnailEmbedding );
+   (API->FileFormatDefinition->SetFileFormatWriteImageRoutine)( FileFormatDispatcher::WriteImage );
+   (API->FileFormatDefinition->SetFileFormatAllowIncrementalWriteRoutine)( FileFormatDispatcher::AllowIncrementalWrite );
+   (API->FileFormatDefinition->SetFileFormatWriteSamplesRoutine)( FileFormatDispatcher::WriteSamples );
+   (API->FileFormatDefinition->SetFileFormatQueryInexactReadRoutine)( FileFormatDispatcher::QueryInexactRead );
+   (API->FileFormatDefinition->SetFileFormatQueryLossyWriteRoutine)( FileFormatDispatcher::QueryLossyWrite );
+   (API->FileFormatDefinition->SetFileFormatQueryFormatStatusRoutine)( FileFormatDispatcher::QueryFormatStatus );
 
-   (*API->FileFormatDefinition->EndFileFormatDefinition)();
+   (API->FileFormatDefinition->EndFileFormatDefinition)();
 
-   (*API->FileFormatDefinition->ExitFileFormatDefinitionContext)();
+   (API->FileFormatDefinition->ExitFileFormatDefinitionContext)();
 }
 
 // ----------------------------------------------------------------------------

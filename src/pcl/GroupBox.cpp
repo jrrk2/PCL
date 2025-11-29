@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 GroupBox::GroupBox( const String& title, Control& parent )
-   : Control( (*API->GroupBox->CreateGroupBox)( ModuleHandle(), this, title.c_str(), parent.handle, 0/*flags*/ ) )
+   : Control( (API->GroupBox->CreateGroupBox)( ModuleHandle(), this, title.c_str(), parent.handle, 0/*flags*/ ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateGroupBox" );
@@ -38,13 +38,13 @@ GroupBox::GroupBox( const String& title, Control& parent )
 String GroupBox::Title() const
 {
    size_type len = 0;
-   (*API->GroupBox->GetGroupBoxTitle)( handle, 0, &len );
+   (API->GroupBox->GetGroupBoxTitle)( handle, 0, &len );
 
    String title;
    if ( len > 0 )
    {
       title.SetLength( len );
-      if ( (*API->GroupBox->GetGroupBoxTitle)( handle, title.Begin(), &len ) == api_false )
+      if ( (API->GroupBox->GetGroupBoxTitle)( handle, title.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetGroupBoxTitle" );
       title.ResizeToNullTerminated();
    }
@@ -55,35 +55,35 @@ String GroupBox::Title() const
 
 void GroupBox::SetTitle( const String& title )
 {
-   (*API->GroupBox->SetGroupBoxTitle)( handle, title.c_str() );
+   (API->GroupBox->SetGroupBoxTitle)( handle, title.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool GroupBox::HasTitleCheckBox() const
 {
-   return (*API->GroupBox->GetGroupBoxCheckable)( handle ) != api_false;
+   return (API->GroupBox->GetGroupBoxCheckable)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void GroupBox::EnableTitleCheckBox( bool enabled )
 {
-   (*API->GroupBox->SetGroupBoxCheckable)( handle, enabled );
+   (API->GroupBox->SetGroupBoxCheckable)( handle, enabled );
 }
 
 // ----------------------------------------------------------------------------
 
 bool GroupBox::IsChecked() const
 {
-   return (*API->GroupBox->GetGroupBoxChecked)( handle ) != api_false;
+   return (API->GroupBox->GetGroupBoxChecked)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void GroupBox::SetChecked( bool checked )
 {
-   (*API->GroupBox->SetGroupBoxChecked)( handle, checked );
+   (API->GroupBox->SetGroupBoxChecked)( handle, checked );
 }
 
 // ----------------------------------------------------------------------------
@@ -117,7 +117,7 @@ public:
 void GroupBox::OnCheck( check_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->GroupBox->SetGroupBoxCheckEventRoutine)( handle, &receiver,
+   if ( (API->GroupBox->SetGroupBoxCheckEventRoutine)( handle, &receiver,
                   (f != nullptr) ? GroupBoxEventDispatcher::Check : nullptr ) == api_false )
       throw APIFunctionError( "SetGroupBoxCheckEventRoutine" );
    m_handlers->onCheck = f;

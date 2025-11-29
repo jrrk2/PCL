@@ -29,7 +29,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 Sizer::Sizer( bool vertical )
-   : UIObject( (*API->Sizer->CreateSizer)( ModuleHandle(), vertical ) )
+   : UIObject( (API->Sizer->CreateSizer)( ModuleHandle(), vertical ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateSizer" );
@@ -51,7 +51,7 @@ Sizer& Sizer::Null()
 
 Control& Sizer::ParentControl() const
 {
-   control_handle hParent = (*API->Sizer->GetSizerParentControl)( handle ); // N.B.: client handle
+   control_handle hParent = (API->Sizer->GetSizerParentControl)( handle ); // N.B.: client handle
    return (hParent != 0) ? *reinterpret_cast<Control*>( hParent ) : Control::Null();
 }
 
@@ -59,28 +59,28 @@ Control& Sizer::ParentControl() const
 
 bool Sizer::IsVertical() const
 {
-   return (*API->Sizer->GetSizerOrientation)( handle ) != api_false;
+   return (API->Sizer->GetSizerOrientation)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int Sizer::NumberOfItems() const
 {
-   return (*API->Sizer->GetSizerCount)( handle );
+   return (API->Sizer->GetSizerCount)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int Sizer::IndexOf( const Sizer& s ) const
 {
-   return s.IsNull() ? -1 : (*API->Sizer->GetSizerIndex)( handle, s.handle );
+   return s.IsNull() ? -1 : (API->Sizer->GetSizerIndex)( handle, s.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int Sizer::IndexOf( const Control& c ) const
 {
-   return c.IsNull() ? -1 : (*API->Sizer->GetSizerControlIndex)( handle, c.handle );
+   return c.IsNull() ? -1 : (API->Sizer->GetSizerControlIndex)( handle, c.handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -88,7 +88,7 @@ int Sizer::IndexOf( const Control& c ) const
 void Sizer::Add( Sizer& s, int stretchFactor )
 {
    if ( !s.IsNull() )
-      (*API->Sizer->InsertSizer)( handle, -1, s.handle, stretchFactor );
+      (API->Sizer->InsertSizer)( handle, -1, s.handle, stretchFactor );
 }
 
 // ----------------------------------------------------------------------------
@@ -96,21 +96,21 @@ void Sizer::Add( Sizer& s, int stretchFactor )
 void Sizer::Add( Control& c, int stretchFactor, Sizer::item_alignment align )
 {
    if ( !c.IsNull() )
-      (*API->Sizer->InsertSizerControl)( handle, -1, c.handle, stretchFactor, align );
+      (API->Sizer->InsertSizerControl)( handle, -1, c.handle, stretchFactor, align );
 }
 
 // ----------------------------------------------------------------------------
 
 void Sizer::AddSpacing( int size, bool autoScaling )
 {
-   (*API->Sizer->InsertSizerSpacing)( handle, -1, autoScaling ? LogicalPixelsToPhysical( size ) : size );
+   (API->Sizer->InsertSizerSpacing)( handle, -1, autoScaling ? LogicalPixelsToPhysical( size ) : size );
 }
 
 // ----------------------------------------------------------------------------
 
 void Sizer::AddStretch( int stretchFactor )
 {
-   (*API->Sizer->InsertSizerStretch)( handle, -1, stretchFactor );
+   (API->Sizer->InsertSizerStretch)( handle, -1, stretchFactor );
 }
 
 // ----------------------------------------------------------------------------
@@ -118,7 +118,7 @@ void Sizer::AddStretch( int stretchFactor )
 void Sizer::Insert( int index, Sizer& s, int stretchFactor )
 {
    if ( !s.IsNull() )
-      (*API->Sizer->InsertSizer)( handle, index, s.handle, stretchFactor );
+      (API->Sizer->InsertSizer)( handle, index, s.handle, stretchFactor );
 }
 
 // ----------------------------------------------------------------------------
@@ -126,21 +126,21 @@ void Sizer::Insert( int index, Sizer& s, int stretchFactor )
 void Sizer::Insert( int index, Control& c, int stretchFactor, Sizer::item_alignment align )
 {
    if ( !c.IsNull() )
-      (*API->Sizer->InsertSizerControl)( handle, index, c.handle, stretchFactor, align );
+      (API->Sizer->InsertSizerControl)( handle, index, c.handle, stretchFactor, align );
 }
 
 // ----------------------------------------------------------------------------
 
 void Sizer::InsertSpacing( int index, int size, bool autoScaling )
 {
-   (*API->Sizer->InsertSizerSpacing)( handle, index, autoScaling ? LogicalPixelsToPhysical( size ) : size );
+   (API->Sizer->InsertSizerSpacing)( handle, index, autoScaling ? LogicalPixelsToPhysical( size ) : size );
 }
 
 // ----------------------------------------------------------------------------
 
 void Sizer::InsertStretch( int index, int stretchFactor )
 {
-   (*API->Sizer->InsertSizerStretch)( handle, index, stretchFactor );
+   (API->Sizer->InsertSizerStretch)( handle, index, stretchFactor );
 }
 
 // ----------------------------------------------------------------------------
@@ -148,7 +148,7 @@ void Sizer::InsertStretch( int index, int stretchFactor )
 void Sizer::Remove( Sizer& s )
 {
    if ( !s.IsNull() )
-      (*API->Sizer->RemoveSizer)( handle, s.handle );
+      (API->Sizer->RemoveSizer)( handle, s.handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -156,7 +156,7 @@ void Sizer::Remove( Sizer& s )
 void Sizer::Remove( Control& c )
 {
    if ( !c.IsNull() )
-      (*API->Sizer->RemoveSizerControl)( handle, c.handle );
+      (API->Sizer->RemoveSizerControl)( handle, c.handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -164,7 +164,7 @@ void Sizer::Remove( Control& c )
 void Sizer::SetStretchFactor( Sizer& s, int stretchFactor )
 {
    if ( !s.IsNull() )
-      (*API->Sizer->SetSizerStretchFactor)( handle, s.handle, stretchFactor );
+      (API->Sizer->SetSizerStretchFactor)( handle, s.handle, stretchFactor );
 }
 
 // ----------------------------------------------------------------------------
@@ -172,7 +172,7 @@ void Sizer::SetStretchFactor( Sizer& s, int stretchFactor )
 void Sizer::SetStretchFactor( Control& c, int stretchFactor )
 {
    if ( !c.IsNull() )
-      (*API->Sizer->SetSizerControlStretchFactor)( handle, c.handle, stretchFactor );
+      (API->Sizer->SetSizerControlStretchFactor)( handle, c.handle, stretchFactor );
 }
 
 // ----------------------------------------------------------------------------
@@ -180,7 +180,7 @@ void Sizer::SetStretchFactor( Control& c, int stretchFactor )
 void Sizer::SetAlignment( Sizer& s, Sizer::item_alignment align )
 {
    if ( !s.IsNull() )
-      (*API->Sizer->SetSizerAlignment)( handle, s.handle, align );
+      (API->Sizer->SetSizerAlignment)( handle, s.handle, align );
 }
 
 // ----------------------------------------------------------------------------
@@ -188,14 +188,14 @@ void Sizer::SetAlignment( Sizer& s, Sizer::item_alignment align )
 void Sizer::SetAlignment( Control& c, Sizer::item_alignment align )
 {
    if ( !c.IsNull() )
-      (*API->Sizer->SetSizerControlAlignment)( handle, c.handle, align );
+      (API->Sizer->SetSizerControlAlignment)( handle, c.handle, align );
 }
 
 // ----------------------------------------------------------------------------
 
 int Sizer::Margin( bool autoScaling ) const
 {
-   int margin = (*API->Sizer->GetSizerMargin)( handle );
+   int margin = (API->Sizer->GetSizerMargin)( handle );
    return autoScaling ? PhysicalPixelsToLogical( margin ) : margin;
 }
 
@@ -203,14 +203,14 @@ int Sizer::Margin( bool autoScaling ) const
 
 void Sizer::SetMargin( int size, bool autoScaling )
 {
-   (*API->Sizer->SetSizerMargin)( handle, autoScaling ? LogicalPixelsToPhysical( size ) : size );
+   (API->Sizer->SetSizerMargin)( handle, autoScaling ? LogicalPixelsToPhysical( size ) : size );
 }
 
 // ----------------------------------------------------------------------------
 
 int Sizer::Spacing( bool autoScaling ) const
 {
-   int spacing = (*API->Sizer->GetSizerSpacing)( handle );
+   int spacing = (API->Sizer->GetSizerSpacing)( handle );
    return autoScaling ? PhysicalPixelsToLogical( spacing ) : spacing;
 }
 
@@ -218,7 +218,7 @@ int Sizer::Spacing( bool autoScaling ) const
 
 void Sizer::SetSpacing( int size, bool autoScaling )
 {
-   (*API->Sizer->SetSizerSpacing)( handle, autoScaling ? LogicalPixelsToPhysical( size ) : size );
+   (API->Sizer->SetSizerSpacing)( handle, autoScaling ? LogicalPixelsToPhysical( size ) : size );
 }
 
 // ----------------------------------------------------------------------------
@@ -226,7 +226,7 @@ void Sizer::SetSpacing( int size, bool autoScaling )
 double Sizer::DisplayPixelRatio() const
 {
    double r;
-   if ( (*API->Sizer->GetSizerDisplayPixelRatio)( handle, &r ) == api_false )
+   if ( (API->Sizer->GetSizerDisplayPixelRatio)( handle, &r ) == api_false )
       throw APIFunctionError( "GetSizerDisplayPixelRatio" );
    return r;
 }

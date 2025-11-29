@@ -44,13 +44,13 @@ SharedPixelData::SharedPixelData( void* handle, int bitsPerSample, bool floatSam
 
    uint32 n;
    api_bool f;
-   if ( (*API->SharedImage->GetImageFormat)( m_handle, &n, &f ) == api_false )
+   if ( (API->SharedImage->GetImageFormat)( m_handle, &n, &f ) == api_false )
       throw APIFunctionError( "GetImageFormat" );
 
    if ( n != uint32( bitsPerSample ) || (f != api_false) != floatSample )
       throw APIError( "SharedPixelData: Incompatible shared image format" );
 
-   if ( (*API->SharedImage->AttachToImage)( m_handle, this/*owner*/ ) == api_false )
+   if ( (API->SharedImage->AttachToImage)( m_handle, this/*owner*/ ) == api_false )
       throw APIFunctionError( "AttachToImage" );
 }
 
@@ -58,7 +58,7 @@ SharedPixelData::SharedPixelData( void* handle, int bitsPerSample, bool floatSam
 
 SharedPixelData::SharedPixelData( int width, int height, int numberOfChannels,
                                   int bitsPerSample, bool floatSample, int colorSpace )
-   : m_handle( (*API->SharedImage->CreateImage)( width, height, numberOfChannels,
+   : m_handle( (API->SharedImage->CreateImage)( width, height, numberOfChannels,
                                                  bitsPerSample, floatSample, colorSpace, this/*owner*/ ) )
 {
    if ( m_handle == nullptr )
@@ -73,7 +73,7 @@ bool SharedPixelData::IsAliased() const
       return false;
 
    uint32 n = 0;
-   if ( (*API->SharedImage->GetImageRefCount)( m_handle, &n ) == api_false )
+   if ( (API->SharedImage->GetImageRefCount)( m_handle, &n ) == api_false )
       throw APIFunctionError( "GetImageRefCount" );
    return n > 1;
 }
@@ -82,7 +82,7 @@ bool SharedPixelData::IsAliased() const
 
 bool SharedPixelData::IsOwner() const
 {
-   return m_handle != nullptr && (*API->SharedImage->GetImageOwner)( m_handle ) == this;
+   return m_handle != nullptr && (API->SharedImage->GetImageOwner)( m_handle ) == this;
 }
 
 // ----------------------------------------------------------------------------
@@ -90,7 +90,7 @@ bool SharedPixelData::IsOwner() const
 void SharedPixelData::Attach()
 {
    if ( m_handle != nullptr )
-      if ( (*API->SharedImage->AttachToImage)( m_handle, this ) == api_false )
+      if ( (API->SharedImage->AttachToImage)( m_handle, this ) == api_false )
          throw APIFunctionError( "AttachToImage" );
 }
 
@@ -99,7 +99,7 @@ void SharedPixelData::Attach()
 void SharedPixelData::Detach()
 {
    if ( m_handle != nullptr )
-      if ( (*API->SharedImage->DetachFromImage)( m_handle, this ) == api_false )
+      if ( (API->SharedImage->DetachFromImage)( m_handle, this ) == api_false )
          throw APIFunctionError( "DetachFromImage" );
 }
 
@@ -110,7 +110,7 @@ void* SharedPixelData::Allocate( size_type size ) const
    if ( size > 0 )
    {
       // Allocate all pixel data blocks with 32-byte alignment for AVX/SSE load/store requirements
-      void* p = (m_handle == nullptr) ? PCL_ALIGNED_MALLOC( size, 32 ) : (*API->Global->Allocate)( size );
+      void* p = (m_handle == nullptr) ? PCL_ALIGNED_MALLOC( size, 32 ) : (API->Global->Allocate)( size );
       if ( unlikely( p == nullptr ) )
          throw std::bad_alloc();
       return p;
@@ -125,7 +125,7 @@ void SharedPixelData::Deallocate( void* p ) const
    if ( p != nullptr )
       if ( m_handle == nullptr )
          PCL_ALIGNED_FREE( p );
-      else if ( (*API->Global->Deallocate)( p ) == api_false )
+      else if ( (API->Global->Deallocate)( p ) == api_false )
          throw APIFunctionError( "Deallocate" );
 }
 
@@ -137,7 +137,7 @@ void** SharedPixelData::GetSharedData() const
       return nullptr;
 
    void** data;
-   if ( (*API->SharedImage->GetImagePixelData)( m_handle, &data ) == api_false )
+   if ( (API->SharedImage->GetImagePixelData)( m_handle, &data ) == api_false )
       throw APIFunctionError( "GetImagePixelData" );
    return data;
 }
@@ -147,7 +147,7 @@ void** SharedPixelData::GetSharedData() const
 void SharedPixelData::SetSharedData( void** ptrToShared )
 {
    if ( m_handle != nullptr )
-      if ( (*API->SharedImage->SetImagePixelData)( m_handle, ptrToShared ) == api_false )
+      if ( (API->SharedImage->SetImagePixelData)( m_handle, ptrToShared ) == api_false )
          throw APIFunctionError( "SetImagePixelData" );
 }
 
@@ -158,7 +158,7 @@ void SharedPixelData::GetSharedGeometry( int& width, int& height, int& numberOfC
    if ( m_handle != nullptr )
    {
       uint32 w, h, n;
-      if ( (*API->SharedImage->GetImageGeometry)( m_handle, &w, &h, &n ) == api_false )
+      if ( (API->SharedImage->GetImageGeometry)( m_handle, &w, &h, &n ) == api_false )
          throw APIFunctionError( "GetImageGeometry" );
       width = int( w );
       height = int( h );
@@ -173,7 +173,7 @@ void SharedPixelData::GetSharedGeometry( int& width, int& height, int& numberOfC
 void SharedPixelData::SetSharedGeometry( int width, int height, int numberOfChannels )
 {
    if ( m_handle != nullptr )
-      if ( (*API->SharedImage->SetImageGeometry)( m_handle, width, height, numberOfChannels ) == api_false )
+      if ( (API->SharedImage->SetImageGeometry)( m_handle, width, height, numberOfChannels ) == api_false )
          throw APIFunctionError( "SetImageGeometry" );
 }
 
@@ -184,11 +184,11 @@ void SharedPixelData::GetSharedColor( color_space& colorSpace, RGBColorSystem& R
    if ( m_handle != nullptr )
    {
       uint32 cs;
-      if ( (*API->SharedImage->GetImageColorSpace)( m_handle, &cs ) == api_false )
+      if ( (API->SharedImage->GetImageColorSpace)( m_handle, &cs ) == api_false )
          throw APIFunctionError( "GetImageColorSpace" );
 
       api_RGBWS rgbws;
-      if ( (*API->SharedImage->GetImageRGBWS)( m_handle, &rgbws ) == api_false )
+      if ( (API->SharedImage->GetImageRGBWS)( m_handle, &rgbws ) == api_false )
          throw APIFunctionError( "GetImageRGBWS" );
 
       colorSpace = color_space( cs );
@@ -207,7 +207,7 @@ void SharedPixelData::SetSharedColor( color_space colorSpace, const RGBColorSyst
 {
    if ( m_handle != nullptr )
    {
-      if ( (*API->SharedImage->SetImageColorSpace)( m_handle, colorSpace ) == api_false )
+      if ( (API->SharedImage->SetImageColorSpace)( m_handle, colorSpace ) == api_false )
          throw APIFunctionError( "SetImageColorSpace" );
       /*
        * The following code has been omitted because we cannot modify a shared
@@ -223,7 +223,7 @@ void SharedPixelData::SetSharedColor( color_space colorSpace, const RGBColorSyst
       memcpy( rgbws.x, *RGBWS.ChromaticityXCoordinates(), sizeof( rgbws.x ) );
       memcpy( rgbws.y, *RGBWS.ChromaticityYCoordinates(), sizeof( rgbws.y ) );
       memcpy( rgbws.Y, *RGBWS.LuminanceCoefficients(), sizeof( rgbws.Y ) );
-      if ( (*API->SetImageRGBWS)( m_handle, &rgbws ) == api_false )
+      if ( (API->SetImageRGBWS)( m_handle, &rgbws ) == api_false )
          throw APIFunctionError( "SetImageRGBWS" );
       */
    }

@@ -28,14 +28,14 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 Font::Font( family f, double ptSize )
-   : UIObject( (*API->Font->CreateFontByFamily)( ModuleHandle(), f, ptSize ) )
+   : UIObject( (API->Font->CreateFontByFamily)( ModuleHandle(), f, ptSize ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateFontByFamily" );
 }
 
 Font::Font( const String& face, double ptSize )
-   : UIObject( (*API->Font->CreateFontByFace)( ModuleHandle(), face.c_str(), ptSize ) )
+   : UIObject( (API->Font->CreateFontByFace)( ModuleHandle(), face.c_str(), ptSize ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateFontByFace" );
@@ -61,13 +61,13 @@ String Font::Face() const
       return String();
 
    size_type len = 0;
-   (*API->Font->GetFontFace)( handle, 0, &len );
+   (API->Font->GetFontFace)( handle, 0, &len );
    if ( len == 0 )
       throw APIFunctionError( "GetFontFace" );
 
    String face;
    face.SetLength( len );
-   if ( (*API->Font->GetFontFace)( handle, face.Begin(), &len ) == api_false )
+   if ( (API->Font->GetFontFace)( handle, face.Begin(), &len ) == api_false )
       throw APIFunctionError( "GetFontFace" );
    face.ResizeToNullTerminated();
    return face;
@@ -78,21 +78,21 @@ String Font::Face() const
 void Font::SetFace( const String& face )
 {
    EnsureUnique();
-   (*API->Font->SetFontFace)( handle, face.c_str() );
+   (API->Font->SetFontFace)( handle, face.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsExactMatch() const
 {
-   return (*API->Font->GetFontExactMatch)( handle ) != api_false;
+   return (API->Font->GetFontExactMatch)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::PixelSize() const
 {
-   return (*API->Font->GetFontPixelSize)( handle );
+   return (API->Font->GetFontPixelSize)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -100,7 +100,7 @@ int Font::PixelSize() const
 void Font::SetPixelSize ( int pxSize )
 {
    EnsureUnique();
-   (*API->Font->SetFontPixelSize)( handle, pxSize );
+   (API->Font->SetFontPixelSize)( handle, pxSize );
 }
 
 // ----------------------------------------------------------------------------
@@ -108,7 +108,7 @@ void Font::SetPixelSize ( int pxSize )
 double Font::PointSize() const
 {
    double ptSize = 0.0;
-   (*API->Font->GetFontPointSize)( handle, &ptSize );
+   (API->Font->GetFontPointSize)( handle, &ptSize );
    return ptSize;
 }
 
@@ -117,14 +117,14 @@ double Font::PointSize() const
 void Font::SetPointSize( double ptSize )
 {
    EnsureUnique();
-   (*API->Font->SetFontPointSize)( handle, ptSize );
+   (API->Font->SetFontPointSize)( handle, ptSize );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsFixedPitch() const
 {
-   return (*API->Font->GetFontFixedPitch)( handle ) != api_false;
+   return (API->Font->GetFontFixedPitch)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -132,14 +132,14 @@ bool Font::IsFixedPitch() const
 void Font::SetFixedPitch( bool enable )
 {
    EnsureUnique();
-   (*API->Font->SetFontFixedPitch)( handle, enable );
+   (API->Font->SetFontFixedPitch)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsKerningEnabled() const
 {
-   return (*API->Font->GetFontKerning)( handle ) != api_false;
+   return (API->Font->GetFontKerning)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -147,7 +147,7 @@ bool Font::IsKerningEnabled() const
 void Font::EnableKerning( bool enable )
 {
    EnsureUnique();
-   (*API->Font->SetFontKerning)( handle, enable );
+   (API->Font->SetFontKerning)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
@@ -155,14 +155,14 @@ void Font::EnableKerning( bool enable )
 void Font::DisableKerning( bool disable )
 {
    EnsureUnique();
-   (*API->Font->SetFontKerning)( handle, !disable );
+   (API->Font->SetFontKerning)( handle, !disable );
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::StretchFactor() const
 {
-   return (*API->Font->GetFontStretchFactor)( handle );
+   return (API->Font->GetFontStretchFactor)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -170,14 +170,14 @@ int Font::StretchFactor() const
 void Font::SetStretchFactor( int stretch )
 {
    EnsureUnique();
-   (*API->Font->SetFontStretchFactor)( handle, stretch );
+   (API->Font->SetFontStretchFactor)( handle, stretch );
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::Weight() const
 {
-   return (*API->Font->GetFontWeight)( handle );
+   return (API->Font->GetFontWeight)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -185,14 +185,14 @@ int Font::Weight() const
 void Font::SetWeight( int weight )
 {
    EnsureUnique();
-   (*API->Font->SetFontWeight)( handle, weight );
+   (API->Font->SetFontWeight)( handle, weight );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsItalic() const
 {
-   return (*API->Font->GetFontItalic)( handle ) != api_false;
+   return (API->Font->GetFontItalic)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -200,14 +200,14 @@ bool Font::IsItalic() const
 void Font::SetItalic( bool enable )
 {
    EnsureUnique();
-   (*API->Font->SetFontItalic)( handle, enable );
+   (API->Font->SetFontItalic)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsUnderline() const
 {
-   return (*API->Font->GetFontUnderline)( handle ) != api_false;
+   return (API->Font->GetFontUnderline)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -215,14 +215,14 @@ bool Font::IsUnderline() const
 void Font::SetUnderline( bool enable )
 {
    EnsureUnique();
-   (*API->Font->SetFontUnderline)( handle, enable );
+   (API->Font->SetFontUnderline)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsOverline() const
 {
-   return (*API->Font->GetFontOverline)( handle ) != api_false;
+   return (API->Font->GetFontOverline)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -230,14 +230,14 @@ bool Font::IsOverline() const
 void Font::SetOverline( bool enable )
 {
    EnsureUnique();
-   (*API->Font->SetFontOverline)( handle, enable );
+   (API->Font->SetFontOverline)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsStrikeOut() const
 {
-   return (*API->Font->GetFontStrikeOut)( handle ) != api_false;
+   return (API->Font->GetFontStrikeOut)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -245,63 +245,63 @@ bool Font::IsStrikeOut() const
 void Font::SetStrikeOut( bool enable )
 {
    EnsureUnique();
-   (*API->Font->SetFontStrikeOut)( handle, enable );
+   (API->Font->SetFontStrikeOut)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::Ascent() const
 {
-   return (*API->Font->GetFontAscent)( handle );
+   return (API->Font->GetFontAscent)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::Descent() const
 {
-   return (*API->Font->GetFontDescent)( handle );
+   return (API->Font->GetFontDescent)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::Height() const
 {
-   return (*API->Font->GetFontHeight)( handle );
+   return (API->Font->GetFontHeight)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::LineSpacing() const
 {
-   return (*API->Font->GetFontLineSpacing)( handle );
+   return (API->Font->GetFontLineSpacing)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsCharDefined( int c ) const
 {
-   return (*API->Font->GetFontCharDefined)( handle, c ) != api_false;
+   return (API->Font->GetFontCharDefined)( handle, c ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::MaxWidth() const
 {
-   return (*API->Font->GetFontMaxWidth)( handle );
+   return (API->Font->GetFontMaxWidth)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::Width( const String& s ) const
 {
-   return (*API->Font->GetStringPixelWidth)( handle, s.c_str() );
+   return (API->Font->GetStringPixelWidth)( handle, s.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::Width( int c ) const
 {
-   return (*API->Font->GetCharPixelWidth)( handle, c );
+   return (API->Font->GetCharPixelWidth)( handle, c );
 }
 
 // ----------------------------------------------------------------------------
@@ -309,7 +309,7 @@ int Font::Width( int c ) const
 Rect Font::BoundingRect( const String& s ) const
 {
    Rect r;
-   (*API->Font->GetStringPixelRect)( handle, s.c_str(), &r.x0, &r.y0, &r.x1, &r.y1, 0x00 );
+   (API->Font->GetStringPixelRect)( handle, s.c_str(), &r.x0, &r.y0, &r.x1, &r.y1, 0x00 );
    return r;
 }
 
@@ -318,7 +318,7 @@ Rect Font::BoundingRect( const String& s ) const
 Rect Font::TightBoundingRect( const String& s ) const
 {
    Rect r;
-   (*API->Font->GetStringPixelRect)( handle, s.c_str(), &r.x0, &r.y0, &r.x1, &r.y1, 0x01 );
+   (API->Font->GetStringPixelRect)( handle, s.c_str(), &r.x0, &r.y0, &r.x1, &r.y1, 0x01 );
    return r;
 }
 
@@ -351,13 +351,13 @@ StringList Font::AvailableFonts( const String& writingSystem )
    IsoString ws8( writingSystem );
 
    size_type len = 0;
-   (*API->Font->EnumerateFonts)( 0, 0, &len, 0, ws8.c_str() );
+   (API->Font->EnumerateFonts)( 0, 0, &len, 0, ws8.c_str() );
 
    if ( len > 0 )
    {
       String fontFace;
       fontFace.Reserve( len );
-      if ( (*API->Font->EnumerateFonts)( InternalFontEnumerator::FontCallback,
+      if ( (API->Font->EnumerateFonts)( InternalFontEnumerator::FontCallback,
                         fontFace.Begin(), &len, &faces, ws8.c_str() ) == api_false )
       {
          throw APIFunctionError( "EnumerateFonts" );
@@ -374,13 +374,13 @@ StringList Font::AvailableFontWritingSystems( const String& font )
    StringList writingSystems;
 
    size_type len = 0;
-   (*API->Font->EnumerateWritingSystems)( 0, 0, &len, 0, font.c_str() );
+   (API->Font->EnumerateWritingSystems)( 0, 0, &len, 0, font.c_str() );
 
    if ( len > 0 )
    {
       String system;
       system.Reserve( len );
-      if ( (*API->Font->EnumerateWritingSystems)( InternalFontEnumerator::FontCallback,
+      if ( (API->Font->EnumerateWritingSystems)( InternalFontEnumerator::FontCallback,
                         system.Begin(), &len, &writingSystems, font.c_str() ) == api_false )
       {
          throw APIFunctionError( "EnumerateWritingSystems" );
@@ -397,13 +397,13 @@ StringList Font::AvailableFontStyles( const String& font )
    StringList styles;
 
    size_type len = 0;
-   (*API->Font->EnumerateFontStyles)( 0, 0, &len, 0, font.c_str() );
+   (API->Font->EnumerateFontStyles)( 0, 0, &len, 0, font.c_str() );
 
    if ( len > 0 )
    {
       String style;
       style.Reserve( len );
-      if ( (*API->Font->EnumerateFontStyles)( InternalFontEnumerator::FontCallback,
+      if ( (API->Font->EnumerateFontStyles)( InternalFontEnumerator::FontCallback,
                         style.Begin(), &len, &styles, font.c_str() ) == api_false )
       {
          throw APIFunctionError( "EnumerateFontStyles" );
@@ -419,7 +419,7 @@ Array<double> Font::OptimalFontPointSizes( const String& font, const String& sty
 {
    Array<double> optimalSizes;
    double ptSize;
-   if ( (*API->Font->EnumerateOptimalFontPointSizes)( InternalFontEnumerator::PtSizeCallback,
+   if ( (API->Font->EnumerateOptimalFontPointSizes)( InternalFontEnumerator::PtSizeCallback,
                                  &ptSize, &optimalSizes, font.c_str(), style.c_str() ) == api_false )
    {
       throw APIFunctionError( "EnumerateOptimalFontPointSizes" );
@@ -431,35 +431,35 @@ Array<double> Font::OptimalFontPointSizes( const String& font, const String& sty
 
 bool Font::IsScalableFont( const String& font, const String& style )
 {
-   return (*API->Font->GetFontScalable)( font.c_str(), style.c_str() ) != api_false;
+   return (API->Font->GetFontScalable)( font.c_str(), style.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsFixedPitchFont( const String& font, const String& style )
 {
-   return (*API->Font->GetNominalFontFixedPitch)( font.c_str(), style.c_str() ) != api_false;
+   return (API->Font->GetNominalFontFixedPitch)( font.c_str(), style.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool Font::IsItalicFont( const String& font, const String& style )
 {
-   return (*API->Font->GetNominalFontItalic)( font.c_str(), style.c_str() ) != api_false;
+   return (API->Font->GetNominalFontItalic)( font.c_str(), style.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int Font::FontWeight( const String& font, const String& style )
 {
-   return (*API->Font->GetNominalFontWeight)( font.c_str(), style.c_str() );
+   return (API->Font->GetNominalFontWeight)( font.c_str(), style.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 void* Font::CloneHandle() const
 {
-   return (*API->Font->CloneFont)( ModuleHandle(), handle );
+   return (API->Font->CloneFont)( ModuleHandle(), handle );
 }
 
 // ----------------------------------------------------------------------------

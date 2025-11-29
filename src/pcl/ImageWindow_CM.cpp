@@ -31,7 +31,7 @@ namespace pcl
 bool ImageWindow::IsColorManagementEnabled() const
 {
    api_bool enableCM;
-   (*API->ImageWindow->GetImageWindowCMEnabled)( handle, &enableCM, 0, 0 );
+   (API->ImageWindow->GetImageWindowCMEnabled)( handle, &enableCM, 0, 0 );
    return enableCM != api_false;
 }
 
@@ -40,8 +40,8 @@ bool ImageWindow::IsColorManagementEnabled() const
 void ImageWindow::EnableColorManagement( bool enable )
 {
    api_bool proofing, gamutCheck;
-   (*API->ImageWindow->GetImageWindowCMEnabled)( handle, 0, &proofing, &gamutCheck );
-   (*API->ImageWindow->SetImageWindowCMEnabled)( handle, enable, proofing, gamutCheck );
+   (API->ImageWindow->GetImageWindowCMEnabled)( handle, 0, &proofing, &gamutCheck );
+   (API->ImageWindow->SetImageWindowCMEnabled)( handle, enable, proofing, gamutCheck );
 }
 
 // ----------------------------------------------------------------------------
@@ -49,7 +49,7 @@ void ImageWindow::EnableColorManagement( bool enable )
 bool ImageWindow::IsProofingEnabled() const
 {
    api_bool proofing;
-   (*API->ImageWindow->GetImageWindowCMEnabled)( handle, 0, &proofing, 0 );
+   (API->ImageWindow->GetImageWindowCMEnabled)( handle, 0, &proofing, 0 );
    return proofing != api_false;
 }
 
@@ -58,8 +58,8 @@ bool ImageWindow::IsProofingEnabled() const
 void ImageWindow::EnableProofing( bool enable )
 {
    api_bool enableCM, gamutCheck;
-   (*API->ImageWindow->GetImageWindowCMEnabled)( handle, &enableCM, 0, &gamutCheck );
-   (*API->ImageWindow->SetImageWindowCMEnabled)( handle, enableCM, enable, gamutCheck );
+   (API->ImageWindow->GetImageWindowCMEnabled)( handle, &enableCM, 0, &gamutCheck );
+   (API->ImageWindow->SetImageWindowCMEnabled)( handle, enableCM, enable, gamutCheck );
 }
 
 // ----------------------------------------------------------------------------
@@ -67,7 +67,7 @@ void ImageWindow::EnableProofing( bool enable )
 bool ImageWindow::IsGamutCheckEnabled() const
 {
    api_bool gamutCheck;
-   (*API->ImageWindow->GetImageWindowCMEnabled)( handle, 0, 0, &gamutCheck );
+   (API->ImageWindow->GetImageWindowCMEnabled)( handle, 0, 0, &gamutCheck );
    return gamutCheck != api_false;
 }
 
@@ -76,15 +76,15 @@ bool ImageWindow::IsGamutCheckEnabled() const
 void ImageWindow::EnableGamutCheck( bool enable )
 {
    api_bool enableCM, proofing;
-   (*API->ImageWindow->GetImageWindowCMEnabled)( handle, &enableCM, &proofing, 0 );
-   (*API->ImageWindow->SetImageWindowCMEnabled)( handle, enableCM, enable || proofing, enable );
+   (API->ImageWindow->GetImageWindowCMEnabled)( handle, &enableCM, &proofing, 0 );
+   (API->ImageWindow->SetImageWindowCMEnabled)( handle, enableCM, enable || proofing, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetColorManagementFeatures( bool cmEnabled, bool proofing, bool gamutCheck )
 {
-   (*API->ImageWindow->SetImageWindowCMEnabled)( handle, cmEnabled, proofing, gamutCheck );
+   (API->ImageWindow->SetImageWindowCMEnabled)( handle, cmEnabled, proofing, gamutCheck );
 }
 
 // ----------------------------------------------------------------------------
@@ -93,14 +93,14 @@ bool ImageWindow::GetICCProfile( ICCProfile& profile ) const
 {
    profile.Clear();
 
-   size_type profileSize = (*API->ImageWindow->GetImageWindowICCProfileLength)( handle );
+   size_type profileSize = (API->ImageWindow->GetImageWindowICCProfileLength)( handle );
    if ( profileSize == 0 )
       return false;
 
    try
    {
       ByteArray profileData( profileSize );
-      (*API->ImageWindow->GetImageWindowICCProfile)( handle, profileData.Begin() );
+      (API->ImageWindow->GetImageWindowICCProfile)( handle, profileData.Begin() );
       profile.Set( profileData );
       return true;
    }
@@ -114,21 +114,21 @@ bool ImageWindow::GetICCProfile( ICCProfile& profile ) const
 void ImageWindow::SetICCProfile( const ICCProfile& profile )
 {
    if ( profile.IsProfile() )
-      (*API->ImageWindow->SetImageWindowICCProfile)( handle, profile.ProfileData().Begin() );
+      (API->ImageWindow->SetImageWindowICCProfile)( handle, profile.ProfileData().Begin() );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetICCProfile( const String& filePath )
 {
-   (*API->ImageWindow->LoadImageWindowICCProfile)( handle, filePath.c_str() );
+   (API->ImageWindow->LoadImageWindowICCProfile)( handle, filePath.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::DeleteICCProfile()
 {
-   (*API->ImageWindow->DeleteImageWindowICCProfile)( handle );
+   (API->ImageWindow->DeleteImageWindowICCProfile)( handle );
 }
 
 // ----------------------------------------------------------------------------

@@ -245,7 +245,7 @@ public:
 
 private:
 
-   Cursor( void* h ) : UIObject( h )
+   Cursor( control_handle h ) : UIObject( h )
    {
    }
 

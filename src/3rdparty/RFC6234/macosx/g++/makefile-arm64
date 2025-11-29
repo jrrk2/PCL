@@ -1,0 +1,69 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:39.679Z
+# Project id ...... RFC6234
+# Project type .... StaticLibrary
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/3rdparty/RFC6234/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/libRFC6234-pxi.a
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../hkdf.c \
+../../hmac.c \
+../../sha1.c \
+../../sha224-256.c \
+../../sha384-512.c \
+../../usha.c
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/hkdf.o \
+./arm64/Release/hmac.o \
+./arm64/Release/sha1.o \
+./arm64/Release/sha224-256.o \
+./arm64/Release/sha384-512.o \
+./arm64/Release/usha.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/hkdf.d \
+./arm64/Release/hmac.d \
+./arm64/Release/sha1.d \
+./arm64/Release/sha224-256.d \
+./arm64/Release/sha384-512.d \
+./arm64/Release/usha.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/libRFC6234-pxi.a: $(OBJ_FILES)
+	ar r $(OBJ_DIR)/libRFC6234-pxi.a $(OBJ_FILES)
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/libRFC6234-pxi.a
+
+./arm64/Release/%.o: ../../%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -msse4.2 -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

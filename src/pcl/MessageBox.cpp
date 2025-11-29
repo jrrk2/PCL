@@ -119,7 +119,7 @@ MessageBox::std_button MessageBox::Execute()
 
    // Request a PixInsight MessageBox primitive.
 
-   return std_button( (*API->Global->MessageBox)( p->text.c_str(), p->caption.c_str(),
+   return std_button( (API->Global->MessageBox)( p->text.c_str(), p->caption.c_str(),
                                                   p->button0, p->button1, p->button2,
                                                   p->defaultButton, p->escapeButton,
                                                   p->icon ) );

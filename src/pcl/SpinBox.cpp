@@ -33,7 +33,7 @@ namespace pcl
  */
 
 SpinBox::SpinBox( Control& parent )
-   : Control( (*API->SpinBox->CreateSpinBox)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
+   : Control( (API->SpinBox->CreateSpinBox)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateSpinBox" );
@@ -43,14 +43,14 @@ SpinBox::SpinBox( Control& parent )
 
 int SpinBox::Value() const
 {
-   return (*API->SpinBox->GetSpinBoxValue)( handle );
+   return (API->SpinBox->GetSpinBoxValue)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void SpinBox::SetValue( int value )
 {
-   return (*API->SpinBox->SetSpinBoxValue)( handle, value );
+   return (API->SpinBox->SetSpinBoxValue)( handle, value );
 }
 
 // ----------------------------------------------------------------------------
@@ -73,56 +73,56 @@ void SpinBox::SetNormalizedValue( double f )
 
 void SpinBox::GetRange( int& minValue, int& maxValue ) const
 {
-   (*API->SpinBox->GetSpinBoxRange)( handle, &minValue, &maxValue );
+   (API->SpinBox->GetSpinBoxRange)( handle, &minValue, &maxValue );
 }
 
 // ----------------------------------------------------------------------------
 
 void SpinBox::SetRange( int minValue, int maxValue )
 {
-   (*API->SpinBox->SetSpinBoxRange)( handle, minValue, maxValue );
+   (API->SpinBox->SetSpinBoxRange)( handle, minValue, maxValue );
 }
 
 // ----------------------------------------------------------------------------
 
 int SpinBox::StepSize() const
 {
-   return (*API->SpinBox->GetSpinBoxStepSize)( handle );
+   return (API->SpinBox->GetSpinBoxStepSize)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void SpinBox::SetStepSize( int size )
 {
-   (*API->SpinBox->SetSpinBoxStepSize)( handle, size );
+   (API->SpinBox->SetSpinBoxStepSize)( handle, size );
 }
 
 // ----------------------------------------------------------------------------
 
 bool SpinBox::IsWrappingEnabled() const
 {
-   return (*API->SpinBox->GetSpinBoxWrappingEnabled)( handle ) != api_false;
+   return (API->SpinBox->GetSpinBoxWrappingEnabled)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void SpinBox::EnableWrapping( bool enable )
 {
-   (*API->SpinBox->SetSpinBoxWrappingEnabled)( handle, enable );
+   (API->SpinBox->SetSpinBoxWrappingEnabled)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool SpinBox::IsEditable() const
 {
-   return (*API->SpinBox->GetSpinBoxEditable)( handle ) != api_false;
+   return (API->SpinBox->GetSpinBoxEditable)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void SpinBox::SetEditable( bool enable )
 {
-   (*API->SpinBox->SetSpinBoxEditable)( handle, enable );
+   (API->SpinBox->SetSpinBoxEditable)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
@@ -130,13 +130,13 @@ void SpinBox::SetEditable( bool enable )
 String SpinBox::Prefix() const
 {
    size_type len = 0;
-   (*API->SpinBox->GetSpinBoxPrefix)( handle, 0, &len );
+   (API->SpinBox->GetSpinBoxPrefix)( handle, 0, &len );
 
    String prefix;
    if ( len > 0 )
    {
       prefix.SetLength( len );
-      if ( (*API->SpinBox->GetSpinBoxPrefix)( handle, prefix.Begin(), &len ) == api_false )
+      if ( (API->SpinBox->GetSpinBoxPrefix)( handle, prefix.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetSpinBoxPrefix" );
       prefix.ResizeToNullTerminated();
    }
@@ -147,7 +147,7 @@ String SpinBox::Prefix() const
 
 void SpinBox::SetPrefix( const String& txt )
 {
-   (*API->SpinBox->SetSpinBoxPrefix)( handle, txt.c_str() );
+   (API->SpinBox->SetSpinBoxPrefix)( handle, txt.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -155,13 +155,13 @@ void SpinBox::SetPrefix( const String& txt )
 String SpinBox::Suffix() const
 {
    size_type len = 0;
-   (*API->SpinBox->GetSpinBoxSuffix)( handle, 0, &len );
+   (API->SpinBox->GetSpinBoxSuffix)( handle, 0, &len );
 
    String suffix;
    if ( len > 0 )
    {
       suffix.SetLength( len );
-      if ( (*API->SpinBox->GetSpinBoxSuffix)( handle, suffix.Begin(), &len ) == api_false )
+      if ( (API->SpinBox->GetSpinBoxSuffix)( handle, suffix.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetSpinBoxSuffix" );
       suffix.ResizeToNullTerminated();
    }
@@ -172,7 +172,7 @@ String SpinBox::Suffix() const
 
 void SpinBox::SetSuffix( const String& txt )
 {
-   (*API->SpinBox->SetSpinBoxSuffix)( handle, txt.c_str() );
+   (API->SpinBox->SetSpinBoxSuffix)( handle, txt.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -180,13 +180,13 @@ void SpinBox::SetSuffix( const String& txt )
 String SpinBox::MinimumValueText() const
 {
    size_type len = 0;
-   (*API->SpinBox->GetSpinBoxMinimumValueText)( handle, 0, &len );
+   (API->SpinBox->GetSpinBoxMinimumValueText)( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->SpinBox->GetSpinBoxMinimumValueText)( handle, text.Begin(), &len ) == api_false )
+      if ( (API->SpinBox->GetSpinBoxMinimumValueText)( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetSpinBoxMinimumValueText" );
       text.ResizeToNullTerminated();
    }
@@ -197,21 +197,21 @@ String SpinBox::MinimumValueText() const
 
 void SpinBox::SetMinimumValueText( const String& txt )
 {
-   (*API->SpinBox->SetSpinBoxMinimumValueText)( handle, txt.c_str() );
+   (API->SpinBox->SetSpinBoxMinimumValueText)( handle, txt.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool SpinBox::IsRightAligned() const
 {
-   return (*API->SpinBox->GetSpinBoxAlignment)( handle ) == TextAlign::Right;
+   return (API->SpinBox->GetSpinBoxAlignment)( handle ) == TextAlign::Right;
 }
 
 // ----------------------------------------------------------------------------
 
 void SpinBox::SetRightAlignment( bool right )
 {
-   (*API->SpinBox->SetSpinBoxAlignment)( handle, right ? TextAlign::Right : TextAlign::Left );
+   (API->SpinBox->SetSpinBoxAlignment)( handle, right ? TextAlign::Right : TextAlign::Left );
 }
 
 // ----------------------------------------------------------------------------
@@ -252,7 +252,7 @@ public:
 void SpinBox::OnValueUpdated( value_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->SpinBox->SetSpinBoxValueUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->SpinBox->SetSpinBoxValueUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? SpinBoxEventDispatcher::ValueUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetSpinBoxValueUpdatedEventRoutine" );
    m_handlers->onValueUpdated = f;
@@ -261,7 +261,7 @@ void SpinBox::OnValueUpdated( value_event_handler f, Control& receiver )
 void SpinBox::OnRangeUpdated( range_event_handler f, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->SpinBox->SetSpinBoxRangeUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->SpinBox->SetSpinBoxRangeUpdatedEventRoutine)( handle, &receiver,
                   (f != nullptr) ? SpinBoxEventDispatcher::RangeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetSpinBoxRangeUpdatedEventRoutine" );
    m_handlers->onRangeUpdated = f;

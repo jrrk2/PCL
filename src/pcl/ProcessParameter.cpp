@@ -41,7 +41,7 @@ public:
    {
       if ( hParam != nullptr )
       {
-         meta_process_handle hProcess = (*API->Process->GetParameterProcess)( hParam );
+         meta_process_handle hProcess = (API->Process->GetParameterProcess)( hParam );
          if ( hProcess == nullptr )
             throw Error( "ProcessParameter: Internal error: Invalid process handle" );
 
@@ -68,7 +68,7 @@ api_bool InternalParameterEnumerator::ParameterCallback( meta_parameter_handle h
 
 ProcessParameter::ProcessParameter( const Process& process, const IsoString& paramId )
 {
-   m_data = new ProcessParameterPrivate( (*API->Process->GetParameterByName)( process.Handle(), paramId.c_str() ) );
+   m_data = new ProcessParameterPrivate( (API->Process->GetParameterByName)( process.Handle(), paramId.c_str() ) );
    if ( m_data->handle == nullptr )
    {
       if ( paramId.IsEmpty() )
@@ -83,7 +83,7 @@ ProcessParameter::ProcessParameter( const Process& process, const IsoString& par
 
 ProcessParameter::ProcessParameter( const ProcessParameter& table, const IsoString& colId )
 {
-   m_data = new ProcessParameterPrivate( (*API->Process->GetTableColumnByName)( table.m_data->handle, colId.c_str() ) );
+   m_data = new ProcessParameterPrivate( (API->Process->GetTableColumnByName)( table.m_data->handle, colId.c_str() ) );
    if ( m_data->handle == nullptr )
    {
       if ( table.IsNull() )
@@ -146,7 +146,7 @@ Process& ProcessParameter::ParentProcess() const
 
 ProcessParameter ProcessParameter::ParentTable() const
 {
-   return ProcessParameter( (*API->Process->GetParameterTable)( m_data->handle ) );
+   return ProcessParameter( (API->Process->GetParameterTable)( m_data->handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -154,13 +154,13 @@ ProcessParameter ProcessParameter::ParentTable() const
 IsoString ProcessParameter::Id() const
 {
    size_type len = 0;
-   (*API->Process->GetParameterIdentifier)( m_data->handle, 0, &len );
+   (API->Process->GetParameterIdentifier)( m_data->handle, 0, &len );
 
    IsoString id;
    if ( len > 0 )
    {
       id.SetLength( len );
-      if ( (*API->Process->GetParameterIdentifier)( m_data->handle, id.Begin(), &len ) == api_false )
+      if ( (API->Process->GetParameterIdentifier)( m_data->handle, id.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetParameterIdentifier" );
       id.ResizeToNullTerminated();
    }
@@ -172,14 +172,14 @@ IsoString ProcessParameter::Id() const
 IsoStringList ProcessParameter::Aliases() const
 {
    size_type len = 0;
-   (*API->Process->GetParameterAliasIdentifiers)( m_data->handle, 0, &len );
+   (API->Process->GetParameterAliasIdentifiers)( m_data->handle, 0, &len );
 
    IsoStringList aliases;
    if ( len > 0 )
    {
       IsoString csAliases;
       csAliases.SetLength( len );
-      if ( (*API->Process->GetParameterAliasIdentifiers)( m_data->handle, csAliases.Begin(), &len ) == api_false )
+      if ( (API->Process->GetParameterAliasIdentifiers)( m_data->handle, csAliases.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetParameterAliasIdentifiers" );
       csAliases.ResizeToNullTerminated();
       csAliases.Break( aliases, ',' );
@@ -191,14 +191,14 @@ IsoStringList ProcessParameter::Aliases() const
 
 bool ProcessParameter::IsRequired() const
 {
-   return (*API->Process->GetParameterRequired)( m_data->handle ) != api_false;
+   return (API->Process->GetParameterRequired)( m_data->handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ProcessParameter::IsReadOnly() const
 {
-   return (*API->Process->GetParameterReadOnly)( m_data->handle ) != api_false;
+   return (API->Process->GetParameterReadOnly)( m_data->handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -206,13 +206,13 @@ bool ProcessParameter::IsReadOnly() const
 String ProcessParameter::Description() const
 {
    size_type len = 0;
-   (*API->Process->GetParameterDescription)( m_data->handle, 0, &len );
+   (API->Process->GetParameterDescription)( m_data->handle, 0, &len );
 
    String description;
    if ( len > 0 )
    {
       description.SetLength( len );
-      if ( (*API->Process->GetParameterDescription)( m_data->handle, description.Begin(), &len ) == api_false )
+      if ( (API->Process->GetParameterDescription)( m_data->handle, description.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetParameterDescription" );
       description.ResizeToNullTerminated();
    }
@@ -224,13 +224,13 @@ String ProcessParameter::Description() const
 String ProcessParameter::ScriptComment() const
 {
    size_type len = 0;
-   (*API->Process->GetParameterScriptComment)( m_data->handle, 0, &len );
+   (API->Process->GetParameterScriptComment)( m_data->handle, 0, &len );
 
    String comment;
    if ( len > 0 )
    {
       comment.SetLength( len );
-      if ( (*API->Process->GetParameterScriptComment)( m_data->handle, comment.Begin(), &len ) == api_false )
+      if ( (API->Process->GetParameterScriptComment)( m_data->handle, comment.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetParameterScriptComment" );
       comment.ResizeToNullTerminated();
    }
@@ -244,7 +244,7 @@ ProcessParameter::data_type ProcessParameter::Type() const
    if ( IsNull() )
       return ProcessParameterType::Invalid;
 
-   uint32 apiType = (*API->Process->GetParameterType)( m_data->handle );
+   uint32 apiType = (API->Process->GetParameterType)( m_data->handle );
    if ( apiType == 0 )
       throw APIFunctionError( "GetParameterType" );
 
@@ -274,7 +274,7 @@ ProcessParameter::data_type ProcessParameter::DataInterpretation() const
    if ( !IsBlock() )
       return ProcessParameterType::Invalid;
 
-   uint32 apiType = (*API->Process->GetParameterType)( m_data->handle );
+   uint32 apiType = (API->Process->GetParameterType)( m_data->handle );
    if ( apiType == 0 )
       throw APIFunctionError( "GetParameterType" );
 
@@ -301,7 +301,7 @@ Variant ProcessParameter::DefaultValue() const
    if ( IsNull() )
       return Variant();
 
-   uint32 apiType = (*API->Process->GetParameterType)( m_data->handle );
+   uint32 apiType = (API->Process->GetParameterType)( m_data->handle );
    if ( apiType == 0 )
       throw APIFunctionError( "GetParameterType" );
 
@@ -316,13 +316,13 @@ Variant ProcessParameter::DefaultValue() const
    if ( apiType == PTYPE_STRING )
    {
       size_type len = 0;
-      (*API->Process->GetParameterDefaultValue)( m_data->handle, 0, &len );
+      (API->Process->GetParameterDefaultValue)( m_data->handle, 0, &len );
 
       String value;
       if ( len > 0 )
       {
          value.SetLength( len );
-         if ( (*API->Process->GetParameterDefaultValue)( m_data->handle, value.Begin(), &len ) == api_false )
+         if ( (API->Process->GetParameterDefaultValue)( m_data->handle, value.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetParameterDefaultValue" );
          value.ResizeToNullTerminated();
       }
@@ -331,7 +331,7 @@ Variant ProcessParameter::DefaultValue() const
 
    if ( apiType == PTYPE_ENUM )
    {
-      int index = (*API->Process->GetParameterDefaultElementIndex)( m_data->handle );
+      int index = (API->Process->GetParameterDefaultElementIndex)( m_data->handle );
       if ( index < 0 )
          throw APIFunctionError( "GetParameterDefaultElementIndex" );
       return index;
@@ -353,7 +353,7 @@ Variant ProcessParameter::DefaultValue() const
    }
    value;
 
-   if ( (*API->Process->GetParameterDefaultValue)( m_data->handle, &value, 0 ) == api_false )
+   if ( (API->Process->GetParameterDefaultValue)( m_data->handle, &value, 0 ) == api_false )
       throw APIFunctionError( "GetParameterDefaultValue" );
 
    switch ( apiType )
@@ -384,7 +384,7 @@ void ProcessParameter::GetNumericRange( double& minValue, double& maxValue ) con
       return;
    }
 
-   if ( (*API->Process->GetParameterRange)( m_data->handle, &minValue, &maxValue ) == api_false )
+   if ( (API->Process->GetParameterRange)( m_data->handle, &minValue, &maxValue ) == api_false )
       throw APIFunctionError( "GetParameterRange" );
 }
 
@@ -394,7 +394,7 @@ int ProcessParameter::Precision() const
 {
    if ( !IsReal() )
       return 0;
-   return (*API->Process->GetParameterPrecision)( m_data->handle );
+   return (API->Process->GetParameterPrecision)( m_data->handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -403,7 +403,7 @@ bool ProcessParameter::ScientificNotation() const
 {
    if ( !IsReal() )
       return false;
-   return (*API->Process->GetParameterScientificNotation)( m_data->handle ) != api_false;
+   return (API->Process->GetParameterScientificNotation)( m_data->handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -416,7 +416,7 @@ void ProcessParameter::GetLengthLimits( size_type& minLength, size_type& maxLeng
       return;
    }
 
-   if ( (*API->Process->GetParameterLengthLimits)( m_data->handle, &minLength, &maxLength ) == api_false )
+   if ( (API->Process->GetParameterLengthLimits)( m_data->handle, &minLength, &maxLength ) == api_false )
       throw APIFunctionError( "GetParameterLengthLimits" );
 }
 
@@ -427,7 +427,7 @@ ProcessParameter::enumeration_element_list ProcessParameter::EnumerationElements
    if ( !IsEnumeration() )
       return enumeration_element_list();
 
-   size_type count = (*API->Process->GetParameterElementCount)( m_data->handle );
+   size_type count = (API->Process->GetParameterElementCount)( m_data->handle );
    if ( count == 0 )
       throw APIFunctionError( "GetParameterElementCount" );
 
@@ -436,27 +436,27 @@ ProcessParameter::enumeration_element_list ProcessParameter::EnumerationElements
    for ( size_type i = 0; i < count; ++i )
    {
       size_type len = 0;
-      (*API->Process->GetParameterElementIdentifier)( m_data->handle, i, 0, &len );
+      (API->Process->GetParameterElementIdentifier)( m_data->handle, i, 0, &len );
       if ( len == 0 )
          throw APIFunctionError( "GetParameterElementIdentifier" );
       elements[i].id.SetLength( len );
-      if ( (*API->Process->GetParameterElementIdentifier)( m_data->handle, i, elements[i].id.Begin(), &len ) == api_false )
+      if ( (API->Process->GetParameterElementIdentifier)( m_data->handle, i, elements[i].id.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetParameterElementIdentifier" );
       elements[i].id.ResizeToNullTerminated();
 
       len = 0;
-      (*API->Process->GetParameterElementAliasIdentifiers)( m_data->handle, i, 0, &len );
+      (API->Process->GetParameterElementAliasIdentifiers)( m_data->handle, i, 0, &len );
       if ( len > 0 )
       {
          IsoString aliases;
          aliases.SetLength( len );
-         if ( (*API->Process->GetParameterElementAliasIdentifiers)( m_data->handle, i, aliases.Begin(), &len ) == api_false )
+         if ( (API->Process->GetParameterElementAliasIdentifiers)( m_data->handle, i, aliases.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetParameterElementAliasIdentifiers" );
          aliases.ResizeToNullTerminated();
          aliases.Break( elements[i].aliases, ',' );
       }
 
-      elements[i].value = (*API->Process->GetParameterElementValue)( m_data->handle, i );
+      elements[i].value = (API->Process->GetParameterElementValue)( m_data->handle, i );
    }
 
    return elements;
@@ -471,12 +471,12 @@ String ProcessParameter::AllowedCharacters() const
    if ( IsString() )
    {
       size_type len = 0;
-      (*API->Process->GetParameterAllowedCharacters)( m_data->handle, 0, &len );
+      (API->Process->GetParameterAllowedCharacters)( m_data->handle, 0, &len );
 
       if ( len > 0 )
       {
          allowed.SetLength( len );
-         if ( (*API->Process->GetParameterAllowedCharacters)( m_data->handle, allowed.Begin(), &len ) == api_false )
+         if ( (API->Process->GetParameterAllowedCharacters)( m_data->handle, allowed.Begin(), &len ) == api_false )
             throw APIFunctionError( "GetParameterAllowedCharacters" );
          allowed.ResizeToNullTerminated();
       }
@@ -491,7 +491,7 @@ ProcessParameter::parameter_list ProcessParameter::TableColumns() const
 {
    parameter_list parameters;
    if ( IsTable() )
-      if ( (*API->Process->EnumerateTableColumns)( m_data->handle,
+      if ( (API->Process->EnumerateTableColumns)( m_data->handle,
                                     InternalParameterEnumerator::ParameterCallback, &parameters ) == api_false )
          throw APIFunctionError( "EnumerateTableColumns" );
    return parameters;

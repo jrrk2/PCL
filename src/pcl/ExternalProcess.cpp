@@ -84,7 +84,7 @@ public:
 // ----------------------------------------------------------------------------
 
 ExternalProcess::ExternalProcess()
-   : UIObject( (*API->ExternalProcess->CreateExternalProcess)( ModuleHandle(), this ) )
+   : UIObject( (API->ExternalProcess->CreateExternalProcess)( ModuleHandle(), this ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateExternalProcess" );
@@ -116,7 +116,7 @@ void ExternalProcess::Start( const String& program, const StringList& arguments 
    Array<const char16_type*> argv;
    for ( const String& arg : arguments )
       argv.Add( arg.c_str() );
-   if ( (*API->ExternalProcess->StartExternalProcess)( handle, program.c_str(), argv.Begin(), argv.Length() ) == api_false )
+   if ( (API->ExternalProcess->StartExternalProcess)( handle, program.c_str(), argv.Begin(), argv.Length() ) == api_false )
       throw APIFunctionError( "StartExternalProcess" );
 }
 
@@ -124,35 +124,35 @@ void ExternalProcess::Start( const String& program, const StringList& arguments 
 
 bool ExternalProcess::WaitForStarted( int ms )
 {
-   return (*API->ExternalProcess->WaitForExternalProcessStarted)( handle, ms ) != api_false;
+   return (API->ExternalProcess->WaitForExternalProcessStarted)( handle, ms ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ExternalProcess::WaitForFinished( int ms )
 {
-   return (*API->ExternalProcess->WaitForExternalProcessFinished)( handle, ms ) != api_false;
+   return (API->ExternalProcess->WaitForExternalProcessFinished)( handle, ms ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ExternalProcess::WaitForDataAvailable( int ms )
 {
-   return (*API->ExternalProcess->WaitForExternalProcessDataAvailable)( handle, ms ) != api_false;
+   return (API->ExternalProcess->WaitForExternalProcessDataAvailable)( handle, ms ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ExternalProcess::WaitForDataWritten( int ms )
 {
-   return (*API->ExternalProcess->WaitForExternalProcessDataWritten)( handle, ms ) != api_false;
+   return (API->ExternalProcess->WaitForExternalProcessDataWritten)( handle, ms ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ExternalProcess::Terminate()
 {
-   if ( (*API->ExternalProcess->TerminateExternalProcess)( handle ) == api_false )
+   if ( (API->ExternalProcess->TerminateExternalProcess)( handle ) == api_false )
       throw APIFunctionError( "TerminateExternalProcess" );
 }
 
@@ -160,7 +160,7 @@ void ExternalProcess::Terminate()
 
 void ExternalProcess::Kill()
 {
-   if ( (*API->ExternalProcess->KillExternalProcess)( handle ) == api_false )
+   if ( (API->ExternalProcess->KillExternalProcess)( handle ) == api_false )
       throw APIFunctionError( "KillExternalProcess" );
 }
 
@@ -168,7 +168,7 @@ void ExternalProcess::Kill()
 
 void ExternalProcess::CloseStandardInput()
 {
-   if ( (*API->ExternalProcess->CloseExternalProcessStream)( handle, ExternalProcessContext::StandardInput ) == api_false )
+   if ( (API->ExternalProcess->CloseExternalProcessStream)( handle, ExternalProcessContext::StandardInput ) == api_false )
       throw APIFunctionError( "CloseExternalProcessStream" );
 }
 
@@ -176,7 +176,7 @@ void ExternalProcess::CloseStandardInput()
 
 void ExternalProcess::CloseStandardOutput()
 {
-   if ( (*API->ExternalProcess->CloseExternalProcessStream)( handle, ExternalProcessContext::StandardOutput ) == api_false )
+   if ( (API->ExternalProcess->CloseExternalProcessStream)( handle, ExternalProcessContext::StandardOutput ) == api_false )
       throw APIFunctionError( "CloseExternalProcessStream" );
 }
 
@@ -184,7 +184,7 @@ void ExternalProcess::CloseStandardOutput()
 
 void ExternalProcess::CloseStandardError()
 {
-   if ( (*API->ExternalProcess->CloseExternalProcessStream)( handle, ExternalProcessContext::StandardError ) == api_false )
+   if ( (API->ExternalProcess->CloseExternalProcessStream)( handle, ExternalProcessContext::StandardError ) == api_false )
       throw APIFunctionError( "CloseExternalProcessStream" );
 }
 
@@ -192,7 +192,7 @@ void ExternalProcess::CloseStandardError()
 
 void ExternalProcess::RedirectStandardOutput( const String& filePath, bool append )
 {
-   if ( (*API->ExternalProcess->RedirectExternalProcessToFile)( handle,
+   if ( (API->ExternalProcess->RedirectExternalProcessToFile)( handle,
                ExternalProcessContext::StandardOutput, filePath.c_str(), append ) == api_false )
       throw APIFunctionError( "RedirectExternalProcessToFile" );
 }
@@ -201,7 +201,7 @@ void ExternalProcess::RedirectStandardOutput( const String& filePath, bool appen
 
 void ExternalProcess::RedirectStandardOutput( ExternalProcess& process )
 {
-   if ( (*API->ExternalProcess->PipeExternalProcess)( handle,
+   if ( (API->ExternalProcess->PipeExternalProcess)( handle,
                ExternalProcessContext::StandardOutput, process.handle ) == api_false )
       throw APIFunctionError( "PipeExternalProcess" );
 }
@@ -210,7 +210,7 @@ void ExternalProcess::RedirectStandardOutput( ExternalProcess& process )
 
 void ExternalProcess::RedirectStandardError( const String& filePath, bool append )
 {
-   if ( (*API->ExternalProcess->RedirectExternalProcessToFile)( handle,
+   if ( (API->ExternalProcess->RedirectExternalProcessToFile)( handle,
                ExternalProcessContext::StandardError, filePath.c_str(), append ) == api_false )
       throw APIFunctionError( "RedirectExternalProcessToFile" );
 }
@@ -219,7 +219,7 @@ void ExternalProcess::RedirectStandardError( const String& filePath, bool append
 
 void ExternalProcess::RedirectStandardInput( const String& filePath )
 {
-   if ( (*API->ExternalProcess->RedirectExternalProcessToFile)( handle,
+   if ( (API->ExternalProcess->RedirectExternalProcessToFile)( handle,
                ExternalProcessContext::StandardInput, filePath.c_str(), api_false/*append*/ ) == api_false )
       throw APIFunctionError( "RedirectExternalProcessToFile" );
 }
@@ -229,13 +229,13 @@ void ExternalProcess::RedirectStandardInput( const String& filePath )
 String ExternalProcess::WorkingDirectory() const
 {
    size_type len = 0;
-   (*API->ExternalProcess->GetExternalProcessWorkingDirectory)( handle, 0, &len );
+   (API->ExternalProcess->GetExternalProcessWorkingDirectory)( handle, 0, &len );
 
    String dirPath;
    if ( len > 0 )
    {
       dirPath.SetLength( len );
-      if ( (*API->ExternalProcess->GetExternalProcessWorkingDirectory)( handle, dirPath.Begin(), &len ) == api_false )
+      if ( (API->ExternalProcess->GetExternalProcessWorkingDirectory)( handle, dirPath.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetExternalProcessWorkingDirectory" );
       dirPath.ResizeToNullTerminated();
    }
@@ -246,7 +246,7 @@ String ExternalProcess::WorkingDirectory() const
 
 void ExternalProcess::SetWorkingDirectory( const String& dirPath )
 {
-   if ( (*API->ExternalProcess->SetExternalProcessWorkingDirectory)( handle, dirPath.c_str() ) == api_false )
+   if ( (API->ExternalProcess->SetExternalProcessWorkingDirectory)( handle, dirPath.c_str() ) == api_false )
       throw APIFunctionError( "SetExternalProcessWorkingDirectory" );
 }
 
@@ -254,49 +254,49 @@ void ExternalProcess::SetWorkingDirectory( const String& dirPath )
 
 bool ExternalProcess::IsRunning() const
 {
-   return (*API->ExternalProcess->GetExternalProcessIsRunning)( handle ) != api_false;
+   return (API->ExternalProcess->GetExternalProcessIsRunning)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ExternalProcess::IsStarting() const
 {
-   return (*API->ExternalProcess->GetExternalProcessIsStarting)( handle ) != api_false;
+   return (API->ExternalProcess->GetExternalProcessIsStarting)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ExternalProcess::HasCrashed() const
 {
-   return (*API->ExternalProcess->GetExternalProcessExitStatus)( handle ) == ExternalProcessContext::CrashedExit;
+   return (API->ExternalProcess->GetExternalProcessExitStatus)( handle ) == ExternalProcessContext::CrashedExit;
 }
 
 // ----------------------------------------------------------------------------
 
 ExternalProcess::pid_type ExternalProcess::PID() const
 {
-   return pid_type( (*API->ExternalProcess->GetExternalProcessPID)( handle ) );
+   return pid_type( (API->ExternalProcess->GetExternalProcessPID)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 int ExternalProcess::ExitCode() const
 {
-   return (*API->ExternalProcess->GetExternalProcessExitCode)( handle );
+   return (API->ExternalProcess->GetExternalProcessExitCode)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 size_type ExternalProcess::BytesAvailable() const
 {
-   return (*API->ExternalProcess->GetExternalProcessBytesAvailable)( handle );
+   return (API->ExternalProcess->GetExternalProcessBytesAvailable)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 size_type ExternalProcess::BytesToWrite() const
 {
-   return (*API->ExternalProcess->GetExternalProcessBytesToWrite)( handle );
+   return (API->ExternalProcess->GetExternalProcessBytesToWrite)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -309,7 +309,7 @@ ByteArray ExternalProcess::StandardOutput()
     */
    uint8* data = 0;
    size_type size = 0;
-   if ( (*API->ExternalProcess->ReadFromExternalProcess)( ModuleHandle(), handle,
+   if ( (API->ExternalProcess->ReadFromExternalProcess)( ModuleHandle(), handle,
                ExternalProcessContext::StandardOutput, reinterpret_cast<void**>( &data ), &size ) == api_false )
       throw APIFunctionError( "ReadFromExternalProcess" );
    ByteArray b;
@@ -327,7 +327,7 @@ ByteArray ExternalProcess::StandardError()
     */
    uint8* data = 0;
    size_type size = 0;
-   if ( (*API->ExternalProcess->ReadFromExternalProcess)( ModuleHandle(), handle,
+   if ( (API->ExternalProcess->ReadFromExternalProcess)( ModuleHandle(), handle,
                ExternalProcessContext::StandardError, reinterpret_cast<void**>( &data ), &size ) == api_false )
       throw APIFunctionError( "ReadFromExternalProcess" );
    ByteArray b;
@@ -345,7 +345,7 @@ ByteArray ExternalProcess::Read()
     */
    uint8* data = 0;
    size_type size = 0;
-   if ( (*API->ExternalProcess->ReadFromExternalProcess)( ModuleHandle(), handle,
+   if ( (API->ExternalProcess->ReadFromExternalProcess)( ModuleHandle(), handle,
                ExternalProcessContext::CombinedOutput, reinterpret_cast<void**>( &data ), &size ) == api_false )
       throw APIFunctionError( "ReadFromExternalProcess" );
    ByteArray b;
@@ -358,7 +358,7 @@ ByteArray ExternalProcess::Read()
 void ExternalProcess::Write( const ByteArray& data )
 {
    if ( !data.IsEmpty() )
-      if ( (*API->ExternalProcess->WriteToExternalProcess)( handle, data.Begin(), data.Length() ) == api_false )
+      if ( (API->ExternalProcess->WriteToExternalProcess)( handle, data.Begin(), data.Length() ) == api_false )
          throw APIFunctionError( "WriteToExternalProcess" );
 }
 
@@ -367,7 +367,7 @@ void ExternalProcess::Write( const ByteArray& data )
 void ExternalProcess::Write( const String& text )
 {
    if ( !text.IsEmpty() )
-      if ( (*API->ExternalProcess->WriteToExternalProcess)( handle, text.c_str(), text.Size() ) == api_false )
+      if ( (API->ExternalProcess->WriteToExternalProcess)( handle, text.c_str(), text.Size() ) == api_false )
          throw APIFunctionError( "WriteToExternalProcess" );
 }
 
@@ -376,7 +376,7 @@ void ExternalProcess::Write( const String& text )
 void ExternalProcess::Write( const IsoString& text )
 {
    if ( !text.IsEmpty() )
-      if ( (*API->ExternalProcess->WriteToExternalProcess)( handle, text.c_str(), text.Size() ) == api_false )
+      if ( (API->ExternalProcess->WriteToExternalProcess)( handle, text.c_str(), text.Size() ) == api_false )
          throw APIFunctionError( "WriteToExternalProcess" );
 }
 
@@ -386,7 +386,7 @@ void ExternalProcess::Write( const char* text )
 {
    if ( text != nullptr )
       if ( *text != '\0' )
-         if ( (*API->ExternalProcess->WriteToExternalProcess)( handle, text, strlen( text ) ) == api_false )
+         if ( (API->ExternalProcess->WriteToExternalProcess)( handle, text, strlen( text ) ) == api_false )
             throw APIFunctionError( "WriteToExternalProcess" );
 }
 
@@ -396,7 +396,7 @@ void ExternalProcess::Write( const void* data, size_type count )
 {
    if ( data != nullptr )
       if ( count > 0 )
-         if ( (*API->ExternalProcess->WriteToExternalProcess)( handle, data, count ) == api_false )
+         if ( (API->ExternalProcess->WriteToExternalProcess)( handle, data, count ) == api_false )
             throw APIFunctionError( "WriteToExternalProcess" );
 }
 
@@ -405,7 +405,7 @@ void ExternalProcess::Write( const void* data, size_type count )
 StringList ExternalProcess::Environment() const
 {
    StringList environment;
-   if ( (*API->ExternalProcess->EnumerateExternalProcessEnvironment)( handle,
+   if ( (API->ExternalProcess->EnumerateExternalProcessEnvironment)( handle,
                         ExternalProcessPrivate::EnvironmentEnumerationCallback, &environment ) == api_false )
       return StringList();
    return environment;
@@ -418,7 +418,7 @@ void ExternalProcess::SetEnvironment( const StringList& environment )
    Array<const char16_type*> vars;
    for ( const String& env : environment )
       vars.Add( env.c_str() );
-   if ( (*API->ExternalProcess->SetExternalProcessEnvironment)( handle, vars.Begin(), vars.Length() ) == api_false )
+   if ( (API->ExternalProcess->SetExternalProcessEnvironment)( handle, vars.Begin(), vars.Length() ) == api_false )
       throw APIFunctionError( "SetExternalProcessEnvironment" );
 }
 
@@ -429,7 +429,7 @@ int ExternalProcess::ExecuteProgram( const String& program, const StringList& ar
    Array<const char16_type*> argv;
    for ( const String& arg : arguments )
       argv.Add( arg.c_str() );
-   int retVal = (*API->ExternalProcess->ExecuteProgram)( program.c_str(), argv.Begin(), argv.Length() );
+   int retVal = (API->ExternalProcess->ExecuteProgram)( program.c_str(), argv.Begin(), argv.Length() );
    if ( retVal < -1 )
       ExternalProcessPrivate::Throw( ExternalProcessContext::FailedToStart );
    return retVal;
@@ -443,7 +443,7 @@ ExternalProcess::pid_type ExternalProcess::StartProgram( const String& program, 
    for ( const String& arg : arguments )
       argv.Add( arg.c_str() );
    uint64 pid = 0;
-   api_bool ok = (*API->ExternalProcess->StartProgram)( program.c_str(), argv.Begin(), argv.Length(), workingDirectory.c_str(), &pid );
+   api_bool ok = (API->ExternalProcess->StartProgram)( program.c_str(), argv.Begin(), argv.Length(), workingDirectory.c_str(), &pid );
    if ( ok == api_false || pid == 0 )
       ExternalProcessPrivate::Throw( ExternalProcessContext::FailedToStart );
    return pid_type( pid );
@@ -512,7 +512,7 @@ public:
 void ExternalProcess::OnStarted( process_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ExternalProcess->SetExternalProcessStartedEventRoutine)( handle, &receiver,
+   if ( (API->ExternalProcess->SetExternalProcessStartedEventRoutine)( handle, &receiver,
                      (handler != nullptr) ? ExternalProcessEventDispatcher::Started : nullptr ) == api_false )
       throw APIFunctionError( "SetExternalProcessStartedEventRoutine" );
    m_handlers->onStarted = handler;
@@ -521,7 +521,7 @@ void ExternalProcess::OnStarted( process_event_handler handler, Control& receive
 void ExternalProcess::OnFinished( process_exit_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ExternalProcess->SetExternalProcessFinishedEventRoutine)( handle, &receiver,
+   if ( (API->ExternalProcess->SetExternalProcessFinishedEventRoutine)( handle, &receiver,
                      (handler != nullptr) ? ExternalProcessEventDispatcher::Finished : nullptr ) == api_false )
       throw APIFunctionError( "SetExternalProcessFinishedEventRoutine" );
    m_handlers->onFinished = handler;
@@ -530,7 +530,7 @@ void ExternalProcess::OnFinished( process_exit_event_handler handler, Control& r
 void ExternalProcess::OnStandardOutputDataAvailable( process_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ExternalProcess->SetExternalProcessStandardOutputDataAvailableEventRoutine)( handle, &receiver,
+   if ( (API->ExternalProcess->SetExternalProcessStandardOutputDataAvailableEventRoutine)( handle, &receiver,
                      (handler != nullptr) ? ExternalProcessEventDispatcher::StandardOutputDataAvailable : nullptr ) == api_false )
       throw APIFunctionError( "SetExternalProcessStandardOutputDataAvailableEventRoutine" );
    m_handlers->onStandardOutputDataAvailable = handler;
@@ -539,7 +539,7 @@ void ExternalProcess::OnStandardOutputDataAvailable( process_event_handler handl
 void ExternalProcess::OnStandardErrorDataAvailable( process_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ExternalProcess->SetExternalProcessStandardErrorDataAvailableEventRoutine)( handle, &receiver,
+   if ( (API->ExternalProcess->SetExternalProcessStandardErrorDataAvailableEventRoutine)( handle, &receiver,
                      (handler != nullptr) ? ExternalProcessEventDispatcher::StandardErrorDataAvailable : nullptr ) == api_false )
       throw APIFunctionError( "SetExternalProcessStandardErrorDataAvailableEventRoutine" );
    m_handlers->onStandardErrorDataAvailable = handler;
@@ -548,7 +548,7 @@ void ExternalProcess::OnStandardErrorDataAvailable( process_event_handler handle
 void ExternalProcess::OnError( process_error_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->ExternalProcess->SetExternalProcessErrorEventRoutine)( handle, &receiver,
+   if ( (API->ExternalProcess->SetExternalProcessErrorEventRoutine)( handle, &receiver,
                      (handler != nullptr) ? ExternalProcessEventDispatcher::Error : nullptr ) == api_false )
       throw APIFunctionError( "SetExternalProcessErrorEventRoutine" );
    m_handlers->onError = handler;

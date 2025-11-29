@@ -37,7 +37,7 @@ static bool s_useGUI = false;
 
 static bool HaveConsole()
 {
-   return API != nullptr && (*API->Global->GetConsole)() != nullptr;
+   return API != nullptr && (API->Global->GetConsole)() != nullptr;
 }
 
 // ----------------------------------------------------------------------------

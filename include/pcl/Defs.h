@@ -1159,6 +1159,9 @@ using fpos_type = int64;
  */
 using fsize_type = int64;
 
+class PCL_CLASS Control;
+typedef Control *control_handle;
+  
 }  // pcl
 
 #endif   // !__PCL_NO_FILE_SIZE_AND_POSITION_TYPES

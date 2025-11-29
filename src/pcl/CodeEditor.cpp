@@ -28,7 +28,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 CodeEditor::CodeEditor( Control& parent )
-   : Control( (*API->CodeEditor->CreateCodeEditor)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
+   : Control( (API->CodeEditor->CreateCodeEditor)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
    , m_lineNumbers( nullptr )
 {
    if ( handle == nullptr )
@@ -41,7 +41,7 @@ Control& CodeEditor::LineNumbersControl()
 {
    if ( m_lineNumbers.IsNull() )
    {
-      m_lineNumbers.TransferHandle( (*API->CodeEditor->CreateEditorLineNumbersControl)( handle, &m_lineNumbers, handle, 0/*flags*/ ) );
+      m_lineNumbers.TransferHandle( (API->CodeEditor->CreateEditorLineNumbersControl)( handle, &m_lineNumbers, handle, 0/*flags*/ ) );
       if ( m_lineNumbers.IsNull() )
          throw APIFunctionError( "CreateEditorLineNumbersControl" );
    }
@@ -53,13 +53,13 @@ Control& CodeEditor::LineNumbersControl()
 String CodeEditor::FilePath() const
 {
    size_type len = 0;
-   (*API->CodeEditor->GetEditorFilePath)( handle, 0, &len );
+   (API->CodeEditor->GetEditorFilePath)( handle, 0, &len );
 
    String path;
    if ( len > 0 )
    {
       path.SetLength( len );
-      if ( (*API->CodeEditor->GetEditorFilePath)( handle, path.Begin(), &len ) == api_false )
+      if ( (API->CodeEditor->GetEditorFilePath)( handle, path.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetEditorFilePath" );
       path.ResizeToNullTerminated();
    }
@@ -70,7 +70,7 @@ String CodeEditor::FilePath() const
 
 void CodeEditor::SetFilePath( const String& filePath )
 {
-   (*API->CodeEditor->SetEditorFilePath)( handle, filePath.c_str() );
+   (API->CodeEditor->SetEditorFilePath)( handle, filePath.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -78,13 +78,13 @@ void CodeEditor::SetFilePath( const String& filePath )
 String CodeEditor::Text() const
 {
    size_type len = 0;
-   (*API->CodeEditor->GetEditorText)( handle, 0, &len );
+   (API->CodeEditor->GetEditorText)( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->CodeEditor->GetEditorText)( handle, text.Begin(), &len ) == api_false )
+      if ( (API->CodeEditor->GetEditorText)( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetEditorText" );
       text.ResizeToNullTerminated();
    }
@@ -95,7 +95,7 @@ String CodeEditor::Text() const
 
 void CodeEditor::SetText( const String& text )
 {
-   (*API->CodeEditor->SetEditorText)( handle, text.c_str() );
+   (API->CodeEditor->SetEditorText)( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -103,13 +103,13 @@ void CodeEditor::SetText( const String& text )
 IsoString CodeEditor::EncodedText( const IsoString& encoding ) const
 {
    size_type len = 0;
-   (*API->CodeEditor->GetEditorEncodedText)( handle, 0, &len, encoding.c_str() );
+   (API->CodeEditor->GetEditorEncodedText)( handle, 0, &len, encoding.c_str() );
 
    IsoString text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->CodeEditor->GetEditorEncodedText)( handle, text.Begin(), &len, encoding.c_str() ) == api_false )
+      if ( (API->CodeEditor->GetEditorEncodedText)( handle, text.Begin(), &len, encoding.c_str() ) == api_false )
          throw APIFunctionError( "GetEditorEncodedText" );
       text.ResizeToNullTerminated();
    }
@@ -120,7 +120,7 @@ IsoString CodeEditor::EncodedText( const IsoString& encoding ) const
 
 void CodeEditor::SetEncodedText( const IsoString& text, const IsoString& encoding )
 {
-   if ( (*API->CodeEditor->SetEditorEncodedText)( handle, text.c_str(), encoding.c_str() ) == api_false )
+   if ( (API->CodeEditor->SetEditorEncodedText)( handle, text.c_str(), encoding.c_str() ) == api_false )
       throw APIFunctionError( "SetEditorEncodedText" );
 }
 
@@ -128,49 +128,49 @@ void CodeEditor::SetEncodedText( const IsoString& text, const IsoString& encodin
 
 void CodeEditor::ClearText()
 {
-   (*API->CodeEditor->ClearEditorText)( handle );
+   (API->CodeEditor->ClearEditorText)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::IsReadOnly() const
 {
-   return (*API->CodeEditor->GetEditorReadOnly)( handle ) != api_false;
+   return (API->CodeEditor->GetEditorReadOnly)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::SetReadOnly( bool readOnly )
 {
-   (*API->CodeEditor->SetEditorReadOnly)( handle, readOnly );
+   (API->CodeEditor->SetEditorReadOnly)( handle, readOnly );
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::Save( const String& filePath, const IsoString& encoding )
 {
-   return (*API->CodeEditor->SaveEditorText)( handle, filePath.c_str(), encoding.c_str() ) != api_false;
+   return (API->CodeEditor->SaveEditorText)( handle, filePath.c_str(), encoding.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::Load( const String& filePath, const IsoString& encoding )
 {
-   return (*API->CodeEditor->LoadEditorText)( handle, filePath.c_str(), encoding.c_str() ) != api_false;
+   return (API->CodeEditor->LoadEditorText)( handle, filePath.c_str(), encoding.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int CodeEditor::NumberOfLines() const
 {
-   return (*API->CodeEditor->GetEditorLineCount)( handle );
+   return (API->CodeEditor->GetEditorLineCount)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int CodeEditor::NumberOfCharacters() const
 {
-   return (*API->CodeEditor->GetEditorCharacterCount)( handle );
+   return (API->CodeEditor->GetEditorCharacterCount)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -178,7 +178,7 @@ int CodeEditor::NumberOfCharacters() const
 Point CodeEditor::CursorPosition() const
 {
    Point pos;
-   (*API->CodeEditor->GetEditorCursorCoordinates)( handle, &pos.y, &pos.x );
+   (API->CodeEditor->GetEditorCursorCoordinates)( handle, &pos.y, &pos.x );
    return pos;
 }
 
@@ -186,70 +186,70 @@ Point CodeEditor::CursorPosition() const
 
 void CodeEditor::SetCursorPosition( int line, int column )
 {
-   (*API->CodeEditor->SetEditorCursorCoordinates)( handle, line, column );
+   (API->CodeEditor->SetEditorCursorCoordinates)( handle, line, column );
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::IsInsertMode() const
 {
-   return (*API->CodeEditor->GetEditorInsertMode)( handle ) != api_false;
+   return (API->CodeEditor->GetEditorInsertMode)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::SetInsertMode( bool insert )
 {
-   (*API->CodeEditor->SetEditorInsertMode)( handle, insert );
+   (API->CodeEditor->SetEditorInsertMode)( handle, insert );
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::IsBlockSelectionMode() const
 {
-   return (*API->CodeEditor->GetEditorBlockSelectionMode)( handle ) != api_false;
+   return (API->CodeEditor->GetEditorBlockSelectionMode)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::SetBlockSelectionMode( bool blockMode )
 {
-   (*API->CodeEditor->SetEditorBlockSelectionMode)( handle, blockMode );
+   (API->CodeEditor->SetEditorBlockSelectionMode)( handle, blockMode );
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::IsDynamicWordWrapMode() const
 {
-   return (*API->CodeEditor->GetEditorDynamicWordWrapMode)( handle ) != api_false;
+   return (API->CodeEditor->GetEditorDynamicWordWrapMode)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::SetDynamicWordWrapMode( bool wrapMode )
 {
-   (*API->CodeEditor->SetEditorDynamicWordWrapMode)( handle, wrapMode );
+   (API->CodeEditor->SetEditorDynamicWordWrapMode)( handle, wrapMode );
 }
 
 // ----------------------------------------------------------------------------
 
 int CodeEditor::UndoSteps() const
 {
-   return (*API->CodeEditor->GetEditorUndoSteps)( handle );
+   return (API->CodeEditor->GetEditorUndoSteps)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 int CodeEditor::RedoSteps() const
 {
-   return (*API->CodeEditor->GetEditorRedoSteps)( handle );
+   return (API->CodeEditor->GetEditorRedoSteps)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::HasSelection() const
 {
-   return (*API->CodeEditor->GetEditorHasSelection)( handle ) != api_false;
+   return (API->CodeEditor->GetEditorHasSelection)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -257,13 +257,13 @@ bool CodeEditor::HasSelection() const
 String CodeEditor::SelectedText() const
 {
    size_type len = 0;
-   (*API->CodeEditor->GetEditorSelectedText)( handle, 0, &len );
+   (API->CodeEditor->GetEditorSelectedText)( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->CodeEditor->GetEditorSelectedText)( handle, text.Begin(), &len ) == api_false )
+      if ( (API->CodeEditor->GetEditorSelectedText)( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetEditorSelectedText" );
       text.ResizeToNullTerminated();
    }
@@ -275,7 +275,7 @@ String CodeEditor::SelectedText() const
 Rect CodeEditor::Selection() const
 {
    Rect r;
-   (*API->CodeEditor->GetEditorSelectionCoordinates)( handle, &r.y0, &r.x0, &r.y1, &r.x1 );
+   (API->CodeEditor->GetEditorSelectionCoordinates)( handle, &r.y0, &r.x0, &r.y1, &r.x1 );
    return r;
 }
 
@@ -283,112 +283,112 @@ Rect CodeEditor::Selection() const
 
 void CodeEditor::SetSelection( int fromLine, int fromCol, int toLine, int toCol )
 {
-   (*API->CodeEditor->SetEditorSelectionCoordinates)( handle, fromLine, fromCol, toLine, toCol );
+   (API->CodeEditor->SetEditorSelectionCoordinates)( handle, fromLine, fromCol, toLine, toCol );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::InsertText( const String& text )
 {
-   (*API->CodeEditor->InsertEditorText)( handle, text.c_str() );
+   (API->CodeEditor->InsertEditorText)( handle, text.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::Undo()
 {
-   (*API->CodeEditor->EditorUndo)( handle );
+   (API->CodeEditor->EditorUndo)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::Redo()
 {
-   (*API->CodeEditor->EditorRedo)( handle );
+   (API->CodeEditor->EditorRedo)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::Cut()
 {
-   (*API->CodeEditor->EditorCut)( handle );
+   (API->CodeEditor->EditorCut)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::Copy()
 {
-   (*API->CodeEditor->EditorCopy)( handle );
+   (API->CodeEditor->EditorCopy)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::Paste()
 {
-   (*API->CodeEditor->EditorPaste)( handle );
+   (API->CodeEditor->EditorPaste)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::Delete()
 {
-   (*API->CodeEditor->EditorDelete)( handle );
+   (API->CodeEditor->EditorDelete)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::SelectAll()
 {
-   (*API->CodeEditor->EditorSelectAll)( handle );
+   (API->CodeEditor->EditorSelectAll)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::Unselect()
 {
-   (*API->CodeEditor->EditorUnselect)( handle );
+   (API->CodeEditor->EditorUnselect)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::GotoMatchedParenthesis()
 {
-   return (*API->CodeEditor->EditorGotoMatchedParenthesis)( handle ) != api_false;
+   return (API->CodeEditor->EditorGotoMatchedParenthesis)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int CodeEditor::HighlightAllMatches( const String& toFind, FindModes mode )
 {
-   return (*API->CodeEditor->EditorHighlightAllMatches)( handle, toFind.c_str(), unsigned( mode ) );
+   return (API->CodeEditor->EditorHighlightAllMatches)( handle, toFind.c_str(), unsigned( mode ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void CodeEditor::ClearMatches()
 {
-   (*API->CodeEditor->EditorClearMatches)( handle );
+   (API->CodeEditor->EditorClearMatches)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::Find( const String& toFind, FindModes mode )
 {
-   return (*API->CodeEditor->EditorFind)( handle, toFind.c_str(), unsigned( mode ) ) != api_false;
+   return (API->CodeEditor->EditorFind)( handle, toFind.c_str(), unsigned( mode ) ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool CodeEditor::ReplaceSelection( const String& replaceWith )
 {
-   return (*API->CodeEditor->EditorReplace)( handle, replaceWith.c_str() ) != api_false;
+   return (API->CodeEditor->EditorReplace)( handle, replaceWith.c_str() ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int CodeEditor::ReplaceAll( const String& toFind, const String& replaceWith, FindModes mode )
 {
-   return (*API->CodeEditor->EditorReplaceAll)( handle, toFind.c_str(), replaceWith.c_str(), unsigned( mode ) );
+   return (API->CodeEditor->EditorReplaceAll)( handle, toFind.c_str(), replaceWith.c_str(), unsigned( mode ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -453,7 +453,7 @@ public:
 void CodeEditor::OnTextUpdated( editor_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->CodeEditor->SetEditorTextUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->CodeEditor->SetEditorTextUpdatedEventRoutine)( handle, &receiver,
                   (handler != nullptr) ? CodeEditorEventDispatcher::TextUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetEditorTextUpdatedEventRoutine" );
    m_handlers->onTextUpdated = handler;
@@ -462,7 +462,7 @@ void CodeEditor::OnTextUpdated( editor_event_handler handler, Control& receiver 
 void CodeEditor::OnCursorPositionUpdated( cursor_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->CodeEditor->SetEditorCursorPositionUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->CodeEditor->SetEditorCursorPositionUpdatedEventRoutine)( handle, &receiver,
                   (handler != nullptr) ? CodeEditorEventDispatcher::CursorPositionUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetEditorCursorPositionUpdatedEventRoutine" );
    m_handlers->onCursorPositionUpdated = handler;
@@ -471,7 +471,7 @@ void CodeEditor::OnCursorPositionUpdated( cursor_event_handler handler, Control&
 void CodeEditor::OnSelectionUpdated( selection_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->CodeEditor->SetEditorSelectionUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->CodeEditor->SetEditorSelectionUpdatedEventRoutine)( handle, &receiver,
                   (handler != nullptr) ? CodeEditorEventDispatcher::SelectionUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetEditorSelectionUpdatedEventRoutine" );
    m_handlers->onSelectionUpdated = handler;
@@ -480,7 +480,7 @@ void CodeEditor::OnSelectionUpdated( selection_event_handler handler, Control& r
 void CodeEditor::OnOverwriteModeUpdated( state_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->CodeEditor->SetEditorOverwriteModeUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->CodeEditor->SetEditorOverwriteModeUpdatedEventRoutine)( handle, &receiver,
                   (handler != nullptr) ? CodeEditorEventDispatcher::OverwriteModeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetEditorOverwriteModeUpdatedEventRoutine" );
    m_handlers->onOverwriteModeUpdated = handler;
@@ -489,7 +489,7 @@ void CodeEditor::OnOverwriteModeUpdated( state_event_handler handler, Control& r
 void CodeEditor::OnSelectionModeUpdated( state_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->CodeEditor->SetEditorSelectionModeUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->CodeEditor->SetEditorSelectionModeUpdatedEventRoutine)( handle, &receiver,
                   (handler != nullptr) ? CodeEditorEventDispatcher::SelectionModeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetEditorSelectionModeUpdatedEventRoutine" );
    m_handlers->onSelectionModeUpdated = handler;
@@ -498,7 +498,7 @@ void CodeEditor::OnSelectionModeUpdated( state_event_handler handler, Control& r
 void CodeEditor::OnDynamicWordWrapModeUpdated( state_event_handler handler, Control& receiver )
 {
    INIT_EVENT_HANDLERS();
-   if ( (*API->CodeEditor->SetEditorDynamicWordWrapModeUpdatedEventRoutine)( handle, &receiver,
+   if ( (API->CodeEditor->SetEditorDynamicWordWrapModeUpdatedEventRoutine)( handle, &receiver,
                   (handler != nullptr) ? CodeEditorEventDispatcher::DynamicWordWrapModeUpdated : nullptr ) == api_false )
       throw APIFunctionError( "SetEditorDynamicWordWrapModeUpdatedEventRoutine" );
    m_handlers->onDynamicWordWrapModeUpdated = handler;

@@ -43,7 +43,7 @@ static api_bool LinearFitCallback( void* p )
 void LinearFit::Fit( double& a, double& b, double& adev,
                      const float* fx, const float* fy, size_type n, StatusMonitor* status )
 {
-   switch ( (*API->Numerical->LinearFitF)( &a, &b, &adev, fx, fy, n, status ? LinearFitCallback : nullptr, status ) )
+   switch ( (API->Numerical->LinearFitF)( &a, &b, &adev, fx, fy, n, status ? LinearFitCallback : nullptr, status ) )
    {
    case api_ok:
       return;
@@ -58,7 +58,7 @@ void LinearFit::Fit( double& a, double& b, double& adev,
 void LinearFit::Fit( double& a, double& b, double& adev,
                      const double* fx, const double* fy, size_type n, StatusMonitor* status )
 {
-   switch ( (*API->Numerical->LinearFitD)( &a, &b, &adev, fx, fy, n, status ? LinearFitCallback : nullptr, status ) )
+   switch ( (API->Numerical->LinearFitD)( &a, &b, &adev, fx, fy, n, status ? LinearFitCallback : nullptr, status ) )
    {
    case api_ok:
       return;

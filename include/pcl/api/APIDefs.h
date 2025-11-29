@@ -20,6 +20,7 @@
 #define __PCL_API_APIDefs_h
 
 #include <pcl/Defs.h>
+#include <pcl/Control.h>
 
 using namespace pcl;
 
@@ -543,8 +544,8 @@ typedef const_api_handle   const_mutex_handle;
 /*
  * Handle to an UI control
  */
-typedef api_handle         control_handle;
-typedef const_api_handle   const_control_handle;
+typedef pcl::Control*      control_handle;
+typedef const control_handle   const_control_handle;
 
 /*
  * Handle to a device-independent bitmap

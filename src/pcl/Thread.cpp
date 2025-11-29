@@ -128,14 +128,14 @@ public:
  */
 
 Thread::Thread()
-   : UIObject( (API != nullptr) ? (*API->Thread->CreateThread)( ModuleHandle(), this, 0/*flags*/ ) : nullptr )
+   : UIObject( (API != nullptr) ? (API->Thread->CreateThread)( ModuleHandle(), this, 0/*flags*/ ) : nullptr )
 {
    if ( API != nullptr )
    {
       if ( IsNull() )
          throw APIFunctionError( "CreateThread" );
 
-      (*API->Thread->SetThreadExecRoutine)( handle, ThreadDispatcher::RunThread );
+      (API->Thread->SetThreadExecRoutine)( handle, ThreadDispatcher::RunThread );
 
       if ( s_featureDataInitialized.Load() == 0 )
       {
@@ -177,7 +177,7 @@ void Thread::Start( Thread::priority p, int processor )
       if ( processor <= PCL_MAX_PROCESSORS )
          if ( Thread::IsRootThread() )
             m_processorIndex = processor;
-   (*API->Thread->StartThread)( handle, p );
+   (API->Thread->StartThread)( handle, p );
 }
 
 // ----------------------------------------------------------------------------
@@ -209,7 +209,7 @@ Array<int> Thread::Affinity() const
 
 bool Thread::SetAffinity( const Array<int>& processors )
 {
-   if ( (*API->Thread->IsThreadActive)( handle ) == api_false )
+   if ( (API->Thread->IsThreadActive)( handle ) == api_false )
       return false;
 #ifdef __PCL_LINUX
    cpu_set_t set;
@@ -245,7 +245,7 @@ bool Thread::SetAffinity( const Array<int>& processors )
 
 bool Thread::SetAffinity( int processor )
 {
-   if ( (*API->Thread->IsThreadActive)( handle ) == api_false )
+   if ( (API->Thread->IsThreadActive)( handle ) == api_false )
       return false;
 #ifdef __PCL_LINUX
    if ( processor < 0 || processor >= CPU_SETSIZE )
@@ -274,49 +274,49 @@ bool Thread::SetAffinity( int processor )
 
 void Thread::Kill()
 {
-   (*API->Thread->KillThread)( handle );
+   (API->Thread->KillThread)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Thread::IsActive() const
 {
-   return (*API->Thread->IsThreadActive)( handle ) != api_false;
+   return (API->Thread->IsThreadActive)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 Thread::priority Thread::Priority() const
 {
-   return priority( (*API->Thread->GetThreadPriority)( handle ) );
+   return priority( (API->Thread->GetThreadPriority)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void Thread::SetPriority( Thread::priority p )
 {
-   (*API->Thread->SetThreadPriority)( handle, p );
+   (API->Thread->SetThreadPriority)( handle, p );
 }
 
 // ----------------------------------------------------------------------------
 
 void Thread::Wait()
 {
-   (void)(*API->Thread->WaitThread)( handle, uint32_max );
+   (void)(API->Thread->WaitThread)( handle, uint32_max );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Thread::Wait( unsigned ms )
 {
-   return (*API->Thread->WaitThread)( handle, ms ) != api_false;
+   return (API->Thread->WaitThread)( handle, ms ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Thread::Sleep( unsigned ms )
 {
-   //(*API->Thread->SleepThread)( handle, ms );
+   //(API->Thread->SleepThread)( handle, ms );
    SLEEP( ms )
 }
 
@@ -325,9 +325,9 @@ void Thread::Sleep( unsigned ms )
 /*
 Thread& Thread::CurrentThread()
 {
-   thread_handle handle = (*API->Thread->GetCurrentThread)();
+   thread_handle handle = (API->Thread->GetCurrentThread)();
    if ( handle != 0 )
-      if ( (*API->UI->GetUIObjectModule)( handle ) == ModuleHandle() )
+      if ( (API->UI->GetUIObjectModule)( handle ) == ModuleHandle() )
       {
          UIObject& object = UIObject::ObjectByHandle( handle );
          if ( !object.IsNull() )
@@ -345,7 +345,7 @@ Thread& Thread::CurrentThread()
 
 bool Thread::IsRootThread()
 {
-   return (*API->Thread->GetCurrentThread)() == 0;
+   return (API->Thread->GetCurrentThread)() == 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -359,21 +359,21 @@ int Thread::NumberOfRunningThreads()
 
 uint32 Thread::Status() const
 {
-   return (*API->Thread->GetThreadStatus)( handle );
+   return (API->Thread->GetThreadStatus)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Thread::TryGetStatus( uint32& status ) const
 {
-   return (*API->Thread->GetThreadStatusEx)( handle, &status, 0x00000001 ) != api_false;
+   return (API->Thread->GetThreadStatusEx)( handle, &status, 0x00000001 ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void Thread::SetStatus( uint32 status )
 {
-   (*API->Thread->SetThreadStatus)( handle, status );
+   (API->Thread->SetThreadStatus)( handle, status );
 }
 
 // ----------------------------------------------------------------------------
@@ -381,13 +381,13 @@ void Thread::SetStatus( uint32 status )
 String Thread::ConsoleOutputText() const
 {
    size_type len = 0;
-   (*API->Thread->GetThreadConsoleOutputText)( handle, 0, &len );
+   (API->Thread->GetThreadConsoleOutputText)( handle, 0, &len );
 
    String text;
    if ( len > 0 )
    {
       text.SetLength( len );
-      if ( (*API->Thread->GetThreadConsoleOutputText)( handle, text.Begin(), &len ) == api_false )
+      if ( (API->Thread->GetThreadConsoleOutputText)( handle, text.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetThreadConsoleOutputText" );
       text.ResizeToNullTerminated();
    }
@@ -398,7 +398,7 @@ String Thread::ConsoleOutputText() const
 
 void Thread::ClearConsoleOutputText()
 {
-   (*API->Thread->ClearThreadConsoleOutputText)( handle );
+   (API->Thread->ClearThreadConsoleOutputText)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -429,7 +429,7 @@ int Thread::NumberOfThreads( size_type N, size_type overheadLimit )
          int processorsAvailable = Module->NumberOfProcessors() - NumberOfRunningThreads();
          if ( processorsAvailable > 1 )
          {
-            int threadsAllowed = Min( processorsAvailable, (*API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
+            int threadsAllowed = Min( processorsAvailable, (API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
             if ( overheadLimit < 2 || N/threadsAllowed >= overheadLimit )
                return int( Min( size_type( threadsAllowed ), N ) );
             return Max( 1, int( N/overheadLimit ) );
@@ -495,10 +495,10 @@ int Thread::OptimalNumberOfThreads( const Thread::PerformanceAnalysisData& data 
       int processorsAvailable = Module->NumberOfProcessors() - NumberOfRunningThreads();
       if ( processorsAvailable > 1 )
       {
-         int threadsAllowed = Min( processorsAvailable, (*API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
+         int threadsAllowed = Min( processorsAvailable, (API->Global->MaxProcessorsAllowedForModule)( ModuleHandle(), 0u/*flags*/ ) );
          if ( threadsAllowed > 1 )
          {
-            int optimalThreads = (*API->Thread->PerformanceAnalysisValue)( data.algorithm, data.length,
+            int optimalThreads = (API->Thread->PerformanceAnalysisValue)( data.algorithm, data.length,
                                                                            data.itemSize, data.floatingPoint,
                                                                            data.kernelSize, data.width, data.height );
             if ( optimalThreads > 0 )
@@ -538,7 +538,7 @@ Array<size_type> Thread::OptimalThreadLoads( const Thread::PerformanceAnalysisDa
 
 void PCL_FUNC Sleep( unsigned ms )
 {
-   //(*API->Thread->SleepThread)( 0, ms );
+   //(API->Thread->SleepThread)( 0, ms );
    SLEEP( ms )
 }
 

@@ -50,7 +50,7 @@ public:
 // ----------------------------------------------------------------------------
 
 Timer::Timer()
-   : UIObject( (*API->Timer->CreateTimer)( ModuleHandle(), this, 0/*flags*/ ) )
+   : UIObject( (API->Timer->CreateTimer)( ModuleHandle(), this, 0/*flags*/ ) )
 {
    if ( handle == 0 )
       throw APIFunctionError( "CreateTimer" );
@@ -62,7 +62,7 @@ void Timer::OnTimer( timer_event_handler f, Control& receiver )
 {
    onTimer = nullptr;
    count = 0;
-   if ( (*API->Timer->SetTimerNotifyEventRoutine)( handle, &receiver,
+   if ( (API->Timer->SetTimerNotifyEventRoutine)( handle, &receiver,
         (f != nullptr) ? TimerEventDispatcher::TimerNotify : nullptr ) == api_false )
    {
       throw APIFunctionError( "SetTimerNotifyEventRoutine" );
@@ -87,7 +87,7 @@ Timer& Timer::Null()
 double Timer::Interval() const
 {
    uint32 msec = 0;
-   (*API->Timer->GetTimerInterval)( handle, &msec );
+   (API->Timer->GetTimerInterval)( handle, &msec );
    return 0.001*double( msec );
 }
 
@@ -96,14 +96,14 @@ double Timer::Interval() const
 void Timer::SetInterval( double sec )
 {
    count = 0;
-   (*API->Timer->SetTimerInterval)( handle, (uint32)(1000*Round( sec, 3 )) );
+   (API->Timer->SetTimerInterval)( handle, (uint32)(1000*Round( sec, 3 )) );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Timer::IsSingleShot() const
 {
-   return (*API->Timer->GetTimerSingleShot)( handle ) != api_false;
+   return (API->Timer->GetTimerSingleShot)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -111,14 +111,14 @@ bool Timer::IsSingleShot() const
 void Timer::SetSingleShot( bool singleShot )
 {
    count = 0;
-   (*API->Timer->SetTimerSingleShot)( handle, singleShot );
+   (API->Timer->SetTimerSingleShot)( handle, singleShot );
 }
 
 // ----------------------------------------------------------------------------
 
 bool Timer::IsRunning() const
 {
-   return (*API->Timer->IsTimerActive)( handle ) != api_false;
+   return (API->Timer->IsTimerActive)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -126,7 +126,7 @@ bool Timer::IsRunning() const
 void Timer::Start()
 {
    count = 0;
-   if ( (*API->Timer->StartTimer)( handle ) == api_false )
+   if ( (API->Timer->StartTimer)( handle ) == api_false )
       throw APIFunctionError( "StartTimer" );
 }
 
@@ -134,7 +134,7 @@ void Timer::Start()
 
 void Timer::Stop()
 {
-   (*API->Timer->StopTimer)( handle );
+   (API->Timer->StopTimer)( handle );
 }
 
 // ----------------------------------------------------------------------------

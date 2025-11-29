@@ -653,7 +653,7 @@ int SeparableConvolution::FasterThanNonseparableFilterSize( int width, int heigh
 {
    if ( API != nullptr )
    {
-      int kernelSize = (*API->Thread->PerformanceAnalysisValue)( PerformanceAnalysisAlgorithm::SeparableConvolutionFasterThanNonseparable,
+      int kernelSize = (API->Thread->PerformanceAnalysisValue)( PerformanceAnalysisAlgorithm::SeparableConvolutionFasterThanNonseparable,
                                                                  0/*length*/,
                                                                  4/*itemSize*/, api_true/*floatingPoint*/,
                                                                  0/*kernelSize*/, width, height );

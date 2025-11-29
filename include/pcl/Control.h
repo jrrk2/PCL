@@ -34,7 +34,7 @@
 #include <pcl/KeyCodes.h>
 #include <pcl/Rectangle.h>
 #include <pcl/Sizer.h>
-#include <pcl/UIObject.h>
+#include <pcl/UIControlObject.h>
 #include <pcl/UIScaling.h>
 
 #endif   // !__PCL_BUILDING_PIXINSIGHT_APPLICATION
@@ -89,7 +89,7 @@ class PCL_CLASS View;
  *
  * ### TODO: Write a detailed description for %Control.
  */
-class PCL_CLASS Control : public UIObject
+class PCL_CLASS Control : public UIControlObject
 {
 public:
 
@@ -1746,13 +1746,13 @@ protected:
     * \internal
     * Private constructor from a low-level opaque server handle.
     */
-   Control( void* h ) : UIObject( h )
+   Control( control_handle h ) : UIControlObject( h )
    {
    }
 
    /*!
     * \internal
-    * Reimplemented from UIObject. Throws an Error exception because Control
+    * Reimplemented from UIControlObject. Throws an Error exception because Control
     * objects are unique, and hence cannot be duplicated.
     */
    void* CloneHandle() const override;

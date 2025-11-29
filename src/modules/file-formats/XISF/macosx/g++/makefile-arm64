@@ -1,0 +1,66 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:50.063Z
+# Project id ...... XISF
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/modules/file-formats/XISF/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/libXISF-pxm.a
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../XISFFormat.cpp \
+../../XISFInstance.cpp \
+../../XISFModule.cpp \
+../../XISFOptionsDialog.cpp \
+../../XISFPreferencesDialog.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/XISFFormat.o \
+./arm64/Release/XISFInstance.o \
+./arm64/Release/XISFModule.o \
+./arm64/Release/XISFOptionsDialog.o \
+./arm64/Release/XISFPreferencesDialog.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/XISFFormat.d \
+./arm64/Release/XISFInstance.d \
+./arm64/Release/XISFModule.d \
+./arm64/Release/XISFOptionsDialog.d \
+./arm64/Release/XISFPreferencesDialog.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/libXISF-pxm.a: $(OBJ_FILES)
+	ar rc $@ $(OBJ_FILES)
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/libXISF-pxm.a
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -msse4.2 -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -fvisibility=hidden -fvisibility-inlines-hidden -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

@@ -29,21 +29,21 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 Cursor::Cursor( std_cursor stdShape )
-   : UIObject( (*API->Cursor->CreateCursor)( ModuleHandle(), stdShape ) )
+   : UIObject( (API->Cursor->CreateCursor)( ModuleHandle(), stdShape ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateCursor" );
 }
 
 Cursor::Cursor( const Bitmap& p, const pcl::Point& hotSpot )
-   : UIObject( (*API->Cursor->CreateBitmapCursor)( ModuleHandle(), p.handle, hotSpot.x, hotSpot.y ) )
+   : UIObject( (API->Cursor->CreateBitmapCursor)( ModuleHandle(), p.handle, hotSpot.x, hotSpot.y ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateBitmapCursor" );
 }
 
 Cursor::Cursor( const Bitmap& p, int hotSpotX, int hotSpotY )
-   : UIObject( (*API->Cursor->CreateBitmapCursor)( ModuleHandle(), p.handle, hotSpotX, hotSpotY ) )
+   : UIObject( (API->Cursor->CreateBitmapCursor)( ModuleHandle(), p.handle, hotSpotX, hotSpotY ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateBitmapCursor" );
@@ -66,7 +66,7 @@ Cursor& Cursor::Null()
 pcl::Point Cursor::HotSpot() const
 {
    pcl::Point p;
-   (*API->Cursor->GetCursorHotSpot)( handle, &p.x, &p.y );
+   (API->Cursor->GetCursorHotSpot)( handle, &p.x, &p.y );
    return p;
 }
 
@@ -75,7 +75,7 @@ pcl::Point Cursor::HotSpot() const
 pcl::Point Cursor::Position()
 {
    pcl::Point p;
-   (*API->Global->GetCursorPosition)( &p.x, &p.y );
+   (API->Global->GetCursorPosition)( &p.x, &p.y );
    return p;
 }
 
@@ -83,14 +83,14 @@ pcl::Point Cursor::Position()
 
 void Cursor::SetPosition( int x, int y )
 {
-   (*API->Global->SetCursorPosition)( x, y );
+   (API->Global->SetCursorPosition)( x, y );
 }
 
 // ----------------------------------------------------------------------------
 
 void* Cursor::CloneHandle() const
 {
-   return (*API->Cursor->CloneCursor)( ModuleHandle(), handle );
+   return (API->Cursor->CloneCursor)( ModuleHandle(), handle );
 }
 
 // ----------------------------------------------------------------------------

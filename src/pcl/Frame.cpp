@@ -27,7 +27,7 @@ namespace pcl
 // ----------------------------------------------------------------------------
 
 Frame::Frame( Control& parent )
-   : Control( (*API->Frame->CreateFrame)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
+   : Control( (API->Frame->CreateFrame)( ModuleHandle(), this, parent.handle, 0/*flags*/ ) )
 {
    if ( IsNull() )
       throw APIFunctionError( "CreateFrame" );
@@ -37,35 +37,35 @@ Frame::Frame( Control& parent )
 
 Frame::style Frame::Style() const
 {
-   return style( (*API->Frame->GetFrameStyle)( handle ) );
+   return style( (API->Frame->GetFrameStyle)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void Frame::SetStyle( Frame::style style )
 {
-   (*API->Frame->SetFrameStyle)( handle, style );
+   (API->Frame->SetFrameStyle)( handle, style );
 }
 
 // ----------------------------------------------------------------------------
 
 int Frame::LineWidth() const
 {
-   return (*API->Frame->GetFrameLineWidth)( handle );
+   return (API->Frame->GetFrameLineWidth)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void Frame::SetLineWidth( int px )
 {
-   (*API->Frame->SetFrameLineWidth)( handle, px );
+   (API->Frame->SetFrameLineWidth)( handle, px );
 }
 
 // ----------------------------------------------------------------------------
 
 int Frame::BorderWidth() const
 {
-   return (*API->Frame->GetFrameBorderWidth)( handle );
+   return (API->Frame->GetFrameBorderWidth)( handle );
 }
 
 // ----------------------------------------------------------------------------

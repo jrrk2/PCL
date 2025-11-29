@@ -27,7 +27,7 @@ namespace pcl
 
 KeyboardModifiers CurrentKeyboardModifiers()
 {
-   return (*API->Global->GetKeyboardModifiers)();
+   return (API->Global->GetKeyboardModifiers)();
 }
 
 // ----------------------------------------------------------------------------

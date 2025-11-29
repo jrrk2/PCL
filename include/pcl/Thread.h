@@ -856,7 +856,7 @@ private:
 
    int m_processorIndex = -1;
 
-   Thread( void* h ) : UIObject( h )
+   Thread( control_handle h ) : UIObject( h )
    {
    }
 

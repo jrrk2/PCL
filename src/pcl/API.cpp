@@ -52,8 +52,8 @@ api_handle PCL_FUNC ModuleHandle()
 
 void APIError::GetAPIErrorCode()
 {
-   if ( API != nullptr && API->Global != nullptr && API->Global->LastError != 0 )
-      apiErrorCode = (*API->Global->LastError)();
+  if ( API != nullptr && API->Global != nullptr)
+      apiErrorCode = API->Global->LastError();
    else
       apiErrorCode = 0;
 }
@@ -73,11 +73,11 @@ String APIError::FormatInfo() const
       if ( apiErrorCode != 0 )
       {
          size_type len = 0;
-         (*API->Global->ErrorMessage)( apiErrorCode, 0, &len );
+         (API->Global->ErrorMessage)( apiErrorCode, 0, &len );
          if ( len > 0 )
          {
             apiMessage.SetLength( len );
-            (*API->Global->ErrorMessage)( apiErrorCode, apiMessage.Begin(), &len );
+            (API->Global->ErrorMessage)( apiErrorCode, apiMessage.Begin(), &len );
             apiMessage.ResizeToNullTerminated();
          }
       }

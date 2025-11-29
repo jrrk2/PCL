@@ -145,7 +145,7 @@ protected:
    /*!
     * \internal
     */
-   Frame( void* h ) : Control( h )
+   Frame( control_handle h ) : Control( h )
    {
    }
 };

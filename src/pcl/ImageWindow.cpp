@@ -45,7 +45,7 @@ public:
 ImageWindow::ImageWindow( int width, int height, int numberOfChannels,
                           int bitsPerSample, bool floatSample, bool color,
                           bool initialProcessing, const IsoString& id )
-   : UIObject( (*API->ImageWindow->CreateImageWindow)( width, height, numberOfChannels,
+   : UIObject( (API->ImageWindow->CreateImageWindow)( width, height, numberOfChannels,
                                                        bitsPerSample, floatSample, color,
                                                        initialProcessing, id.c_str() ) )
 {
@@ -71,7 +71,7 @@ Array<ImageWindow> ImageWindow::Open( const String& url,
                const IsoString& id, const IsoString& formatHints, bool asACopy, bool allowMessages )
 {
    Array<ImageWindow> a;
-   if ( (*API->ImageWindow->LoadImageWindows)( url.c_str(), id.c_str(), formatHints.c_str(),
+   if ( (API->ImageWindow->LoadImageWindows)( url.c_str(), id.c_str(), formatHints.c_str(),
                                  api_bool( asACopy ), api_bool( allowMessages ),
                                  InternalWindowEnumerator::Callback, &a ) == api_false )
       throw APIFunctionError( "LoadImageWindows" );
@@ -82,14 +82,14 @@ Array<ImageWindow> ImageWindow::Open( const String& url,
 
 bool ImageWindow::IsNew() const
 {
-   return (*API->ImageWindow->GetImageWindowNewFlag)( handle ) != api_false;
+   return (API->ImageWindow->GetImageWindowNewFlag)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::IsACopy() const
 {
-   return (*API->ImageWindow->GetImageWindowCopyFlag)( handle ) != api_false;
+   return (API->ImageWindow->GetImageWindowCopyFlag)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -97,13 +97,13 @@ bool ImageWindow::IsACopy() const
 String ImageWindow::FilePath() const
 {
    size_type len = 0;
-   (*API->ImageWindow->GetImageWindowFilePath)( handle, 0, &len );
+   (API->ImageWindow->GetImageWindowFilePath)( handle, 0, &len );
 
    String path;
    if ( len > 0 )
    {
       path.SetLength( len );
-      if ( (*API->ImageWindow->GetImageWindowFilePath)( handle, path.Begin(), &len ) == api_false )
+      if ( (API->ImageWindow->GetImageWindowFilePath)( handle, path.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetImageWindowFilePath" );
       path.ResizeToNullTerminated();
    }
@@ -115,13 +115,13 @@ String ImageWindow::FilePath() const
 String ImageWindow::FileURL() const
 {
    size_type len = 0;
-   (*API->ImageWindow->GetImageWindowFileURL)( handle, 0, &len );
+   (API->ImageWindow->GetImageWindowFileURL)( handle, 0, &len );
 
    String url;
    if ( len > 0 )
    {
       url.SetLength( len );
-      if ( (*API->ImageWindow->GetImageWindowFileURL)( handle, url.Begin(), &len ) == api_false )
+      if ( (API->ImageWindow->GetImageWindowFileURL)( handle, url.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetImageWindowFileURL" );
       url.ResizeToNullTerminated();
    }
@@ -133,7 +133,7 @@ String ImageWindow::FileURL() const
 ImageOptions ImageWindow::FileInfo() const
 {
    api_image_file_info a;
-   (*API->ImageWindow->GetImageWindowFileInfo)( handle, &a );
+   (API->ImageWindow->GetImageWindowFileInfo)( handle, &a );
 
    ImageOptions o;
    o.bitsPerSample          = a.bitsPerSample;
@@ -164,14 +164,14 @@ ImageOptions ImageWindow::FileInfo() const
 
 ImageWindow::image_type ImageWindow::ImageType() const
 {
-   return (ImageWindow::image_type)(*API->ImageWindow->GetImageType)( handle );
+   return (ImageWindow::image_type)(API->ImageWindow->GetImageType)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetImageType( ImageWindow::image_type type, bool notify )
 {
-   if ( (*API->ImageWindow->SetImageType)( handle, type, api_bool( notify ) ) == api_false )
+   if ( (API->ImageWindow->SetImageType)( handle, type, api_bool( notify ) ) == api_false )
       throw APIFunctionError( "SetImageType" );
 }
 
@@ -179,21 +179,21 @@ void ImageWindow::SetImageType( ImageWindow::image_type type, bool notify )
 
 size_type ImageWindow::ModifyCount() const
 {
-   return (*API->ImageWindow->GetImageWindowModifyCount)( handle );
+   return (API->ImageWindow->GetImageWindowModifyCount)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::Close()
 {
-   return (*API->ImageWindow->CloseImageWindow)( handle, api_false/*force*/ ) != api_false;
+   return (API->ImageWindow->CloseImageWindow)( handle, api_false/*force*/ ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ForceClose()
 {
-   if ( (*API->ImageWindow->CloseImageWindow)( handle, api_true/*force*/ ) == api_false )
+   if ( (API->ImageWindow->CloseImageWindow)( handle, api_true/*force*/ ) == api_false )
       throw APIFunctionError( "CloseImageWindow" );
 }
 
@@ -201,42 +201,42 @@ void ImageWindow::ForceClose()
 
 View ImageWindow::MainView() const
 {
-   return View( (*API->ImageWindow->GetImageWindowMainView)( handle ) );
+   return View( (API->ImageWindow->GetImageWindowMainView)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 View ImageWindow::CurrentView() const
 {
-   return View( (*API->ImageWindow->GetImageWindowCurrentView)( handle ) );
+   return View( (API->ImageWindow->GetImageWindowCurrentView)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SelectView( View& v )
 {
-   (*API->ImageWindow->SetImageWindowCurrentView)( handle, v.handle );
+   (API->ImageWindow->SetImageWindowCurrentView)( handle, v.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::PurgeProperties()
 {
-   (*API->ImageWindow->PurgeImageWindowProperties)( handle );
+   (API->ImageWindow->PurgeImageWindowProperties)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::IsValidView( const View& v ) const
 {
-   return (*API->ImageWindow->ValidateImageWindowView)( handle, v.handle ) != api_false;
+   return (API->ImageWindow->ValidateImageWindowView)( handle, v.handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int ImageWindow::NumberOfPreviews() const
 {
-   return (*API->ImageWindow->GetPreviewCount)( handle );
+   return (API->ImageWindow->GetPreviewCount)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -255,7 +255,7 @@ public:
 Array<View> ImageWindow::Previews() const
 {
    Array<View> a;
-   (*API->ImageWindow->EnumeratePreviews)( handle, InternalPreviewEnumerator::Callback, &a );
+   (API->ImageWindow->EnumeratePreviews)( handle, InternalPreviewEnumerator::Callback, &a );
    return a;
 }
 
@@ -263,35 +263,35 @@ Array<View> ImageWindow::Previews() const
 
 View ImageWindow::PreviewById( const IsoString& previewId ) const
 {
-   return View( (*API->ImageWindow->GetPreviewById)( handle, previewId.c_str() ) );
+   return View( (API->ImageWindow->GetPreviewById)( handle, previewId.c_str() ) );
 }
 
 // ----------------------------------------------------------------------------
 
 View ImageWindow::SelectedPreview() const
 {
-   return View( (*API->ImageWindow->GetSelectedPreview)( handle ) );
+   return View( (API->ImageWindow->GetSelectedPreview)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SelectPreview( View& preview )
 {
-   (*API->ImageWindow->SelectPreview)( handle, preview.handle );
+   (API->ImageWindow->SelectPreview)( handle, preview.handle );
 }
 
 // ----------------------------------------------------------------------------
 
 View ImageWindow::CreatePreview( int x0, int y0, int x1, int y1, const IsoString& previewId )
 {
-   return View( (*API->ImageWindow->CreatePreview)( handle, x0, y0, x1, y1, previewId.c_str() ) );
+   return View( (API->ImageWindow->CreatePreview)( handle, x0, y0, x1, y1, previewId.c_str() ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ModifyPreview( const IsoString& previewId, int x0, int y0, int x1, int y1, const IsoString& newId )
 {
-   (*API->ImageWindow->ModifyPreview)( handle, previewId.c_str(), x0, y0, x1, y1, newId.c_str() );
+   (API->ImageWindow->ModifyPreview)( handle, previewId.c_str(), x0, y0, x1, y1, newId.c_str() );
 }
 
 // ----------------------------------------------------------------------------
@@ -299,7 +299,7 @@ void ImageWindow::ModifyPreview( const IsoString& previewId, int x0, int y0, int
 pcl::Rect ImageWindow::PreviewRect( const IsoString& previewId ) const
 {
    pcl::Rect r( -1, -1, -1, -1 );
-   (*API->ImageWindow->GetPreviewRect)( handle, previewId.c_str(), &r.x0, &r.y0, &r.x1, &r.y1 );
+   (API->ImageWindow->GetPreviewRect)( handle, previewId.c_str(), &r.x0, &r.y0, &r.x1, &r.y1 );
    return r;
 }
 
@@ -307,14 +307,14 @@ pcl::Rect ImageWindow::PreviewRect( const IsoString& previewId ) const
 
 void ImageWindow::DeletePreview( const IsoString& previewId )
 {
-   (*API->ImageWindow->DeletePreview)( handle, previewId.c_str() );
+   (API->ImageWindow->DeletePreview)( handle, previewId.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::DeletePreviews()
 {
-   (*API->ImageWindow->DeletePreviews)( handle );
+   (API->ImageWindow->DeletePreviews)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -323,7 +323,7 @@ void ImageWindow::GetSampleFormat( int& bitsPerSample, bool& floatSample ) const
 {
    uint32 bits;
    api_bool flt;
-   (*API->ImageWindow->GetImageWindowSampleFormat)( handle, &bits, &flt );
+   (API->ImageWindow->GetImageWindowSampleFormat)( handle, &bits, &flt );
    bitsPerSample = int( bits );
    floatSample = flt != api_false;
 }
@@ -332,21 +332,21 @@ void ImageWindow::GetSampleFormat( int& bitsPerSample, bool& floatSample ) const
 
 void ImageWindow::SetSampleFormat( int bitsPerSample, bool floatSample )
 {
-   (*API->ImageWindow->SetImageWindowSampleFormat)( handle, bitsPerSample, api_bool( floatSample ) );
+   (API->ImageWindow->SetImageWindowSampleFormat)( handle, bitsPerSample, api_bool( floatSample ) );
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow ImageWindow::Mask() const
 {
-   return ImageWindow( (*API->ImageWindow->GetImageWindowMask)( handle, 0 ) );
+   return ImageWindow( (API->ImageWindow->GetImageWindowMask)( handle, 0 ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetMask( ImageWindow& mask, bool inverted )
 {
-   (*API->ImageWindow->SetImageWindowMask)( handle, mask.handle, inverted );
+   (API->ImageWindow->SetImageWindowMask)( handle, mask.handle, inverted );
 }
 
 // ----------------------------------------------------------------------------
@@ -354,7 +354,7 @@ void ImageWindow::SetMask( ImageWindow& mask, bool inverted )
 bool ImageWindow::IsMaskInverted() const
 {
    api_bool inverted;
-   (void)(*API->ImageWindow->GetImageWindowMask)( handle, &inverted );
+   (void)(API->ImageWindow->GetImageWindowMask)( handle, &inverted );
    return inverted != api_false;
 }
 
@@ -362,56 +362,56 @@ bool ImageWindow::IsMaskInverted() const
 
 bool ImageWindow::IsMaskEnabled() const
 {
-   return (*API->ImageWindow->GetImageWindowMaskEnabled)( handle ) != api_false;
+   return (API->ImageWindow->GetImageWindowMaskEnabled)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::EnableMask( bool enable )
 {
-   (*API->ImageWindow->SetImageWindowMaskEnabled)( handle, enable );
+   (API->ImageWindow->SetImageWindowMaskEnabled)( handle, enable );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::IsMaskVisible() const
 {
-   return (*API->ImageWindow->GetImageWindowMaskVisible)( handle ) != api_false;
+   return (API->ImageWindow->GetImageWindowMaskVisible)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ShowMask( bool show )
 {
-   (*API->ImageWindow->SetImageWindowMaskVisible)( handle, show );
+   (API->ImageWindow->SetImageWindowMaskVisible)( handle, show );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::IsMaskCompatible( const ImageWindow& mask )
 {
-   return (*API->ImageWindow->ValidateImageWindowMask)( handle, mask.handle ) != api_false;
+   return (API->ImageWindow->ValidateImageWindowMask)( handle, mask.handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::HasMaskReferences() const
 {
-   return (*API->ImageWindow->GetMaskReferenceCount)( handle ) > 0;
+   return (API->ImageWindow->GetMaskReferenceCount)( handle ) > 0;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::RemoveMaskReferences()
 {
-   (*API->ImageWindow->RemoveImageWindowMaskReferences)( handle );
+   (API->ImageWindow->RemoveImageWindowMaskReferences)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::UpdateMaskReferences()
 {
-   (*API->ImageWindow->UpdateImageWindowMaskReferences)( handle );
+   (API->ImageWindow->UpdateImageWindowMaskReferences)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -419,7 +419,7 @@ void ImageWindow::UpdateMaskReferences()
 void ImageWindow::GetRGBWS( RGBColorSystem& rgbws ) const
 {
    api_RGBWS a;
-   (*API->ImageWindow->GetImageWindowRGBWS)( handle, &a );
+   (API->ImageWindow->GetImageWindowRGBWS)( handle, &a );
    rgbws = RGBColorSystem( a.gamma, a.isSRGBGamma != api_false, a.x, a.y, a.Y );
 }
 
@@ -433,21 +433,21 @@ void ImageWindow::SetRGBWS( const RGBColorSystem& rgbws )
    memcpy( a.x, *rgbws.ChromaticityXCoordinates(), sizeof( a.x ) );
    memcpy( a.y, *rgbws.ChromaticityYCoordinates(), sizeof( a.y ) );
    memcpy( a.Y, *rgbws.LuminanceCoefficients(), sizeof( a.Y ) );
-   (*API->ImageWindow->SetImageWindowRGBWS)( handle, &a );
+   (API->ImageWindow->SetImageWindowRGBWS)( handle, &a );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::UsingGlobalRGBWS() const
 {
-   return (*API->ImageWindow->GetImageWindowGlobalRGBWS)( handle ) != api_false;
+   return (API->ImageWindow->GetImageWindowGlobalRGBWS)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::UseGlobalRGBWS()
 {
-   (*API->ImageWindow->SetImageWindowGlobalRGBWS)( handle );
+   (API->ImageWindow->SetImageWindowGlobalRGBWS)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -455,7 +455,7 @@ void ImageWindow::UseGlobalRGBWS()
 void ImageWindow::GetGlobalRGBWS( RGBColorSystem& rgbws )
 {
    api_RGBWS a;
-   (*API->ImageWindow->GetGlobalRGBWS)( &a );
+   (API->ImageWindow->GetGlobalRGBWS)( &a );
    rgbws = RGBColorSystem( a.gamma, a.isSRGBGamma != api_false, a.x, a.y, a.Y );
 }
 
@@ -469,7 +469,7 @@ void ImageWindow::SetGlobalRGBWS( const RGBColorSystem& rgbws )
    memcpy( a.x, *rgbws.ChromaticityXCoordinates(), sizeof( a.x ) );
    memcpy( a.y, *rgbws.ChromaticityYCoordinates(), sizeof( a.y ) );
    memcpy( a.Y, *rgbws.LuminanceCoefficients(), sizeof( a.Y ) );
-   (*API->ImageWindow->SetGlobalRGBWS)( &a );
+   (API->ImageWindow->SetGlobalRGBWS)( &a );
 }
 
 // ----------------------------------------------------------------------------
@@ -477,7 +477,7 @@ void ImageWindow::SetGlobalRGBWS( const RGBColorSystem& rgbws )
 FITSKeywordArray ImageWindow::Keywords() const
 {
    FITSKeywordArray keywords;
-   int n = (*API->ImageWindow->GetImageWindowKeywordCount)( handle );
+   int n = (API->ImageWindow->GetImageWindowKeywordCount)( handle );
    if ( n > 0 )
       for ( int i = 0; i < n; ++i )
       {
@@ -486,7 +486,7 @@ FITSKeywordArray ImageWindow::Keywords() const
          value.Reserve( 256 );
          comment.Reserve( 256 );
          // N.B. The passed maximum lengths *do not* include an ending null character.
-         (*API->ImageWindow->GetImageWindowKeyword)( handle, i,
+         (API->ImageWindow->GetImageWindowKeyword)( handle, i,
                         name.Begin(), 255, value.Begin(), 255, comment.Begin(), 255 );
          name.ResizeToNullTerminated();
          value.ResizeToNullTerminated();
@@ -500,30 +500,30 @@ FITSKeywordArray ImageWindow::Keywords() const
 
 void ImageWindow::SetKeywords( const FITSKeywordArray& keywords )
 {
-   (*API->ImageWindow->ResetImageWindowKeywords)( handle );
+   (API->ImageWindow->ResetImageWindowKeywords)( handle );
    for ( const FITSHeaderKeyword& k : keywords )
-      (*API->ImageWindow->AddImageWindowKeyword)( handle, k.name.c_str(), k.value.c_str(), k.comment.c_str() );
+      (API->ImageWindow->AddImageWindowKeyword)( handle, k.name.c_str(), k.value.c_str(), k.comment.c_str() );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ResetKeywords()
 {
-   (*API->ImageWindow->ResetImageWindowKeywords)( handle );
+   (API->ImageWindow->ResetImageWindowKeywords)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::HasAstrometricSolution() const
 {
-   return (*API->ImageWindow->GetImageWindowHasAstrometricSolution)( handle ) != api_false;
+   return (API->ImageWindow->GetImageWindowHasAstrometricSolution)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::RegenerateAstrometricSolution( bool allowGUIMessages, bool notify )
 {
-   return (*API->ImageWindow->RegenerateImageWindowAstrometricSolution)( handle,
+   return (API->ImageWindow->RegenerateImageWindowAstrometricSolution)( handle,
                                           api_bool( allowGUIMessages ), api_bool( notify ) ) != api_false;
 }
 
@@ -531,7 +531,7 @@ bool ImageWindow::RegenerateAstrometricSolution( bool allowGUIMessages, bool not
 
 bool ImageWindow::CopyAstrometricSolution( const ImageWindow& source, bool notify )
 {
-   return (*API->ImageWindow->CopyImageWindowAstrometricSolution)( handle,
+   return (API->ImageWindow->CopyImageWindowAstrometricSolution)( handle,
                                                          source.handle, api_bool( notify ) ) != api_false;
 }
 
@@ -539,28 +539,28 @@ bool ImageWindow::CopyAstrometricSolution( const ImageWindow& source, bool notif
 
 void ImageWindow::ClearAstrometricSolution( bool notify )
 {
-   (*API->ImageWindow->ClearImageWindowAstrometricSolution)( handle, api_bool( notify ) );
+   (API->ImageWindow->ClearImageWindowAstrometricSolution)( handle, api_bool( notify ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::UpdateAstrometryMetadata( bool notify )
 {
-   (*API->ImageWindow->UpdateImageWindowAstrometryMetadata)( handle, api_bool( notify ) );
+   (API->ImageWindow->UpdateImageWindowAstrometryMetadata)( handle, api_bool( notify ) );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::ImageToCelestial( double& x, double& y, bool rawRA ) const
 {
-   return (*API->ImageWindow->ImageToCelestial)( handle, &x, &y, api_bool( rawRA ) ) != api_false;
+   return (API->ImageWindow->ImageToCelestial)( handle, &x, &y, api_bool( rawRA ) ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::CelestialToImage( double& ra, double& dec ) const
 {
-   return (*API->ImageWindow->CelestialToImage)( handle, &ra, &dec ) != api_false;
+   return (API->ImageWindow->CelestialToImage)( handle, &ra, &dec ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -568,7 +568,7 @@ bool ImageWindow::CelestialToImage( double& ra, double& dec ) const
 void ImageWindow::GetResolution( double& xRes, double& yRes, bool& metric ) const
 {
    api_bool m;
-   (*API->ImageWindow->GetImageWindowResolution)( handle, &xRes, &yRes, &m );
+   (API->ImageWindow->GetImageWindowResolution)( handle, &xRes, &yRes, &m );
    metric = m != api_false;
 }
 
@@ -576,7 +576,7 @@ void ImageWindow::GetResolution( double& xRes, double& yRes, bool& metric ) cons
 
 void ImageWindow::SetResolution( double xRes, double yRes, bool metric )
 {
-   (*API->ImageWindow->SetImageWindowResolution)( handle, xRes, yRes, metric );
+   (API->ImageWindow->SetImageWindowResolution)( handle, xRes, yRes, metric );
 }
 
 // ----------------------------------------------------------------------------
@@ -584,7 +584,7 @@ void ImageWindow::SetResolution( double xRes, double yRes, bool metric )
 void ImageWindow::GetDefaultResolution( double& xRes, double& yRes, bool& metric )
 {
    api_bool m;
-   (*API->ImageWindow->GetDefaultResolution)( &xRes, &yRes, &m );
+   (API->ImageWindow->GetDefaultResolution)( &xRes, &yRes, &m );
    metric = m != api_false;
 }
 
@@ -593,14 +593,14 @@ void ImageWindow::GetDefaultResolution( double& xRes, double& yRes, bool& metric
 bool ImageWindow::IsDefaultICCProfileEmbeddingEnabledForRGBImages()
 {
    api_bool rgb = api_false;
-   (*API->ImageWindow->GetDefaultICCProfileEmbedding)( &rgb, 0 );
+   (API->ImageWindow->GetDefaultICCProfileEmbedding)( &rgb, 0 );
    return rgb != api_false;
 }
 
 bool ImageWindow::IsDefaultICCProfileEmbeddingEnabledForGrayscaleImages()
 {
    api_bool gray = api_false;
-   (*API->ImageWindow->GetDefaultICCProfileEmbedding)( 0, &gray );
+   (API->ImageWindow->GetDefaultICCProfileEmbedding)( 0, &gray );
    return gray != api_false;
 }
 
@@ -608,14 +608,14 @@ bool ImageWindow::IsDefaultICCProfileEmbeddingEnabledForGrayscaleImages()
 
 bool ImageWindow::IsDefaultThumbnailEmbeddingEnabled()
 {
-   return (*API->ImageWindow->GetDefaultThumbnailEmbedding)() != api_false;
+   return (API->ImageWindow->GetDefaultThumbnailEmbedding)() != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::IsDefaultPropertiesEmbeddingEnabled()
 {
-   return (*API->ImageWindow->GetDefaultPropertiesEmbedding)() != api_false;
+   return (API->ImageWindow->GetDefaultPropertiesEmbedding)() != api_false;
 }
 
 // ----------------------------------------------------------------------------
@@ -627,13 +627,13 @@ StringList ImageWindow::SwapDirectories()
    for ( int i = 0; ; ++i )
    {
       size_type len = 0;
-      (*API->ImageWindow->GetSwapDirectory)( i, 0, &len );
+      (API->ImageWindow->GetSwapDirectory)( i, 0, &len );
       if ( len == 0 )
          break;
 
       String path;
       path.SetLength( len );
-      if ( (*API->ImageWindow->GetSwapDirectory)( i, path.Begin(), &len ) == api_false )
+      if ( (API->ImageWindow->GetSwapDirectory)( i, path.Begin(), &len ) == api_false )
          throw APIFunctionError( "GetSwapDirectory" );
       path.ResizeToNullTerminated();
 
@@ -650,77 +650,77 @@ bool ImageWindow::SetSwapDirectories( const StringList& directories )
    Array<const char16_type*> strings;
    for ( const String& dir : directories )
       strings.Add( dir.c_str() );
-   return (*API->ImageWindow->SetSwapDirectories)( strings.Begin(), int32( strings.Length() ) ) != api_false;
+   return (API->ImageWindow->SetSwapDirectories)( strings.Begin(), int32( strings.Length() ) ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 int ImageWindow::CursorTolerance()
 {
-   return (*API->ImageWindow->GetCursorTolerance)();
+   return (API->ImageWindow->GetCursorTolerance)();
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow::gui_mode ImageWindow::CurrentMode()
 {
-   return gui_mode( (*API->ImageWindow->GetImageWindowMode)() );
+   return gui_mode( (API->ImageWindow->GetImageWindowMode)() );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SelectMode( ImageWindow::gui_mode mode )
 {
-   (*API->ImageWindow->SetImageWindowMode)( mode );
+   (API->ImageWindow->SetImageWindowMode)( mode );
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow::display_channel ImageWindow::CurrentChannel() const
 {
-   return display_channel( (*API->ImageWindow->GetImageWindowDisplayChannel)( handle ) );
+   return display_channel( (API->ImageWindow->GetImageWindowDisplayChannel)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SelectChannel( ImageWindow::display_channel chn )
 {
-   (*API->ImageWindow->SetImageWindowDisplayChannel)( handle, chn );
+   (API->ImageWindow->SetImageWindowDisplayChannel)( handle, chn );
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow::mask_mode ImageWindow::MaskMode() const
 {
-   return mask_mode( (*API->ImageWindow->GetImageWindowMaskMode)( handle ) );
+   return mask_mode( (API->ImageWindow->GetImageWindowMaskMode)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetMaskMode( ImageWindow::mask_mode mode )
 {
-   (*API->ImageWindow->SetImageWindowMaskMode)( handle, mode );
+   (API->ImageWindow->SetImageWindowMaskMode)( handle, mode );
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow::background_brush ImageWindow::GetBackgroundBrush( uint32& fgColor, uint32& bgColor )
 {
-   return background_brush( (*API->ImageWindow->GetTransparencyBackgroundBrush)( &fgColor, &bgColor ) );
+   return background_brush( (API->ImageWindow->GetTransparencyBackgroundBrush)( &fgColor, &bgColor ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetBackgroundBrush( ImageWindow::background_brush brush, uint32 fgColor, uint32 bgColor )
 {
-   (*API->ImageWindow->SetTransparencyBackgroundBrush)( brush, fgColor, bgColor );
+   (API->ImageWindow->SetTransparencyBackgroundBrush)( brush, fgColor, bgColor );
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow::transparency_mode ImageWindow::TransparencyMode() const
 {
-   return transparency_mode( (*API->ImageWindow->GetImageWindowTransparencyMode)( handle, 0 ) );
+   return transparency_mode( (API->ImageWindow->GetImageWindowTransparencyMode)( handle, 0 ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -728,7 +728,7 @@ ImageWindow::transparency_mode ImageWindow::TransparencyMode() const
 RGBA ImageWindow::TransparencyColor() const
 {
    uint32 color;
-   (void)(*API->ImageWindow->GetImageWindowTransparencyMode)( handle, &color );
+   (void)(API->ImageWindow->GetImageWindowTransparencyMode)( handle, &color );
    return color;
 }
 
@@ -736,49 +736,49 @@ RGBA ImageWindow::TransparencyColor() const
 
 void ImageWindow::SetTransparencyMode( ImageWindow::transparency_mode mode, RGBA color )
 {
-   (*API->ImageWindow->SetImageWindowTransparencyMode)( handle, mode, color );
+   (API->ImageWindow->SetImageWindowTransparencyMode)( handle, mode, color );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetViewport( double cx, double cy, int zoom )
 {
-   (*API->ImageWindow->SetImageWindowViewport)( handle, cx, cy, zoom );
+   (API->ImageWindow->SetImageWindowViewport)( handle, cx, cy, zoom );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::FitWindow()
 {
-   (*API->ImageWindow->FitImageWindow)( handle );
+   (API->ImageWindow->FitImageWindow)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ZoomToFit( bool optimalFit, bool allowMagnification, bool allowAnimations, bool noLimits )
 {
-   (*API->ImageWindow->ZoomImageWindowToFit)( handle, optimalFit, allowMagnification, allowAnimations, noLimits );
+   (API->ImageWindow->ZoomImageWindowToFit)( handle, optimalFit, allowMagnification, allowAnimations, noLimits );
 }
 
 // ----------------------------------------------------------------------------
 
 int ImageWindow::ZoomFactor() const
 {
-   return (*API->ImageWindow->GetImageWindowZoomFactor)( handle );
+   return (API->ImageWindow->GetImageWindowZoomFactor)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetZoomFactor( int z )
 {
-   (*API->ImageWindow->SetImageWindowZoomFactor)( handle, z );
+   (API->ImageWindow->SetImageWindowZoomFactor)( handle, z );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::GetViewportSize( int& width, int& height ) const
 {
-   (*API->ImageWindow->GetImageWindowViewportSize)( handle, &width, &height );
+   (API->ImageWindow->GetImageWindowViewportSize)( handle, &width, &height );
 }
 
 // ----------------------------------------------------------------------------
@@ -786,7 +786,7 @@ void ImageWindow::GetViewportSize( int& width, int& height ) const
 Point ImageWindow::ViewportPosition() const
 {
    Point p;
-   (*API->ImageWindow->GetImageWindowViewportPosition)( handle, &p.x, &p.y );
+   (API->ImageWindow->GetImageWindowViewportPosition)( handle, &p.x, &p.y );
    return p;
 }
 
@@ -794,7 +794,7 @@ Point ImageWindow::ViewportPosition() const
 
 void ImageWindow::SetViewportPosition( int x, int y )
 {
-   (*API->ImageWindow->SetImageWindowViewportPosition)( handle, x, y );
+   (API->ImageWindow->SetImageWindowViewportPosition)( handle, x, y );
 }
 
 // ----------------------------------------------------------------------------
@@ -802,7 +802,7 @@ void ImageWindow::SetViewportPosition( int x, int y )
 Rect ImageWindow::VisibleViewportRect() const
 {
    Rect r;
-   (*API->ImageWindow->GetImageWindowVisibleViewportRect)( handle, &r.x0, &r.y0, &r.x1, &r.y1 );
+   (API->ImageWindow->GetImageWindowVisibleViewportRect)( handle, &r.x0, &r.y0, &r.x1, &r.y1 );
    return r;
 }
 
@@ -810,14 +810,14 @@ Rect ImageWindow::VisibleViewportRect() const
 
 bool ImageWindow::IsVisible() const
 {
-   return (*API->ImageWindow->GetImageWindowVisible)( handle ) != api_false;
+   return (API->ImageWindow->GetImageWindowVisible)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::Show( bool fitWindow )
 {
-   (*API->ImageWindow->SetImageWindowVisible)( handle, api_true );
+   (API->ImageWindow->SetImageWindowVisible)( handle, api_true );
    if ( fitWindow )
       ZoomToFit();
 }
@@ -826,84 +826,84 @@ void ImageWindow::Show( bool fitWindow )
 
 void ImageWindow::Hide()
 {
-   (*API->ImageWindow->SetImageWindowVisible)( handle, api_false );
+   (API->ImageWindow->SetImageWindowVisible)( handle, api_false );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::IsIconic() const
 {
-   return (*API->ImageWindow->GetImageWindowIconic)( handle ) != api_false;
+   return (API->ImageWindow->GetImageWindowIconic)( handle ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::Iconize()
 {
-   (*API->ImageWindow->SetImageWindowIconic)( handle, api_true );
+   (API->ImageWindow->SetImageWindowIconic)( handle, api_true );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::Deiconize()
 {
-   (*API->ImageWindow->SetImageWindowIconic)( handle, api_false );
+   (API->ImageWindow->SetImageWindowIconic)( handle, api_false );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::BringToFront()
 {
-   (*API->ImageWindow->BringImageWindowToFront)( handle );
+   (API->ImageWindow->BringImageWindowToFront)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SendToBack()
 {
-   (*API->ImageWindow->SendImageWindowToBack)( handle );
+   (API->ImageWindow->SendImageWindowToBack)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::IsDynamicSessionActive()
 {
-   return (*API->ImageWindow->GetActiveDynamicInterface)() != 0;
+   return (API->ImageWindow->GetActiveDynamicInterface)() != 0;
 }
 
 // ----------------------------------------------------------------------------
 
 ProcessInterface* ImageWindow::ActiveDynamicInterface()
 {
-   return reinterpret_cast<ProcessInterface*>( (*API->ImageWindow->GetActiveDynamicInterface)() );
+   return reinterpret_cast<ProcessInterface*>( (API->ImageWindow->GetActiveDynamicInterface)() );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::TerminateDynamicSession( bool closeInterface )
 {
-   return (*API->ImageWindow->TerminateDynamicSession)( closeInterface ) != api_false;
+   return (API->ImageWindow->TerminateDynamicSession)( closeInterface ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetDynamicCursor( const char** xpm, int hx, int hy )
 {
-   (*API->ImageWindow->SetDynamicCursorXPM)( handle, xpm, hx, hy );
+   (API->ImageWindow->SetDynamicCursorXPM)( handle, xpm, hx, hy );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::SetDynamicCursor( const Bitmap& bmp, int hx, int hy )
 {
-   (*API->ImageWindow->SetDynamicCursor)( handle, bmp.handle, hx, hy );
+   (API->ImageWindow->SetDynamicCursor)( handle, bmp.handle, hx, hy );
 }
 
 // ----------------------------------------------------------------------------
 
 Bitmap ImageWindow::DynamicCursorBitmap() const
 {
-   return Bitmap( (*API->ImageWindow->GetDynamicCursorBitmap)( handle ) );
+   return Bitmap( (API->ImageWindow->GetDynamicCursorBitmap)( handle ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -911,7 +911,7 @@ Bitmap ImageWindow::DynamicCursorBitmap() const
 Point ImageWindow::DynamicCursorHotSpot() const
 {
    Point p( 0 );
-   (*API->ImageWindow->GetDynamicCursorHotSpot)( handle, &p.x, &p.y );
+   (API->ImageWindow->GetDynamicCursorHotSpot)( handle, &p.x, &p.y );
    return p;
 }
 
@@ -920,7 +920,7 @@ Point ImageWindow::DynamicCursorHotSpot() const
 double ImageWindow::DisplayPixelRatio() const
 {
    double r;
-   if ( (*API->ImageWindow->GetImageWindowDisplayPixelRatio)( handle, &r ) == api_false )
+   if ( (API->ImageWindow->GetImageWindowDisplayPixelRatio)( handle, &r ) == api_false )
       throw APIFunctionError( "GetImageWindowDisplayPixelRatio" );
    return r;
 }
@@ -929,49 +929,49 @@ double ImageWindow::DisplayPixelRatio() const
 
 void ImageWindow::ViewportToImage( int& x, int& y ) const
 {
-   (*API->ImageWindow->ViewportToImage)( handle, &x, &y );
+   (API->ImageWindow->ViewportToImage)( handle, &x, &y );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ViewportToImage( double& x, double& y ) const
 {
-   (*API->ImageWindow->ViewportToImageD)( handle, &x, &y );
+   (API->ImageWindow->ViewportToImageD)( handle, &x, &y );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ViewportToImage( Point* p, size_type n ) const
 {
-   (*API->ImageWindow->ViewportToImageArray)( handle, reinterpret_cast<int32*>( p ), n );
+   (API->ImageWindow->ViewportToImageArray)( handle, reinterpret_cast<int32*>( p ), n );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ViewportToImage( DPoint* p, size_type n ) const
 {
-   (*API->ImageWindow->ViewportToImageArrayD)( handle, reinterpret_cast<double*>( p ), n );
+   (API->ImageWindow->ViewportToImageArrayD)( handle, reinterpret_cast<double*>( p ), n );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ViewportScalarToImage( int* d, size_type n ) const
 {
-   (*API->ImageWindow->ViewportScalarToImageArray)( handle, d, n );
+   (API->ImageWindow->ViewportScalarToImageArray)( handle, d, n );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ViewportScalarToImage( double* d, size_type n ) const
 {
-   (*API->ImageWindow->ViewportScalarToImageArrayD)( handle, d, n );
+   (API->ImageWindow->ViewportScalarToImageArrayD)( handle, d, n );
 }
 
 // ----------------------------------------------------------------------------
 
 double ImageWindow::ViewportScalarToImage( double d ) const
 {
-   (*API->ImageWindow->ViewportScalarToImageD)( handle, &d );
+   (API->ImageWindow->ViewportScalarToImageD)( handle, &d );
    return d;
 }
 
@@ -979,49 +979,49 @@ double ImageWindow::ViewportScalarToImage( double d ) const
 
 void ImageWindow::ImageToViewport( int& x, int& y ) const
 {
-   (*API->ImageWindow->ImageToViewport)( handle, &x, &y );
+   (API->ImageWindow->ImageToViewport)( handle, &x, &y );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ImageToViewport( double& x, double& y ) const
 {
-   (*API->ImageWindow->ImageToViewportD)( handle, &x, &y );
+   (API->ImageWindow->ImageToViewportD)( handle, &x, &y );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ImageToViewport( Point* p, size_type n ) const
 {
-   (*API->ImageWindow->ImageToViewportArray)( handle, reinterpret_cast<int32*>( p ), n );
+   (API->ImageWindow->ImageToViewportArray)( handle, reinterpret_cast<int32*>( p ), n );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ImageToViewport( DPoint* p, size_type n ) const
 {
-   (*API->ImageWindow->ImageToViewportArrayD)( handle, reinterpret_cast<double*>( p ), n );
+   (API->ImageWindow->ImageToViewportArrayD)( handle, reinterpret_cast<double*>( p ), n );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ImageScalarToViewport( int* d , size_type n ) const
 {
-   (*API->ImageWindow->ImageScalarToViewportArray)( handle, d, n );
+   (API->ImageWindow->ImageScalarToViewportArray)( handle, d, n );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ImageScalarToViewport( double* d , size_type n ) const
 {
-   (*API->ImageWindow->ImageScalarToViewportArrayD)( handle, d, n );
+   (API->ImageWindow->ImageScalarToViewportArrayD)( handle, d, n );
 }
 
 // ----------------------------------------------------------------------------
 
 int ImageWindow::ImageScalarToViewport( int d ) const
 {
-   (*API->ImageWindow->ImageScalarToViewport)( handle, &d );
+   (API->ImageWindow->ImageScalarToViewport)( handle, &d );
    return d;
 }
 
@@ -1029,7 +1029,7 @@ int ImageWindow::ImageScalarToViewport( int d ) const
 
 double ImageWindow::ImageScalarToViewport( double d ) const
 {
-   (*API->ImageWindow->ImageScalarToViewportD)( handle, &d );
+   (API->ImageWindow->ImageScalarToViewportD)( handle, &d );
    return d;
 }
 
@@ -1037,70 +1037,70 @@ double ImageWindow::ImageScalarToViewport( double d ) const
 
 void ImageWindow::ViewportToGlobal( int& x, int& y ) const
 {
-   (*API->ImageWindow->ViewportToGlobal)( handle, &x, &y );
+   (API->ImageWindow->ViewportToGlobal)( handle, &x, &y );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::GlobalToViewport( int& x, int& y ) const
 {
-   (*API->ImageWindow->GlobalToViewport)( handle, &x, &y );
+   (API->ImageWindow->GlobalToViewport)( handle, &x, &y );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::Regenerate()
 {
-   (*API->ImageWindow->RegenerateImageWindowViewport)( handle );
+   (API->ImageWindow->RegenerateImageWindowViewport)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::RegenerateViewportRect( int x0, int y0, int x1, int y1 )
 {
-   (*API->ImageWindow->RegenerateViewportRect)( handle, x0, y0, x1, y1 );
+   (API->ImageWindow->RegenerateViewportRect)( handle, x0, y0, x1, y1 );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::RegenerateImageRect( double x0, double y0, double x1, double y1 )
 {
-   (*API->ImageWindow->RegenerateImageRect)( handle, x0, y0, x1, y1 );
+   (API->ImageWindow->RegenerateImageRect)( handle, x0, y0, x1, y1 );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::UpdateViewport()
 {
-   (*API->ImageWindow->UpdateImageWindowViewport)( handle );
+   (API->ImageWindow->UpdateImageWindowViewport)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::UpdateViewportRect( int x0, int y0, int x1, int y1 )
 {
-   (*API->ImageWindow->UpdateViewportRect)( handle, x0, y0, x1, y1 );
+   (API->ImageWindow->UpdateViewportRect)( handle, x0, y0, x1, y1 );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::UpdateImageRect( double x0, double y0, double x1, double y1 )
 {
-   (*API->ImageWindow->UpdateImageRect)( handle, x0, y0, x1, y1 );
+   (API->ImageWindow->UpdateImageRect)( handle, x0, y0, x1, y1 );
 }
 
 // ----------------------------------------------------------------------------
 
 bool ImageWindow::HasPendingUpdates() const
 {
-   return (*API->ImageWindow->GetViewportUpdateRect)( handle, 0, 0, 0, 0 ) != api_false;
+   return (API->ImageWindow->GetViewportUpdateRect)( handle, 0, 0, 0, 0 ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::CommitPendingUpdates()
 {
-   (*API->ImageWindow->CommitViewportUpdates)( handle );
+   (API->ImageWindow->CommitViewportUpdates)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -1108,7 +1108,7 @@ void ImageWindow::CommitPendingUpdates()
 Rect ImageWindow::ViewportUpdateRect() const
 {
    Rect r;
-   (*API->ImageWindow->GetViewportUpdateRect)( handle, &r.x0, &r.y0, &r.x1, &r.y1 );
+   (API->ImageWindow->GetViewportUpdateRect)( handle, &r.x0, &r.y0, &r.x1, &r.y1 );
    return r;
 }
 
@@ -1116,42 +1116,42 @@ Rect ImageWindow::ViewportUpdateRect() const
 
 Bitmap ImageWindow::ViewportBitmap( int x0, int y0, int x1, int y1, uint32 flags ) const
 {
-   return Bitmap( (*API->ImageWindow->GetViewportBitmap)( ModuleHandle(), handle, x0, y0, x1, y1, 0 ) );
+   return Bitmap( (API->ImageWindow->GetViewportBitmap)( ModuleHandle(), handle, x0, y0, x1, y1, 0 ) );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::BeginSelection( int x, int y, uint32 flags )
 {
-   (*API->ImageWindow->BeginViewportSelection)( handle, x, y, flags );
+   (API->ImageWindow->BeginViewportSelection)( handle, x, y, flags );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::ModifySelection( int x, int y, uint32 flags )
 {
-   (*API->ImageWindow->ModifyViewportSelection)( handle, x, y, flags );
+   (API->ImageWindow->ModifyViewportSelection)( handle, x, y, flags );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::UpdateSelection()
 {
-   (*API->ImageWindow->UpdateViewportSelection)( handle );
+   (API->ImageWindow->UpdateViewportSelection)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::CancelSelection()
 {
-   (*API->ImageWindow->CancelViewportSelection)( handle );
+   (API->ImageWindow->CancelViewportSelection)( handle );
 }
 
 // ----------------------------------------------------------------------------
 
 void ImageWindow::EndSelection()
 {
-   (*API->ImageWindow->EndViewportSelection)( handle );
+   (API->ImageWindow->EndViewportSelection)( handle );
 }
 
 // ----------------------------------------------------------------------------
@@ -1159,7 +1159,7 @@ void ImageWindow::EndSelection()
 pcl::Rect ImageWindow::SelectionRect( uint32* flags ) const
 {
    pcl::Rect r;
-   (*API->ImageWindow->GetViewportSelection)( handle, &r.x0, &r.y0, &r.x1, &r.y1, flags );
+   (API->ImageWindow->GetViewportSelection)( handle, &r.x0, &r.y0, &r.x1, &r.y1, flags );
    return r;
 }
 
@@ -1167,28 +1167,28 @@ pcl::Rect ImageWindow::SelectionRect( uint32* flags ) const
 
 bool ImageWindow::IsSelection() const
 {
-   return (*API->ImageWindow->GetViewportSelection)( handle, 0, 0, 0, 0, 0 ) != api_false;
+   return (API->ImageWindow->GetViewportSelection)( handle, 0, 0, 0, 0, 0 ) != api_false;
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow ImageWindow::WindowById( const IsoString& id )
 {
-   return ImageWindow( (*API->ImageWindow->GetImageWindowById)( id.c_str() ) );
+   return ImageWindow( (API->ImageWindow->GetImageWindowById)( id.c_str() ) );
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow ImageWindow::WindowByFilePath( const String& filePath )
 {
-   return ImageWindow( (*API->ImageWindow->GetImageWindowByFilePath)( filePath.c_str() ) );
+   return ImageWindow( (API->ImageWindow->GetImageWindowByFilePath)( filePath.c_str() ) );
 }
 
 // ----------------------------------------------------------------------------
 
 ImageWindow ImageWindow::ActiveWindow()
 {
-   return ImageWindow( (*API->ImageWindow->GetActiveImageWindow)() );
+   return ImageWindow( (API->ImageWindow->GetActiveImageWindow)() );
 }
 
 // ----------------------------------------------------------------------------
@@ -1196,7 +1196,7 @@ ImageWindow ImageWindow::ActiveWindow()
 Array<ImageWindow> ImageWindow::AllWindows( bool includeIconicWindows )
 {
    Array<ImageWindow> a;
-   (*API->ImageWindow->EnumerateImageWindows)(
+   (API->ImageWindow->EnumerateImageWindows)(
                InternalWindowEnumerator::Callback, &a, includeIconicWindows );
    return a;
 }
