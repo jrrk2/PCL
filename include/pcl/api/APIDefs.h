@@ -542,10 +542,8 @@ typedef api_handle         mutex_handle;
 typedef const_api_handle   const_mutex_handle;
 
 /*
- * Handle to an UI control
+ * Handle to an UI control (moved to PCL library headers)
  */
-typedef pcl::Control*      control_handle;
-typedef const control_handle   const_control_handle;
 
 /*
  * Handle to a device-independent bitmap

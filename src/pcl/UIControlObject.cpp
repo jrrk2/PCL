@@ -405,7 +405,7 @@ void UIControlObject::SetHandle( void* newHandle )
          if ( (API->UI->AttachToUIControlObject)( ModuleHandle(), newHandle ) == api_false )
             throw APIFunctionError( "AttachToUIControlObject" );
 
-         handle = newHandle;
+         handle = reinterpret_cast<Control*>( newHandle );
          s_objects.Add( this );
       }
    }
@@ -430,7 +430,7 @@ void UIControlObject::TransferHandle( void* newHandle )
 
       if ( newHandle != nullptr )
       {
-         handle = newHandle;
+	 handle = reinterpret_cast<Control*>( newHandle );
          s_objects.Add( this );
       }
    }

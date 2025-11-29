@@ -1161,6 +1161,7 @@ using fsize_type = int64;
 
 class PCL_CLASS Control;
 typedef Control *control_handle;
+typedef const Control *const_control_handle;
   
 }  // pcl
 
