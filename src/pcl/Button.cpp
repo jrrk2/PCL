@@ -121,9 +121,6 @@ void Button::SetState( Button::check_state state )
 
 // ----------------------------------------------------------------------------
 
-#define sender    (reinterpret_cast<Button*>( hSender ))
-#define receiver  (reinterpret_cast<Control*>( hReceiver ))
-#define handlers  sender->m_handlers
 
 class ButtonEventDispatcher
 {
@@ -131,32 +128,40 @@ public:
 
    static void api_func Click( control_handle hSender, control_handle hReceiver, api_bool checked )
    {
+     auto sender =   (reinterpret_cast<Button*>( hSender ));
+     auto receiver = (reinterpret_cast<Control*>( hReceiver ));
+     auto handlers = sender->m_handlers;
       if ( handlers->onClick != nullptr )
          (receiver->*handlers->onClick)( *sender, checked != api_false );
    }
 
    static void api_func Press( control_handle hSender, control_handle hReceiver )
    {
+     auto sender =   (reinterpret_cast<Button*>( hSender ));
+     auto receiver = (reinterpret_cast<Control*>( hReceiver ));
+     auto handlers = sender->m_handlers;
       if ( handlers->onPress != nullptr )
          (receiver->*handlers->onPress)( *sender );
    }
 
    static void api_func Release( control_handle hSender, control_handle hReceiver )
    {
+     auto sender =   (reinterpret_cast<Button*>( hSender ));
+     auto receiver = (reinterpret_cast<Control*>( hReceiver ));
+     auto handlers = sender->m_handlers;
       if ( handlers->onRelease != nullptr )
          (receiver->*handlers->onRelease)( *sender );
    }
 
    static void api_func Check( control_handle hSender, control_handle hReceiver, int32 state )
    {
+     auto sender =   (reinterpret_cast<Button*>( hSender ));
+     auto receiver = (reinterpret_cast<Control*>( hReceiver ));
+     auto handlers = sender->m_handlers;
       if ( handlers->onCheck != nullptr )
          (receiver->*handlers->onCheck)( *sender, Button::check_state( state ) );
    }
 }; // ButtonEventDispatcher
-
-#undef sender
-#undef receiver
-#undef handlers
 
 // ----------------------------------------------------------------------------
 
