@@ -1,243 +1,162 @@
-// mockmain_main_find_all_widgets.cpp
-// Alternative approach: Find all widgets regardless of layout hierarchy
+// MockMain.cpp
 
 #include <QApplication>
 #include <QThread>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QLineEdit>
-#include <QSpinBox>
-#include <QCheckBox>
-#include <QComboBox>
-#include <QSlider>
 #include <QDebug>
 
-#include <pcl/Console.h>
-#include <pcl/api/APIInterface.h>
+#include <dlfcn.h>
+
 #include <pcl/MetaModule.h>
+#include <pcl/api/APIInterface.h>
 #include <pcl/MetaProcess.h>
 #include <pcl/ProcessInterface.h>
 #include <pcl/ProcessImplementation.h>
 
+#include "PCLInterfaceScanner.h"
 #include "PCLMockAPI.h"
 #include "ExportHelper.h"
 #include "RootWidgetSelector.h"
 
-using namespace pcl;
+// Raw constructor types
+using RawCtor0 = void (*)(void*);
+using RawCtor1 = void (*)(void*, void*);
 
-// Find all widgets of a type, regardless of layout
-QList<QWidget*> findAllWidgetsOfType(QWidget* root, const QString& typeName)
+static void* mustResolve(const char* name)
 {
-    QList<QWidget*> found;
-    
-    std::function<void(QWidget*)> search = [&](QWidget* w) {
-        if (!w) return;
-        
-        if (w->metaObject()->className() == typeName) {
-            found.append(w);
-        }
-        
-        // Search all children
-        for (QObject* child : w->children()) {
-            if (QWidget* childWidget = qobject_cast<QWidget*>(child)) {
-                search(childWidget);
-            }
-        }
-    };
-    
-    search(root);
-    return found;
+    void* p = dlsym(RTLD_DEFAULT, name);
+    if (!p)
+    {
+        fprintf(stderr, "FATAL: dlsym(%s) failed: %s\n", name, dlerror());
+        std::abort();
+    }
+    return p;
 }
 
-class MockMainInstance : public ProcessImplementation
+static void* dynamicNew(void* ctorAddr, size_t size, void* arg1 = nullptr)
 {
-public:
-
-   MockMainInstance( const MetaProcess* );
-   MockMainInstance( const MockMainInstance& );
-  ~MockMainInstance();
-   void Assign( const ProcessImplementation& ) override;
-};
-
-MockMainInstance::MockMainInstance( const MetaProcess* m )
-   : ProcessImplementation( m )
-{
+    void* mem = ::operator new(size);
+    if (!arg1)
+    {
+        RawCtor0 ctor = reinterpret_cast<RawCtor0>(ctorAddr);
+        ctor(mem);
+    }
+    else
+    {
+        RawCtor1 ctor = reinterpret_cast<RawCtor1>(ctorAddr);
+        ctor(mem, arg1);
+    }
+    return mem;
 }
 
-MockMainInstance::MockMainInstance( const MockMainInstance& x )
-   : ProcessImplementation( x )
+// For now: a simple size map for the interfaces you care about.
+// You can extend this without touching module source.
+size_t sizeForInterfaceClass(const std::string& className)
 {
-   Assign( x );
+    return sizeof(pcl::ProcessInterface);
 }
 
-MockMainInstance::~MockMainInstance()
-{
-}
-
-void MockMainInstance::Assign( const ProcessImplementation& p )
-{
-   const MockMainInstance* x = dynamic_cast<const MockMainInstance*>( &p );
-}
-
-class MockMainModule : public MetaModule
-{
-public:
-   MockMainModule();
-   ~MockMainModule();
-   const char* Version() const override;
-   IsoString Name() const override;
-};
-
-MockMainModule::MockMainModule()
-{
-}
-
-MockMainModule::~MockMainModule()
-{
-}
-
-IsoString MockMainModule::Name() const
-{
-   return "MockMain";
-}
-
-const char* MockMainModule::Version() const
-{
-   return PCL_MODULE_VERSION( MODULE_VERSION_MAJOR,
-                              MODULE_VERSION_MINOR,
-                              MODULE_VERSION_REVISION,
-                              MODULE_VERSION_BUILD,
-                              MODULE_VERSION_LANGUAGE );
-}
-
-class MockMainProcess : public MetaProcess
-{
-public:
-   MockMainProcess();
-   ~MockMainProcess();
-   IsoString Id() const override;
-   ProcessImplementation* Create() const override;
-   ProcessImplementation* Clone( const ProcessImplementation& ) const override;
-};
-
-MockMainProcess* TheMockMainProcess = nullptr;
-
-MockMainProcess::MockMainProcess()
-{
-}
-
-MockMainProcess::~MockMainProcess()
-{
-}
-
-IsoString MockMainProcess::Id() const
-{
-   return "MockMain";
-}
-
-ProcessImplementation* MockMainProcess::Create() const
-{
-   return new MockMainInstance( this );
-}
-
-// ----------------------------------------------------------------------------
-
-ProcessImplementation* MockMainProcess::Clone( const ProcessImplementation& p ) const
-{
-  /*
-   const MockMainInstance* instance = dynamic_cast<const MockMainInstance*>( &p );
-   return (instance != nullptr) ? new MockMainInstance( *instance ) : nullptr;
-  */
-  abort();
-}
- 
-class MockMainInterface : public ProcessInterface
-{
-public:
-
-   MockMainInterface();
-   virtual ~MockMainInterface();
-   IsoString Id() const override;
-   MetaProcess* Process() const override;
-   MockMainProcess* m_instance;
-};
-
-MockMainInterface* TheMockMainInterface = nullptr;
-
-MockMainInterface::MockMainInterface()
-   : m_instance( TheMockMainProcess )
-{
-   TheMockMainInterface = this;
-}
-
-MockMainInterface::~MockMainInterface()
-{
-
-}
-
-IsoString MockMainInterface::Id() const
-{
-   return "MockMain";
-}
-
-// ----------------------------------------------------------------------------
-
-MetaProcess* MockMainInterface::Process() const
-{
-   return TheMockMainProcess;
-}
- 
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
     SetDebugLogging(true);
 
-    // Initialize API before Console
-    
-    Module = new MockMainModule;
-    InitializePixInsightModule(Module, GetMockFunctionResolver(), PCL_API_Version, nullptr );
+    // Initialize PCL mock API (your existing call)
+    Module = nullptr;
+    InitializePixInsightModule(Module, GetMockFunctionResolver(), PCL_API_Version, nullptr);
 
-    MockMainProcess proc;
-    MockMainInterface iface;
-    MockBase* interfaceRoot = new MockBase();
-    interfaceRoot->isSizer = false;
-    interfaceRoot->widget = new QWidget(nullptr);  // True top-level
-    interfaceRoot->widget->setWindowTitle("MockMainInterface Mock");
-    
-    // Add to top-level list
-    g_topLevelWidgets.append(interfaceRoot);
-    
-    // Set the interface's handle (simulate what PixInsight core does)
-    // This is what InterfaceDispatcher::Initialize() does:
-    iface.handle = (control_handle)interfaceRoot;
+    // Discover all interface classes present in *this* executable
+    auto discovered = scanDerivedPCLInterfaces();
+
+    qDebug() << "Discovered interfaces:";
+    for (const auto& di : discovered)
+        qDebug() << "  class =" << di.className.c_str()
+                 << "ctor =" << di.mangledCtorName.c_str();
+
+    if (discovered.empty())
+    {
+        fprintf(stderr, "No PCL ProcessInterface derivatives found.\n");
+        return 1;
+    }
+
+    // For now, pick the first one, or prefer Sandbox
+    const DiscoveredInterface* chosen = nullptr;
+    for (const auto& di : discovered)
+    {
+        if (di.className.find("SandboxInterface") != std::string::npos)
+        {
+            chosen = &di;
+            break;
+        }
+    }
+    if (!chosen)
+        chosen = &discovered.front();
+
+    qDebug() << "Chosen interface:" << chosen->className.c_str();
+
+    // Construct the REAL MetaModule and MetaProcess the usual way
+    // (Here I'm assuming you still know how to make them; if needed we
+    // can do a similar auto-detect for processes and modules.)
+    // For now, assume you have:
+    //   extern pcl::MetaModule* TheSandboxModule;
+    //   extern pcl::MetaProcess* TheSandboxProcess;
+    // or you can construct them exactly the way you did before.
+
+    // --------- Simplified example: one process / one module ----------
+    // In practice, you'd also auto-detect MetaProcess/MetaModule
+    // using the same pattern as interfaces.
+    pcl::MetaModule* MM = nullptr;   // TODO: initialize properly
+    pcl::MetaProcess* MP = nullptr;  // TODO: initialize properly
+
+    // Resolve and call the chosen interface constructor
+    void* ctorAddr = mustResolve(chosen->mangledCtorName.c_str());
+    size_t sz = sizeForInterfaceClass(chosen->className);
+
+    // We don't know the concrete C++ type at compile time,
+    // so treat it as a ProcessInterface*
+    pcl::ProcessInterface* IF = reinterpret_cast<pcl::ProcessInterface*>(
+        dynamicNew(ctorAddr, sz)
+    );
+
+    if (!MP)
+    {
+        fprintf(stderr, "MetaProcess not set up yet.\n");
+        return 1;
+    }
+
+    // Create a REAL process instance and launch the interface
+    pcl::ProcessImplementation* inst = MP->Create();
+    if (!inst)
+    {
+        fprintf(stderr, "MetaProcess::Create() returned null.\n");
+        return 1;
+    }
 
     bool dynamic = false;
     unsigned flags = 0;
-    
-    iface.Launch(proc, nullptr, dynamic, flags);
 
-    iface.Show();
+    IF->Launch(*MP, inst, dynamic, flags);
+    IF->Show();
 
+    // Your existing widget export logic
     QList<QWidget*> candidates;
-    for (MockBase* base : g_topLevelWidgets) {
-        if (base && base->widget) {
+    for (MockBase* base : g_topLevelWidgets)
+        if (base && base->widget)
             candidates.append(base->widget);
-        }
-    }
-    
-    // Smart selection!
-    QWidget* bestRoot = RootWidgetSelector::selectBestRoot(candidates, true);
-    
-    if (!bestRoot) {
-        fputs("Error: No root widget!\n", stderr);
+
+    QWidget* root = RootWidgetSelector::selectBestRoot(candidates, true);
+    if (!root)
+    {
+        fprintf(stderr, "No root widget found.\n");
         return 1;
     }
-    
-    // Wait for everything to be created
+
     QApplication::processEvents();
     QThread::msleep(200);
     QApplication::processEvents();
-    ExportHelper::exportInterface(bestRoot, "MockMainDialog", "./exported");
+
+    ExportHelper::exportInterface(root,
+                                  chosen->className.c_str(),
+                                  "./exported");
+
     return app.exec();
 }
