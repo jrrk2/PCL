@@ -294,7 +294,7 @@ public:
     */
    void OnValueUpdated( value_event_handler, Control& );
 
-protected:
+   // protected:
 
    struct EventHandlers
    {

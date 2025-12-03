@@ -1704,7 +1704,7 @@ public:
 
    // -------------------------------------------------------------------------
 
-private:
+   // private:
 
    struct EventHandlers
    {
@@ -1732,13 +1732,7 @@ private:
       view_drop_event_handler    onViewDrop         = nullptr;
       child_event_handler        onChildCreate      = nullptr;
       child_event_handler        onChildDestroy     = nullptr;
-
-      EventHandlers() = default;
-      EventHandlers( const EventHandlers& ) = default;
-      EventHandlers& operator =( const EventHandlers& ) = default;
-   };
-
-   AutoPointer<EventHandlers> m_handlers;
+   } m_handlers;
 
 protected:
 

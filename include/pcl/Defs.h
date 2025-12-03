@@ -385,9 +385,9 @@ template <typename... Args> inline void __pcl_unused__( Args&&... ) {}
 #else                         // Linux/X11, FreeBSD/X11 and Mac OS X
 #  define PCL_EXPORT          __attribute__((visibility ("default")))
 #  if defined( __clang__ )    // Clang does not have the "externally_visible" attribute
-#    define PCL_MODULE_EXPORT   extern "C" __attribute__((visibility ("default")))
+#    define PCL_MODULE_EXPORT   // extern "C" __attribute__((visibility ("default")))
 #  else
-#    define PCL_MODULE_EXPORT   extern "C" __attribute__((visibility ("default"), externally_visible))
+#    define PCL_MODULE_EXPORT   // extern "C" __attribute__((visibility ("default"), externally_visible))
 #  endif
 #  define PCL_IMPORT          __attribute__((visibility ("default")))
 #  define PCL_LOCAL           __attribute__((visibility ("hidden")))
@@ -1162,6 +1162,8 @@ using fsize_type = int64;
 class PCL_CLASS Control;
 typedef Control *control_handle;
 typedef const Control *const_control_handle;
+class PCL_CLASS UIObject;
+typedef UIObject *treebox_handle;
   
 }  // pcl
 

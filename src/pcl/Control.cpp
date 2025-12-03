@@ -22,6 +22,7 @@
 
 #include <pcl/api/APIException.h>
 #include <pcl/api/APIInterface.h>
+#include <pcl/NumericControl.h>
 
 namespace pcl
 {
@@ -912,9 +913,9 @@ public:
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
 
-      if ( handlers->onDestroy != nullptr )
+      if ( handlers.onDestroy != nullptr )
       {
-         (receiver->*handlers->onDestroy)( *sender );
+         (receiver->*handlers.onDestroy)( *sender );
          return api_true;
       }
       return api_false;
@@ -925,9 +926,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onShow != nullptr )
+      if ( handlers.onShow != nullptr )
       {
-         (receiver->*handlers->onShow)( *sender );
+         (receiver->*handlers.onShow)( *sender );
          return api_true;
       }
       return api_false;
@@ -938,9 +939,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onHide != nullptr )
+      if ( handlers.onHide != nullptr )
       {
-         (receiver->*handlers->onHide)( *sender );
+         (receiver->*handlers.onHide)( *sender );
          return api_true;
       }
       return api_false;
@@ -951,10 +952,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onClose != nullptr )
+      if ( handlers.onClose != nullptr )
       {
          bool allowClose = true;
-         (receiver->*handlers->onClose)( *sender, allowClose );
+         (receiver->*handlers.onClose)( *sender, allowClose );
          return api_bool( allowClose );
       }
       return api_true;
@@ -965,9 +966,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onGetFocus != nullptr )
+      if ( handlers.onGetFocus != nullptr )
       {
-         (receiver->*handlers->onGetFocus)( *sender );
+         (receiver->*handlers.onGetFocus)( *sender );
          return api_true;
       }
       return api_false;
@@ -978,9 +979,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onLoseFocus != nullptr )
+      if ( handlers.onLoseFocus != nullptr )
       {
-         (receiver->*handlers->onLoseFocus)( *sender );
+         (receiver->*handlers.onLoseFocus)( *sender );
          return api_true;
       }
       return api_false;
@@ -991,9 +992,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onEnter != nullptr )
+      if ( handlers.onEnter != nullptr )
       {
-         (receiver->*handlers->onEnter)( *sender );
+         (receiver->*handlers.onEnter)( *sender );
          return api_true;
       }
       return api_false;
@@ -1004,9 +1005,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onLeave != nullptr )
+      if ( handlers.onLeave != nullptr )
       {
-         (receiver->*handlers->onLeave)( *sender );
+         (receiver->*handlers.onLeave)( *sender );
          return api_true;
       }
       return api_false;
@@ -1018,11 +1019,11 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onMove != nullptr )
+      if ( handlers.onMove != nullptr )
       {
          pcl::Point pos( x, y );
          pcl::Point oldPos( oldX, oldY );
-         (receiver->*handlers->onMove)( *sender, pos, oldPos );
+         (receiver->*handlers.onMove)( *sender, pos, oldPos );
          return api_true;
       }
       return api_false;
@@ -1034,9 +1035,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onResize != nullptr )
+      if ( handlers.onResize != nullptr )
       {
-         (receiver->*handlers->onResize)( *sender, w, h, oldW, oldH );
+         (receiver->*handlers.onResize)( *sender, w, h, oldW, oldH );
          return api_true;
       }
       return api_false;
@@ -1048,25 +1049,27 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onPaint != nullptr )
+      if ( handlers.onPaint != nullptr )
       {
          pcl::Rect r( x0, y0, x1, y1 );
-         (receiver->*handlers->onPaint)( *sender, r );
+         (receiver->*handlers.onPaint)( *sender, r );
          return api_true;
       }
       return api_false;
    }
 
-   static api_bool api_func KeyPress( control_handle hSender, control_handle hReceiver,
+   static api_bool api_func KeyPress( control_handle sender, control_handle hReceiver,
                                     api_key_code key, api_key_modifiers modifiers )
    {
-      auto sender =   (reinterpret_cast<Control*>( hSender ));
-      auto receiver = (reinterpret_cast<Control*>( hReceiver ));
+      auto receiver = (reinterpret_cast<NumericEdit*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onKeyPress != nullptr )
+      if ( handlers.onKeyPress != nullptr )
       {
          bool wantsKey = false;
-         (receiver->*handlers->onKeyPress)( *sender, key, modifiers, wantsKey );
+	 if (true)
+         (receiver->*handlers.onKeyPress)( *sender, key, modifiers, wantsKey );
+	 else
+	   receiver->NumericEdit::KeyPressed( *sender, key, modifiers, wantsKey );
          return wantsKey;
       }
       return api_false;
@@ -1078,10 +1081,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onKeyRelease != nullptr )
+      if ( handlers.onKeyRelease != nullptr )
       {
          bool wantsKey = false;
-         (receiver->*handlers->onKeyRelease)( *sender, key, modifiers, wantsKey );
+         (receiver->*handlers.onKeyRelease)( *sender, key, modifiers, wantsKey );
          return wantsKey;
       }
       return api_false;
@@ -1093,10 +1096,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onMouseMove != nullptr )
+      if ( handlers.onMouseMove != nullptr )
       {
          pcl::Point pos( x, y );
-         (receiver->*handlers->onMouseMove)( *sender, pos, buttons, modifiers );
+         (receiver->*handlers.onMouseMove)( *sender, pos, buttons, modifiers );
          return api_true;
       }
       return api_false;
@@ -1108,10 +1111,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onMouseDoubleClick != nullptr )
+      if ( handlers.onMouseDoubleClick != nullptr )
       {
          pcl::Point pos( x, y );
-         (receiver->*handlers->onMouseDoubleClick)( *sender, pos, buttons, modifiers );
+         (receiver->*handlers.onMouseDoubleClick)( *sender, pos, buttons, modifiers );
          return api_true;
       }
       return api_false;
@@ -1124,10 +1127,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onMousePress != nullptr )
+      if ( handlers.onMousePress != nullptr )
       {
          pcl::Point pos( x, y );
-         (receiver->*handlers->onMousePress)( *sender, pos, button, buttons, modifiers );
+         (receiver->*handlers.onMousePress)( *sender, pos, button, buttons, modifiers );
          return api_true;
       }
       return api_false;
@@ -1140,10 +1143,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onMouseRelease != nullptr )
+      if ( handlers.onMouseRelease != nullptr )
       {
          pcl::Point pos( x, y );
-         (receiver->*handlers->onMouseRelease)( *sender, pos, button, buttons, modifiers );
+         (receiver->*handlers.onMouseRelease)( *sender, pos, button, buttons, modifiers );
          return api_true;
       }
       return api_false;
@@ -1156,10 +1159,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onMouseWheel != nullptr )
+      if ( handlers.onMouseWheel != nullptr )
       {
          pcl::Point pos( x, y );
-         (receiver->*handlers->onMouseWheel)( *sender, pos, delta, buttons, modifiers );
+         (receiver->*handlers.onMouseWheel)( *sender, pos, delta, buttons, modifiers );
          return api_true;
       }
       return api_false;
@@ -1170,9 +1173,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onChildCreate != nullptr )
+      if ( handlers.onChildCreate != nullptr )
       {
-         (receiver->*handlers->onChildCreate)( *sender, *reinterpret_cast<Control*>( hChild ) );
+         (receiver->*handlers.onChildCreate)( *sender, *reinterpret_cast<Control*>( hChild ) );
          return api_true;
       }
       return api_false;
@@ -1183,9 +1186,9 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onChildDestroy != nullptr )
+      if ( handlers.onChildDestroy != nullptr )
       {
-         (receiver->*handlers->onChildDestroy)( *sender, *reinterpret_cast<Control*>( hChild ) );
+         (receiver->*handlers.onChildDestroy)( *sender, *reinterpret_cast<Control*>( hChild ) );
          return api_true;
       }
       return api_false;
@@ -1211,11 +1214,11 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onFileDrag != nullptr )
+      if ( handlers.onFileDrag != nullptr )
       {
          StringList fileList = MakeFileList( files, lengths, count );
          bool wantsFiles = false;
-         (receiver->*handlers->onFileDrag)( *sender, pcl::Point( x, y ), fileList, modifiers, wantsFiles );
+         (receiver->*handlers.onFileDrag)( *sender, pcl::Point( x, y ), fileList, modifiers, wantsFiles );
          return wantsFiles;
       }
       return api_false;
@@ -1229,10 +1232,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onFileDrop != nullptr )
+      if ( handlers.onFileDrop != nullptr )
       {
          StringList fileList = MakeFileList( files, lengths, count );
-         (receiver->*handlers->onFileDrop)( *sender, pcl::Point( x, y ), fileList, modifiers );
+         (receiver->*handlers.onFileDrop)( *sender, pcl::Point( x, y ), fileList, modifiers );
          return api_true;
       }
       return api_false;
@@ -1246,11 +1249,11 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onViewDrag != nullptr )
+      if ( handlers.onViewDrag != nullptr )
       {
          View view( hView );
          bool wantsView = false;
-         (receiver->*handlers->onViewDrag)( *sender, pcl::Point( x, y ), view, modifiers, wantsView );
+         (receiver->*handlers.onViewDrag)( *sender, pcl::Point( x, y ), view, modifiers, wantsView );
          return wantsView;
       }
       return api_false;
@@ -1264,10 +1267,10 @@ public:
       auto sender =   (reinterpret_cast<Control*>( hSender ));
       auto receiver = (reinterpret_cast<Control*>( hReceiver ));
       auto handlers = sender->m_handlers;
-      if ( handlers->onViewDrop != nullptr )
+      if ( handlers.onViewDrop != nullptr )
       {
          View view( hView );
-         (receiver->*handlers->onViewDrop)( *sender, pcl::Point( x, y ), view, modifiers );
+         (receiver->*handlers.onViewDrop)( *sender, pcl::Point( x, y ), view, modifiers );
          return api_true;
       }
       return api_false;
@@ -1277,9 +1280,11 @@ public:
 // ----------------------------------------------------------------------------
 
 #define INIT_EVENT_HANDLERS()    \
+  /*
    __PCL_NO_ALIAS_HANDLERS;      \
    if ( m_handlers.IsNull() )    \
       m_handlers = new Control::EventHandlers
+  */
 
 void Control::OnDestroy( event_handler f, Control& receiver )
 {
@@ -1287,7 +1292,7 @@ void Control::OnDestroy( event_handler f, Control& receiver )
    if ( (API->Control->SetDestroyEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Destroy : nullptr ) == api_false )
       throw APIFunctionError( "SetDestroyEventRoutine" );
-   m_handlers->onDestroy = f;
+   m_handlers.onDestroy = f;
 }
 
 void Control::OnShow( event_handler f, Control& receiver )
@@ -1296,7 +1301,7 @@ void Control::OnShow( event_handler f, Control& receiver )
    if ( (API->Control->SetShowEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Show : nullptr ) == api_false )
       throw APIFunctionError( "SetShowEventRoutine" );
-   m_handlers->onShow = f;
+   m_handlers.onShow = f;
 }
 
 void Control::OnHide( event_handler f, Control& receiver )
@@ -1305,7 +1310,7 @@ void Control::OnHide( event_handler f, Control& receiver )
    if ( (API->Control->SetHideEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Hide : nullptr ) == api_false )
       throw APIFunctionError( "SetHideEventRoutine" );
-   m_handlers->onHide = f;
+   m_handlers.onHide = f;
 }
 
 void Control::OnClose( close_event_handler f, Control& receiver )
@@ -1314,7 +1319,7 @@ void Control::OnClose( close_event_handler f, Control& receiver )
    if ( (API->Control->SetCloseEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Close : nullptr ) == api_false )
       throw APIFunctionError( "SetCloseEventRoutine" );
-   m_handlers->onClose = f;
+   m_handlers.onClose = f;
 }
 
 void Control::OnGetFocus( event_handler f, Control& receiver )
@@ -1323,7 +1328,7 @@ void Control::OnGetFocus( event_handler f, Control& receiver )
    if ( (API->Control->SetGetFocusEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::GetFocus : nullptr ) == api_false )
       throw APIFunctionError( "SetGetFocusEventRoutine" );
-   m_handlers->onGetFocus = f;
+   m_handlers.onGetFocus = f;
 }
 
 void Control::OnLoseFocus( event_handler f, Control& receiver )
@@ -1332,7 +1337,7 @@ void Control::OnLoseFocus( event_handler f, Control& receiver )
    if ( (API->Control->SetLoseFocusEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::LoseFocus : nullptr ) == api_false )
       throw APIFunctionError( "SetLoseFocusEventRoutine" );
-   m_handlers->onLoseFocus = f;
+   m_handlers.onLoseFocus = f;
 }
 
 void Control::OnEnter( event_handler f, Control& receiver )
@@ -1341,7 +1346,7 @@ void Control::OnEnter( event_handler f, Control& receiver )
    if ( (API->Control->SetEnterEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Enter : nullptr ) == api_false )
       throw APIFunctionError( "SetEnterEventRoutine" );
-   m_handlers->onEnter = f;
+   m_handlers.onEnter = f;
 }
 
 void Control::OnLeave( event_handler f, Control& receiver )
@@ -1350,7 +1355,7 @@ void Control::OnLeave( event_handler f, Control& receiver )
    if ( (API->Control->SetLeaveEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Leave : nullptr ) == api_false )
       throw APIFunctionError( "SetLeaveEventRoutine" );
-   m_handlers->onLeave = f;
+   m_handlers.onLeave = f;
 }
 
 void Control::OnMove( move_event_handler f, Control& receiver )
@@ -1359,7 +1364,7 @@ void Control::OnMove( move_event_handler f, Control& receiver )
    if ( (API->Control->SetMoveEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Move : nullptr ) == api_false )
       throw APIFunctionError( "SetMoveEventRoutine" );
-   m_handlers->onMove = f;
+   m_handlers.onMove = f;
 }
 
 void Control::OnResize( resize_event_handler f, Control& receiver )
@@ -1368,7 +1373,7 @@ void Control::OnResize( resize_event_handler f, Control& receiver )
    if ( (API->Control->SetResizeEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Resize : nullptr ) == api_false )
       throw APIFunctionError( "SetResizeEventRoutine" );
-   m_handlers->onResize = f;
+   m_handlers.onResize = f;
 }
 
 void Control::OnPaint( paint_event_handler f, Control& receiver )
@@ -1377,7 +1382,7 @@ void Control::OnPaint( paint_event_handler f, Control& receiver )
    if ( (API->Control->SetPaintEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::Paint : nullptr ) == api_false )
       throw APIFunctionError( "SetPaintEventRoutine" );
-   m_handlers->onPaint = f;
+   m_handlers.onPaint = f;
 }
 
 void Control::OnKeyPress( keyboard_event_handler f, Control& receiver )
@@ -1386,7 +1391,7 @@ void Control::OnKeyPress( keyboard_event_handler f, Control& receiver )
    if ( (API->Control->SetKeyPressEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::KeyPress : nullptr ) == api_false )
       throw APIFunctionError( "SetKeyPressEventRoutine" );
-   m_handlers->onKeyPress = f;
+   receiver.m_handlers.onKeyPress = f;
 }
 
 void Control::OnKeyRelease( keyboard_event_handler f, Control& receiver )
@@ -1395,7 +1400,7 @@ void Control::OnKeyRelease( keyboard_event_handler f, Control& receiver )
    if ( (API->Control->SetKeyReleaseEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::KeyRelease : nullptr ) == api_false )
       throw APIFunctionError( "SetKeyReleaseEventRoutine" );
-   m_handlers->onKeyRelease = f;
+   m_handlers.onKeyRelease = f;
 }
 
 void Control::OnMouseMove( mouse_event_handler f, Control& receiver )
@@ -1404,7 +1409,7 @@ void Control::OnMouseMove( mouse_event_handler f, Control& receiver )
    if ( (API->Control->SetMouseMoveEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::MouseMove : nullptr ) == api_false )
       throw APIFunctionError( "SetMouseMoveEventRoutine" );
-   m_handlers->onMouseMove = f;
+   m_handlers.onMouseMove = f;
 }
 
 void Control::OnMouseDoubleClick( mouse_event_handler f, Control& receiver )
@@ -1413,7 +1418,7 @@ void Control::OnMouseDoubleClick( mouse_event_handler f, Control& receiver )
    if ( (API->Control->SetMouseDoubleClickEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::MouseDoubleClick : nullptr ) == api_false )
       throw APIFunctionError( "SetMouseDoubleClickEventRoutine" );
-   m_handlers->onMouseDoubleClick = f;
+   m_handlers.onMouseDoubleClick = f;
 }
 
 void Control::OnMousePress( mouse_button_event_handler f, Control& receiver )
@@ -1422,7 +1427,7 @@ void Control::OnMousePress( mouse_button_event_handler f, Control& receiver )
    if ( (API->Control->SetMousePressEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::MousePress : nullptr ) == api_false )
       throw APIFunctionError( "SetMousePressEventRoutine" );
-   m_handlers->onMousePress = f;
+   m_handlers.onMousePress = f;
 }
 
 void Control::OnMouseRelease( mouse_button_event_handler f, Control& receiver )
@@ -1431,7 +1436,7 @@ void Control::OnMouseRelease( mouse_button_event_handler f, Control& receiver )
    if ( (API->Control->SetMouseReleaseEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::MouseRelease : nullptr ) == api_false )
       throw APIFunctionError( "SetMouseReleaseEventRoutine" );
-   m_handlers->onMouseRelease = f;
+   m_handlers.onMouseRelease = f;
 }
 
 void Control::OnMouseWheel( mouse_wheel_event_handler f, Control& receiver )
@@ -1440,7 +1445,7 @@ void Control::OnMouseWheel( mouse_wheel_event_handler f, Control& receiver )
    if ( (API->Control->SetWheelEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::MouseWheel : nullptr ) == api_false )
       throw APIFunctionError( "SetWheelEventRoutine" );
-   m_handlers->onMouseWheel = f;
+   m_handlers.onMouseWheel = f;
 }
 
 void Control::OnChildCreate( child_event_handler f, Control& receiver )
@@ -1449,7 +1454,7 @@ void Control::OnChildCreate( child_event_handler f, Control& receiver )
    if ( (API->Control->SetChildCreateEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::ChildCreate : nullptr ) == api_false )
       throw APIFunctionError( "SetChildCreateEventRoutine" );
-   m_handlers->onChildCreate = f;
+   m_handlers.onChildCreate = f;
 }
 
 void Control::OnChildDestroy( child_event_handler f, Control& receiver )
@@ -1458,7 +1463,7 @@ void Control::OnChildDestroy( child_event_handler f, Control& receiver )
    if ( (API->Control->SetChildDestroyEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::ChildDestroy : nullptr ) == api_false )
       throw APIFunctionError( "SetChildDestroyEventRoutine" );
-   m_handlers->onChildDestroy = f;
+   m_handlers.onChildDestroy = f;
 }
 
 void Control::OnFileDrag( file_drag_event_handler f, Control& receiver )
@@ -1467,7 +1472,7 @@ void Control::OnFileDrag( file_drag_event_handler f, Control& receiver )
    if ( (API->Control->SetFileDragEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::FileDrag : nullptr ) == api_false )
       throw APIFunctionError( "SetFileDragEventRoutine" );
-   m_handlers->onFileDrag = f;
+   m_handlers.onFileDrag = f;
 }
 
 void Control::OnFileDrop( file_drop_event_handler f, Control& receiver )
@@ -1476,7 +1481,7 @@ void Control::OnFileDrop( file_drop_event_handler f, Control& receiver )
    if ( (API->Control->SetFileDropEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::FileDrop : nullptr ) == api_false )
       throw APIFunctionError( "SetFileDropEventRoutine" );
-   m_handlers->onFileDrop = f;
+   m_handlers.onFileDrop = f;
 }
 
 void Control::OnViewDrag( view_drag_event_handler f, Control& receiver )
@@ -1485,7 +1490,7 @@ void Control::OnViewDrag( view_drag_event_handler f, Control& receiver )
    if ( (API->Control->SetViewDragEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::ViewDrag : nullptr ) == api_false )
       throw APIFunctionError( "SetViewDragEventRoutine" );
-   m_handlers->onViewDrag = f;
+   m_handlers.onViewDrag = f;
 }
 
 void Control::OnViewDrop( view_drop_event_handler f, Control& receiver )
@@ -1494,7 +1499,7 @@ void Control::OnViewDrop( view_drop_event_handler f, Control& receiver )
    if ( (API->Control->SetViewDropEventRoutine)( handle, &receiver,
                   (f != nullptr) ? ControlEventDispatcher::ViewDrop : nullptr ) == api_false )
       throw APIFunctionError( "SetViewDropEventRoutine" );
-   m_handlers->onViewDrop = f;
+   m_handlers.onViewDrop = f;
 }
 
 #undef INIT_EVENT_HANDLERS

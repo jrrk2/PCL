@@ -896,7 +896,7 @@ struct api_context ActionContext
 
 struct api_context ControlContext
 {
-   control_handle (CreateControl)( api_handle, api_handle client, control_handle parent, uint32 flags );
+   control_handle (CreateControl)( api_handle, control_handle client, control_handle parent, uint32 flags );
 
    void           (GetFrameRect)( const_control_handle, int32*, int32*, int32*, int32* );
 
@@ -1064,11 +1064,11 @@ struct api_context ControlContext
    api_bool       (SetMoveEventRoutine)( control_handle, api_handle, pcl::move_event_routine );
    api_bool       (SetResizeEventRoutine)( control_handle, api_handle, pcl::resize_event_routine );
    api_bool       (SetPaintEventRoutine)( control_handle, api_handle, pcl::paint_event_routine );
-   api_bool       (SetKeyPressEventRoutine)( control_handle, api_handle, pcl::keyboard_event_routine );
+   api_bool       (SetKeyPressEventRoutine)( control_handle, control_handle, pcl::keyboard_event_routine );
    api_bool       (SetKeyReleaseEventRoutine)( control_handle, api_handle, pcl::keyboard_event_routine );
    api_bool       (SetMouseMoveEventRoutine)( control_handle, api_handle, pcl::mouse_event_routine );
    api_bool       (SetMouseDoubleClickEventRoutine)( control_handle, api_handle, pcl::mouse_event_routine );
-   api_bool       (SetMousePressEventRoutine)( control_handle, api_handle, pcl::mouse_button_event_routine );
+   api_bool       (SetMousePressEventRoutine)( control_handle, control_handle, pcl::mouse_button_event_routine );
    api_bool       (SetMouseReleaseEventRoutine)( control_handle, api_handle, pcl::mouse_button_event_routine );
    api_bool       (SetWheelEventRoutine)( control_handle, api_handle, pcl::wheel_event_routine );
    api_bool       (SetFileDragEventRoutine)( control_handle, api_handle, pcl::file_drag_event_handler );
@@ -1190,10 +1190,10 @@ struct api_context TabBoxContext
 
 struct api_context ButtonContext
 {
-   control_handle (CreatePushButton)( api_handle, api_handle client, const char16_type*, const_bitmap_handle, control_handle parent, uint32 flags );
-   control_handle (CreateCheckBox)( api_handle, api_handle client, const char16_type*, control_handle parent, uint32 flags );
-   control_handle (CreateRadioButton)( api_handle, api_handle client, const char16_type*, control_handle parent, uint32 flags );
-   control_handle (CreateToolButton)( api_handle, api_handle client, const char16_type*, const_bitmap_handle, api_bool checkable, control_handle parent, uint32 flags );
+   control_handle (CreatePushButton)( api_handle, control_handle client, const char16_type*, const_bitmap_handle, control_handle parent, uint32 flags );
+   control_handle (CreateCheckBox)( api_handle, control_handle client, const char16_type*, control_handle parent, uint32 flags );
+   control_handle (CreateRadioButton)( api_handle, control_handle client, const char16_type*, control_handle parent, uint32 flags );
+   control_handle (CreateToolButton)( api_handle, control_handle client, const char16_type*, const_bitmap_handle, api_bool checkable, control_handle parent, uint32 flags );
 
    api_bool       (GetButtonText)( const_control_handle, char16_type*, size_type* );
    void           (SetButtonText)( control_handle, const char16_type* );
@@ -1229,7 +1229,7 @@ struct api_context ButtonContext
 
 struct api_context EditContext
 {
-   control_handle (CreateEdit)( api_handle, api_handle client, const char16_type*, control_handle parent, uint32 flags );
+   control_handle (CreateEdit)( api_handle, control_handle client, const char16_type*, control_handle parent, uint32 flags );
 
    api_bool       (GetEditText)( const_control_handle, char16_type*, size_type* );
    void           (SetEditText)( control_handle, const char16_type* );
@@ -1307,7 +1307,7 @@ struct api_context TextBoxContext
 
 struct api_context ComboBoxContext
 {
-   control_handle (CreateComboBox)( api_handle, api_handle client, control_handle parent, uint32 flags );
+   control_handle (CreateComboBox)( api_handle, control_handle client, control_handle parent, uint32 flags );
 
    int32          (GetComboBoxLength)( const_control_handle );
 
@@ -1357,7 +1357,7 @@ struct api_context ComboBoxContext
 
 struct api_context SliderContext
 {
-   control_handle (CreateSlider)( api_handle, api_handle client, api_bool vertical, control_handle parent, uint32 flags );
+   control_handle (CreateSlider)( api_handle, control_handle client, api_bool vertical, control_handle parent, uint32 flags );
 
    int32          (GetSliderValue)( const_control_handle );
    void           (SetSliderValue)( control_handle, int32 );
@@ -1388,7 +1388,7 @@ struct api_context SliderContext
 
 struct api_context SpinBoxContext
 {
-   control_handle (CreateSpinBox)( api_handle, api_handle client, control_handle parent, uint32 flags );
+   control_handle (CreateSpinBox)( api_handle, control_handle client, control_handle parent, uint32 flags );
 
    int32          (GetSpinBoxValue)( const_control_handle );
    void           (SetSpinBoxValue)( control_handle, int32 );
@@ -1425,7 +1425,7 @@ struct api_context SpinBoxContext
 
 struct api_context LabelContext
 {
-   control_handle (CreateLabel)( api_handle, api_handle client, const char16_type*, control_handle parent, uint32 flags );
+   control_handle (CreateLabel)( api_handle, control_handle client, const char16_type*, control_handle parent, uint32 flags );
 
    api_bool       (GetLabelText)( const_control_handle, char16_type*, size_type* );
    void           (SetLabelText)( control_handle, const char16_type* );
@@ -1447,7 +1447,7 @@ struct api_context LabelContext
 
 struct api_context BitmapBoxContext
 {
-   control_handle (CreateBitmapBox)( api_handle, api_handle client, const_bitmap_handle, control_handle parent, uint32 flags );
+   control_handle (CreateBitmapBox)( api_handle, control_handle client, const_bitmap_handle, control_handle parent, uint32 flags );
 
    bitmap_handle  (GetBitmapBoxBitmap)( const_control_handle );
    void           (SetBitmapBoxBitmap)( control_handle, const_bitmap_handle );
@@ -1463,9 +1463,9 @@ struct api_context BitmapBoxContext
 
 struct api_context ScrollBoxContext
 {
-   control_handle (CreateScrollBox)( api_handle, api_handle client, control_handle parent, uint32 flags );
+   control_handle (CreateScrollBox)( api_handle, control_handle client, control_handle parent, uint32 flags );
 
-   control_handle (CreateScrollBoxViewport)( control_handle, api_handle client );
+   control_handle (CreateScrollBoxViewport)( control_handle, control_handle client );
 
    void           (GetScrollBarsVisible)( const_control_handle, api_bool*, api_bool* );
    void           (SetScrollBarsVisible)( control_handle, api_bool, api_bool );
@@ -1502,11 +1502,11 @@ struct api_context ScrollBoxContext
 
 struct api_context TreeBoxContext
 {
-   control_handle (CreateTreeBox)( api_handle, api_handle client, control_handle parent, uint32 flags );
+   control_handle (CreateTreeBox)( api_handle, control_handle client, control_handle parent, uint32 flags );
 
-   control_handle (CreateTreeBoxViewport)( control_handle, api_handle client );
+   control_handle (CreateTreeBoxViewport)( control_handle, control_handle client );
 
-   api_handle     (CreateTreeBoxNode)( api_handle, api_handle nodeClient );
+   api_handle     (CreateTreeBoxNode)( api_handle, treebox_handle nodeClient );
 
    int32          (GetTreeBoxChildCount)( const_control_handle );
 
