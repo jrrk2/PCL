@@ -1,0 +1,101 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:40.029Z
+# Project id ...... zlib
+# Project type .... StaticLibrary
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/3rdparty/zlib/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/libzlib-pxi.a
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../adler32.c \
+../../compress.c \
+../../crc32.c \
+../../deflate.c \
+../../gzclose.c \
+../../gzlib.c \
+../../gzread.c \
+../../gzwrite.c \
+../../infback.c \
+../../inffast.c \
+../../inflate.c \
+../../inftrees.c \
+../../trees.c \
+../../uncompr.c \
+../../zutil.c
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/adler32.o \
+./arm64/Release/compress.o \
+./arm64/Release/crc32.o \
+./arm64/Release/deflate.o \
+./arm64/Release/gzclose.o \
+./arm64/Release/gzlib.o \
+./arm64/Release/gzread.o \
+./arm64/Release/gzwrite.o \
+./arm64/Release/infback.o \
+./arm64/Release/inffast.o \
+./arm64/Release/inflate.o \
+./arm64/Release/inftrees.o \
+./arm64/Release/trees.o \
+./arm64/Release/uncompr.o \
+./arm64/Release/zutil.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/adler32.d \
+./arm64/Release/compress.d \
+./arm64/Release/crc32.d \
+./arm64/Release/deflate.d \
+./arm64/Release/gzclose.d \
+./arm64/Release/gzlib.d \
+./arm64/Release/gzread.d \
+./arm64/Release/gzwrite.d \
+./arm64/Release/infback.d \
+./arm64/Release/inffast.d \
+./arm64/Release/inflate.d \
+./arm64/Release/inftrees.d \
+./arm64/Release/trees.d \
+./arm64/Release/uncompr.d \
+./arm64/Release/zutil.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/libzlib-pxi.a: $(OBJ_FILES)
+	ar r $(OBJ_DIR)/libzlib-pxi.a $(OBJ_FILES)
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/libzlib-pxi.a
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/libzlib-pxi.a $(PCLLIBDIR64)
+
+./arm64/Release/%.o: ../../%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

@@ -1,0 +1,152 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:40.596Z
+# Project id ...... zstd
+# Project type .... StaticLibrary
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+# --------------------------------------------------------------------
+# Additional preprocessor definitions:
+# ZSTD_DISABLE_ASM=1
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/3rdparty/zstd/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/libzstd-pxi.a
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../common/debug.c \
+../../common/entropy_common.c \
+../../common/error_private.c \
+../../common/fse_decompress.c \
+../../common/pool.c \
+../../common/threading.c \
+../../common/xxhash.c \
+../../common/zstd_common.c \
+../../compress/fse_compress.c \
+../../compress/hist.c \
+../../compress/huf_compress.c \
+../../compress/zstd_compress.c \
+../../compress/zstd_compress_literals.c \
+../../compress/zstd_compress_sequences.c \
+../../compress/zstd_compress_superblock.c \
+../../compress/zstd_double_fast.c \
+../../compress/zstd_fast.c \
+../../compress/zstd_lazy.c \
+../../compress/zstd_ldm.c \
+../../compress/zstd_opt.c \
+../../compress/zstdmt_compress.c \
+../../decompress/huf_decompress.c \
+../../decompress/zstd_ddict.c \
+../../decompress/zstd_decompress.c \
+../../decompress/zstd_decompress_block.c \
+../../deprecated/zbuff_common.c \
+../../deprecated/zbuff_compress.c \
+../../deprecated/zbuff_decompress.c
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/common/debug.o \
+./arm64/Release/common/entropy_common.o \
+./arm64/Release/common/error_private.o \
+./arm64/Release/common/fse_decompress.o \
+./arm64/Release/common/pool.o \
+./arm64/Release/common/threading.o \
+./arm64/Release/common/xxhash.o \
+./arm64/Release/common/zstd_common.o \
+./arm64/Release/compress/fse_compress.o \
+./arm64/Release/compress/hist.o \
+./arm64/Release/compress/huf_compress.o \
+./arm64/Release/compress/zstd_compress.o \
+./arm64/Release/compress/zstd_compress_literals.o \
+./arm64/Release/compress/zstd_compress_sequences.o \
+./arm64/Release/compress/zstd_compress_superblock.o \
+./arm64/Release/compress/zstd_double_fast.o \
+./arm64/Release/compress/zstd_fast.o \
+./arm64/Release/compress/zstd_lazy.o \
+./arm64/Release/compress/zstd_ldm.o \
+./arm64/Release/compress/zstd_opt.o \
+./arm64/Release/compress/zstdmt_compress.o \
+./arm64/Release/decompress/huf_decompress.o \
+./arm64/Release/decompress/zstd_ddict.o \
+./arm64/Release/decompress/zstd_decompress.o \
+./arm64/Release/decompress/zstd_decompress_block.o \
+./arm64/Release/deprecated/zbuff_common.o \
+./arm64/Release/deprecated/zbuff_compress.o \
+./arm64/Release/deprecated/zbuff_decompress.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/common/debug.d \
+./arm64/Release/common/entropy_common.d \
+./arm64/Release/common/error_private.d \
+./arm64/Release/common/fse_decompress.d \
+./arm64/Release/common/pool.d \
+./arm64/Release/common/threading.d \
+./arm64/Release/common/xxhash.d \
+./arm64/Release/common/zstd_common.d \
+./arm64/Release/compress/fse_compress.d \
+./arm64/Release/compress/hist.d \
+./arm64/Release/compress/huf_compress.d \
+./arm64/Release/compress/zstd_compress.d \
+./arm64/Release/compress/zstd_compress_literals.d \
+./arm64/Release/compress/zstd_compress_sequences.d \
+./arm64/Release/compress/zstd_compress_superblock.d \
+./arm64/Release/compress/zstd_double_fast.d \
+./arm64/Release/compress/zstd_fast.d \
+./arm64/Release/compress/zstd_lazy.d \
+./arm64/Release/compress/zstd_ldm.d \
+./arm64/Release/compress/zstd_opt.d \
+./arm64/Release/compress/zstdmt_compress.d \
+./arm64/Release/decompress/huf_decompress.d \
+./arm64/Release/decompress/zstd_ddict.d \
+./arm64/Release/decompress/zstd_decompress.d \
+./arm64/Release/decompress/zstd_decompress_block.d \
+./arm64/Release/deprecated/zbuff_common.d \
+./arm64/Release/deprecated/zbuff_compress.d \
+./arm64/Release/deprecated/zbuff_decompress.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/libzstd-pxi.a: $(OBJ_FILES)
+	ar r $(OBJ_DIR)/libzstd-pxi.a $(OBJ_FILES)
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/libzstd-pxi.a
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/libzstd-pxi.a $(PCLLIBDIR64)
+
+./arm64/Release/common/%.o: ../../common/%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -D"ZSTD_DISABLE_ASM=1" -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+./arm64/Release/compress/%.o: ../../compress/%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -D"ZSTD_DISABLE_ASM=1" -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+./arm64/Release/decompress/%.o: ../../decompress/%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -D"ZSTD_DISABLE_ASM=1" -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+./arm64/Release/deprecated/%.o: ../../deprecated/%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -D"ZSTD_DISABLE_ASM=1" -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

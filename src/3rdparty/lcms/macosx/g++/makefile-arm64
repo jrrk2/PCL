@@ -1,0 +1,138 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:39.012Z
+# Project id ...... lcms
+# Project type .... StaticLibrary
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+# --------------------------------------------------------------------
+# Additional preprocessor definitions:
+# CMS_NO_REGISTER_KEYWORD=1
+# CMS_NO_PTHREADS=1
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/3rdparty/lcms/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/liblcms-pxi.a
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../cmsalpha.c \
+../../cmscam02.c \
+../../cmscgats.c \
+../../cmscnvrt.c \
+../../cmserr.c \
+../../cmsgamma.c \
+../../cmsgmt.c \
+../../cmshalf.c \
+../../cmsintrp.c \
+../../cmsio0.c \
+../../cmsio1.c \
+../../cmslut.c \
+../../cmsmd5.c \
+../../cmsmtrx.c \
+../../cmsnamed.c \
+../../cmsopt.c \
+../../cmspack.c \
+../../cmspcs.c \
+../../cmsplugin.c \
+../../cmsps2.c \
+../../cmssamp.c \
+../../cmssm.c \
+../../cmstypes.c \
+../../cmsvirt.c \
+../../cmswtpnt.c \
+../../cmsxform.c
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/cmsalpha.o \
+./arm64/Release/cmscam02.o \
+./arm64/Release/cmscgats.o \
+./arm64/Release/cmscnvrt.o \
+./arm64/Release/cmserr.o \
+./arm64/Release/cmsgamma.o \
+./arm64/Release/cmsgmt.o \
+./arm64/Release/cmshalf.o \
+./arm64/Release/cmsintrp.o \
+./arm64/Release/cmsio0.o \
+./arm64/Release/cmsio1.o \
+./arm64/Release/cmslut.o \
+./arm64/Release/cmsmd5.o \
+./arm64/Release/cmsmtrx.o \
+./arm64/Release/cmsnamed.o \
+./arm64/Release/cmsopt.o \
+./arm64/Release/cmspack.o \
+./arm64/Release/cmspcs.o \
+./arm64/Release/cmsplugin.o \
+./arm64/Release/cmsps2.o \
+./arm64/Release/cmssamp.o \
+./arm64/Release/cmssm.o \
+./arm64/Release/cmstypes.o \
+./arm64/Release/cmsvirt.o \
+./arm64/Release/cmswtpnt.o \
+./arm64/Release/cmsxform.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/cmsalpha.d \
+./arm64/Release/cmscam02.d \
+./arm64/Release/cmscgats.d \
+./arm64/Release/cmscnvrt.d \
+./arm64/Release/cmserr.d \
+./arm64/Release/cmsgamma.d \
+./arm64/Release/cmsgmt.d \
+./arm64/Release/cmshalf.d \
+./arm64/Release/cmsintrp.d \
+./arm64/Release/cmsio0.d \
+./arm64/Release/cmsio1.d \
+./arm64/Release/cmslut.d \
+./arm64/Release/cmsmd5.d \
+./arm64/Release/cmsmtrx.d \
+./arm64/Release/cmsnamed.d \
+./arm64/Release/cmsopt.d \
+./arm64/Release/cmspack.d \
+./arm64/Release/cmspcs.d \
+./arm64/Release/cmsplugin.d \
+./arm64/Release/cmsps2.d \
+./arm64/Release/cmssamp.d \
+./arm64/Release/cmssm.d \
+./arm64/Release/cmstypes.d \
+./arm64/Release/cmsvirt.d \
+./arm64/Release/cmswtpnt.d \
+./arm64/Release/cmsxform.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/liblcms-pxi.a: $(OBJ_FILES)
+	ar r $(OBJ_DIR)/liblcms-pxi.a $(OBJ_FILES)
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/liblcms-pxi.a
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/liblcms-pxi.a $(PCLLIBDIR64)
+
+./arm64/Release/%.o: ../../%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -D"CMS_NO_REGISTER_KEYWORD=1" -D"CMS_NO_PTHREADS=1" -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

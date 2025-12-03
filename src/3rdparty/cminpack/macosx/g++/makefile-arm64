@@ -1,0 +1,203 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:38.664Z
+# Project id ...... cminpack
+# Project type .... StaticLibrary
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/3rdparty/cminpack/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/libcminpack-pxi.a
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../chkder.c \
+../../chkder_.c \
+../../covar.c \
+../../covar1.c \
+../../covar_.c \
+../../dogleg.c \
+../../dogleg_.c \
+../../dpmpar.c \
+../../dpmpar_.c \
+../../enorm.c \
+../../enorm_.c \
+../../fdjac1.c \
+../../fdjac1_.c \
+../../fdjac2.c \
+../../fdjac2_.c \
+../../hybrd.c \
+../../hybrd1.c \
+../../hybrd1_.c \
+../../hybrd_.c \
+../../hybrj.c \
+../../hybrj1.c \
+../../hybrj1_.c \
+../../hybrj_.c \
+../../lmder.c \
+../../lmder1.c \
+../../lmder1_.c \
+../../lmder_.c \
+../../lmdif.c \
+../../lmdif1.c \
+../../lmdif1_.c \
+../../lmdif_.c \
+../../lmpar.c \
+../../lmpar_.c \
+../../lmstr.c \
+../../lmstr1.c \
+../../lmstr1_.c \
+../../lmstr_.c \
+../../qform.c \
+../../qform_.c \
+../../qrfac.c \
+../../qrfac_.c \
+../../qrsolv.c \
+../../qrsolv_.c \
+../../r1mpyq.c \
+../../r1mpyq_.c \
+../../r1updt.c \
+../../r1updt_.c \
+../../rwupdt.c \
+../../rwupdt_.c
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/chkder.o \
+./arm64/Release/chkder_.o \
+./arm64/Release/covar.o \
+./arm64/Release/covar1.o \
+./arm64/Release/covar_.o \
+./arm64/Release/dogleg.o \
+./arm64/Release/dogleg_.o \
+./arm64/Release/dpmpar.o \
+./arm64/Release/dpmpar_.o \
+./arm64/Release/enorm.o \
+./arm64/Release/enorm_.o \
+./arm64/Release/fdjac1.o \
+./arm64/Release/fdjac1_.o \
+./arm64/Release/fdjac2.o \
+./arm64/Release/fdjac2_.o \
+./arm64/Release/hybrd.o \
+./arm64/Release/hybrd1.o \
+./arm64/Release/hybrd1_.o \
+./arm64/Release/hybrd_.o \
+./arm64/Release/hybrj.o \
+./arm64/Release/hybrj1.o \
+./arm64/Release/hybrj1_.o \
+./arm64/Release/hybrj_.o \
+./arm64/Release/lmder.o \
+./arm64/Release/lmder1.o \
+./arm64/Release/lmder1_.o \
+./arm64/Release/lmder_.o \
+./arm64/Release/lmdif.o \
+./arm64/Release/lmdif1.o \
+./arm64/Release/lmdif1_.o \
+./arm64/Release/lmdif_.o \
+./arm64/Release/lmpar.o \
+./arm64/Release/lmpar_.o \
+./arm64/Release/lmstr.o \
+./arm64/Release/lmstr1.o \
+./arm64/Release/lmstr1_.o \
+./arm64/Release/lmstr_.o \
+./arm64/Release/qform.o \
+./arm64/Release/qform_.o \
+./arm64/Release/qrfac.o \
+./arm64/Release/qrfac_.o \
+./arm64/Release/qrsolv.o \
+./arm64/Release/qrsolv_.o \
+./arm64/Release/r1mpyq.o \
+./arm64/Release/r1mpyq_.o \
+./arm64/Release/r1updt.o \
+./arm64/Release/r1updt_.o \
+./arm64/Release/rwupdt.o \
+./arm64/Release/rwupdt_.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/chkder.d \
+./arm64/Release/chkder_.d \
+./arm64/Release/covar.d \
+./arm64/Release/covar1.d \
+./arm64/Release/covar_.d \
+./arm64/Release/dogleg.d \
+./arm64/Release/dogleg_.d \
+./arm64/Release/dpmpar.d \
+./arm64/Release/dpmpar_.d \
+./arm64/Release/enorm.d \
+./arm64/Release/enorm_.d \
+./arm64/Release/fdjac1.d \
+./arm64/Release/fdjac1_.d \
+./arm64/Release/fdjac2.d \
+./arm64/Release/fdjac2_.d \
+./arm64/Release/hybrd.d \
+./arm64/Release/hybrd1.d \
+./arm64/Release/hybrd1_.d \
+./arm64/Release/hybrd_.d \
+./arm64/Release/hybrj.d \
+./arm64/Release/hybrj1.d \
+./arm64/Release/hybrj1_.d \
+./arm64/Release/hybrj_.d \
+./arm64/Release/lmder.d \
+./arm64/Release/lmder1.d \
+./arm64/Release/lmder1_.d \
+./arm64/Release/lmder_.d \
+./arm64/Release/lmdif.d \
+./arm64/Release/lmdif1.d \
+./arm64/Release/lmdif1_.d \
+./arm64/Release/lmdif_.d \
+./arm64/Release/lmpar.d \
+./arm64/Release/lmpar_.d \
+./arm64/Release/lmstr.d \
+./arm64/Release/lmstr1.d \
+./arm64/Release/lmstr1_.d \
+./arm64/Release/lmstr_.d \
+./arm64/Release/qform.d \
+./arm64/Release/qform_.d \
+./arm64/Release/qrfac.d \
+./arm64/Release/qrfac_.d \
+./arm64/Release/qrsolv.d \
+./arm64/Release/qrsolv_.d \
+./arm64/Release/r1mpyq.d \
+./arm64/Release/r1mpyq_.d \
+./arm64/Release/r1updt.d \
+./arm64/Release/r1updt_.d \
+./arm64/Release/rwupdt.d \
+./arm64/Release/rwupdt_.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/libcminpack-pxi.a: $(OBJ_FILES)
+	ar r $(OBJ_DIR)/libcminpack-pxi.a $(OBJ_FILES)
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/libcminpack-pxi.a
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/libcminpack-pxi.a $(PCLLIBDIR64)
+
+./arm64/Release/%.o: ../../%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX  -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

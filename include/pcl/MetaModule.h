@@ -24,6 +24,7 @@
 #ifndef __PCL_BUILDING_PIXINSIGHT_APPLICATION
 
 #include <pcl/Defs.h>
+#include <pcl/api/APIDefs.h>
 #include <pcl/Diagnostics.h>
 
 #include <pcl/MetaObject.h>
@@ -1026,6 +1027,8 @@ namespace InstallMode
  */
 
 // ----------------------------------------------------------------------------
+
+PCL_MODULE_EXPORT pcl::uint32 InitializePixInsightModule( api_handle hModule, function_resolver R, pcl::uint32 apiVersion, void* reserved );
 
 // end global namespace
 

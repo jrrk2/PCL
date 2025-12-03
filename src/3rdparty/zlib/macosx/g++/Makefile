@@ -15,9 +15,9 @@
 
 .PHONY: all
 all: 
-	$(MAKE) -f ./makefile-x64 --no-print-directory
+	$(MAKE) -f ./makefile-arm64 --no-print-directory
 
 .PHONY: clean
 clean:
-	$(MAKE) -f ./makefile-x64 --no-print-directory clean
+	$(MAKE) -f ./makefile-arm64 --no-print-directory clean
 

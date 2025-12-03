@@ -1,0 +1,210 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:58.830Z
+# Project id ...... IntensityTransformations
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/IntensityTransformations/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/IntensityTransformations-pxm.dylib
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../AdaptiveStretchCurveGraphInterface.cpp \
+../../AdaptiveStretchInstance.cpp \
+../../AdaptiveStretchInterface.cpp \
+../../AdaptiveStretchParameters.cpp \
+../../AdaptiveStretchProcess.cpp \
+../../AutoHistogramInstance.cpp \
+../../AutoHistogramInterface.cpp \
+../../AutoHistogramParameters.cpp \
+../../AutoHistogramProcess.cpp \
+../../BinarizeAction.cpp \
+../../BinarizeInstance.cpp \
+../../BinarizeInterface.cpp \
+../../BinarizeParameters.cpp \
+../../BinarizeProcess.cpp \
+../../ColorSaturationInstance.cpp \
+../../ColorSaturationInterface.cpp \
+../../ColorSaturationParameters.cpp \
+../../ColorSaturationProcess.cpp \
+../../CurvesTransformationInstance.cpp \
+../../CurvesTransformationInterface.cpp \
+../../CurvesTransformationParameters.cpp \
+../../CurvesTransformationProcess.cpp \
+../../ExponentialNumericControl.cpp \
+../../ExponentialTransformationInstance.cpp \
+../../ExponentialTransformationInterface.cpp \
+../../ExponentialTransformationParameters.cpp \
+../../ExponentialTransformationProcess.cpp \
+../../HistogramAutoClipSetupDialog.cpp \
+../../HistogramTransformationInstance.cpp \
+../../HistogramTransformationInterface.cpp \
+../../HistogramTransformationParameters.cpp \
+../../HistogramTransformationProcess.cpp \
+../../IntensityTransformationsModule.cpp \
+../../InvertAction.cpp \
+../../InvertInstance.cpp \
+../../InvertProcess.cpp \
+../../MaskedStretchInstance.cpp \
+../../MaskedStretchInterface.cpp \
+../../MaskedStretchParameters.cpp \
+../../MaskedStretchProcess.cpp \
+../../RescaleActions.cpp \
+../../RescaleInstance.cpp \
+../../RescaleInterface.cpp \
+../../RescaleParameters.cpp \
+../../RescaleProcess.cpp \
+../../STFAutoStretchAction.cpp \
+../../STFSliders.cpp \
+../../ScreenTransferFunctionInstance.cpp \
+../../ScreenTransferFunctionInterface.cpp \
+../../ScreenTransferFunctionParameters.cpp \
+../../ScreenTransferFunctionProcess.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/AdaptiveStretchCurveGraphInterface.o \
+./arm64/Release/AdaptiveStretchInstance.o \
+./arm64/Release/AdaptiveStretchInterface.o \
+./arm64/Release/AdaptiveStretchParameters.o \
+./arm64/Release/AdaptiveStretchProcess.o \
+./arm64/Release/AutoHistogramInstance.o \
+./arm64/Release/AutoHistogramInterface.o \
+./arm64/Release/AutoHistogramParameters.o \
+./arm64/Release/AutoHistogramProcess.o \
+./arm64/Release/BinarizeAction.o \
+./arm64/Release/BinarizeInstance.o \
+./arm64/Release/BinarizeInterface.o \
+./arm64/Release/BinarizeParameters.o \
+./arm64/Release/BinarizeProcess.o \
+./arm64/Release/ColorSaturationInstance.o \
+./arm64/Release/ColorSaturationInterface.o \
+./arm64/Release/ColorSaturationParameters.o \
+./arm64/Release/ColorSaturationProcess.o \
+./arm64/Release/CurvesTransformationInstance.o \
+./arm64/Release/CurvesTransformationInterface.o \
+./arm64/Release/CurvesTransformationParameters.o \
+./arm64/Release/CurvesTransformationProcess.o \
+./arm64/Release/ExponentialNumericControl.o \
+./arm64/Release/ExponentialTransformationInstance.o \
+./arm64/Release/ExponentialTransformationInterface.o \
+./arm64/Release/ExponentialTransformationParameters.o \
+./arm64/Release/ExponentialTransformationProcess.o \
+./arm64/Release/HistogramAutoClipSetupDialog.o \
+./arm64/Release/HistogramTransformationInstance.o \
+./arm64/Release/HistogramTransformationInterface.o \
+./arm64/Release/HistogramTransformationParameters.o \
+./arm64/Release/HistogramTransformationProcess.o \
+./arm64/Release/IntensityTransformationsModule.o \
+./arm64/Release/InvertAction.o \
+./arm64/Release/InvertInstance.o \
+./arm64/Release/InvertProcess.o \
+./arm64/Release/MaskedStretchInstance.o \
+./arm64/Release/MaskedStretchInterface.o \
+./arm64/Release/MaskedStretchParameters.o \
+./arm64/Release/MaskedStretchProcess.o \
+./arm64/Release/RescaleActions.o \
+./arm64/Release/RescaleInstance.o \
+./arm64/Release/RescaleInterface.o \
+./arm64/Release/RescaleParameters.o \
+./arm64/Release/RescaleProcess.o \
+./arm64/Release/STFAutoStretchAction.o \
+./arm64/Release/STFSliders.o \
+./arm64/Release/ScreenTransferFunctionInstance.o \
+./arm64/Release/ScreenTransferFunctionInterface.o \
+./arm64/Release/ScreenTransferFunctionParameters.o \
+./arm64/Release/ScreenTransferFunctionProcess.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/AdaptiveStretchCurveGraphInterface.d \
+./arm64/Release/AdaptiveStretchInstance.d \
+./arm64/Release/AdaptiveStretchInterface.d \
+./arm64/Release/AdaptiveStretchParameters.d \
+./arm64/Release/AdaptiveStretchProcess.d \
+./arm64/Release/AutoHistogramInstance.d \
+./arm64/Release/AutoHistogramInterface.d \
+./arm64/Release/AutoHistogramParameters.d \
+./arm64/Release/AutoHistogramProcess.d \
+./arm64/Release/BinarizeAction.d \
+./arm64/Release/BinarizeInstance.d \
+./arm64/Release/BinarizeInterface.d \
+./arm64/Release/BinarizeParameters.d \
+./arm64/Release/BinarizeProcess.d \
+./arm64/Release/ColorSaturationInstance.d \
+./arm64/Release/ColorSaturationInterface.d \
+./arm64/Release/ColorSaturationParameters.d \
+./arm64/Release/ColorSaturationProcess.d \
+./arm64/Release/CurvesTransformationInstance.d \
+./arm64/Release/CurvesTransformationInterface.d \
+./arm64/Release/CurvesTransformationParameters.d \
+./arm64/Release/CurvesTransformationProcess.d \
+./arm64/Release/ExponentialNumericControl.d \
+./arm64/Release/ExponentialTransformationInstance.d \
+./arm64/Release/ExponentialTransformationInterface.d \
+./arm64/Release/ExponentialTransformationParameters.d \
+./arm64/Release/ExponentialTransformationProcess.d \
+./arm64/Release/HistogramAutoClipSetupDialog.d \
+./arm64/Release/HistogramTransformationInstance.d \
+./arm64/Release/HistogramTransformationInterface.d \
+./arm64/Release/HistogramTransformationParameters.d \
+./arm64/Release/HistogramTransformationProcess.d \
+./arm64/Release/IntensityTransformationsModule.d \
+./arm64/Release/InvertAction.d \
+./arm64/Release/InvertInstance.d \
+./arm64/Release/InvertProcess.d \
+./arm64/Release/MaskedStretchInstance.d \
+./arm64/Release/MaskedStretchInterface.d \
+./arm64/Release/MaskedStretchParameters.d \
+./arm64/Release/MaskedStretchProcess.d \
+./arm64/Release/RescaleActions.d \
+./arm64/Release/RescaleInstance.d \
+./arm64/Release/RescaleInterface.d \
+./arm64/Release/RescaleParameters.d \
+./arm64/Release/RescaleProcess.d \
+./arm64/Release/STFAutoStretchAction.d \
+./arm64/Release/STFSliders.d \
+./arm64/Release/ScreenTransferFunctionInstance.d \
+./arm64/Release/ScreenTransferFunctionInterface.d \
+./arm64/Release/ScreenTransferFunctionParameters.d \
+./arm64/Release/ScreenTransferFunctionProcess.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/IntensityTransformations-pxm.dylib: $(OBJ_FILES)
+	clang++ -arch arm64 -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -stdlib=libc++ -Wl,-dead_strip -rdynamic -dynamiclib -install_name @executable_path/IntensityTransformations-pxm.dylib -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/IntensityTransformations-pxm.dylib $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/IntensityTransformations-pxm.dylib
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/IntensityTransformations-pxm.dylib $(PCLBINDIR64)
+	codesign --deep --options=runtime -s pleiades -f -v --timestamp $(PCLBINDIR64)/IntensityTransformations-pxm.dylib
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -fvisibility=hidden -fvisibility-inlines-hidden -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+
