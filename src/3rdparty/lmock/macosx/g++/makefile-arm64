@@ -60,6 +60,7 @@ DEP_FILES= \
 
 $(OBJ_DIR)/libMock-pxi.a: $(OBJ_FILES)
 	ar rc $@ $(OBJ_FILES)
+	cp -p $@ $(PCLLIBDIR64)
 
 .PHONY: clean
 clean:
