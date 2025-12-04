@@ -182,20 +182,5 @@ PCL_MODULE_EXPORT int InstallPixInsightModule( int mode )
    return 0;
 }
 
-extern "C" pcl::MetaModule* CreateModuleInstance()
-{
-    return new SandboxModule();
-}
-
-extern "C" pcl::MetaProcess* CreateProcessInstance()
-{
-    return new SandboxProcess();
-}
-
-extern "C" pcl::ProcessInterface* CreateProcessInterface()
-{
-    return new SandboxInterface();
-}
-
 // ----------------------------------------------------------------------------
 // EOF SandboxModule.cpp - Released 2025-04-07T08:53:56Z

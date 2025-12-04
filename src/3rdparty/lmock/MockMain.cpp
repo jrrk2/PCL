@@ -1,7 +1,6 @@
-// MockMain_Library.cpp
-// Main program for use with pre-compiled mock library
-// This version understands that PCLMockAPI is a library and 
-// the actual ProcessInterface classes come from the linked module
+// MockMain.cpp
+// Fully automatic PCL interface export tool
+// NO factory functions needed - discovers everything via symbol scanning!
 
 #include <QApplication>
 #include <QThread>
@@ -29,26 +28,24 @@
 #include "RootWidgetSelector.h"
 
 // ============================================================================
-// Module Factory Function
-// ============================================================================
-// Each module must provide this factory function to create its MetaModule.
-// The module code should implement:
-//   extern "C" pcl::MetaModule* CreateModuleInstance() {
-//       return new YourModule();
-//   }
-
-extern "C"
-  {
-    pcl::MetaModule* CreateModuleInstance();
-    pcl::MetaProcess* CreateProcessInstance();
-    pcl::ProcessInterface* CreateProcessInterface();
-  };
-
-// ============================================================================
-// Library Architecture Support
+// Symbol Resolution Utilities
 // ============================================================================
 
-// Cross-platform way to get executable path
+#include <cxxabi.h>
+
+static std::string demangle(const char* mangled)
+{
+    int status = 0;
+    char* dem = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
+    if (status == 0 && dem)
+    {
+        std::string s(dem);
+        std::free(dem);
+        return s;
+    }
+    return mangled ? std::string(mangled) : std::string();
+}
+
 static const char* getExecutablePath()
 {
 #ifdef __APPLE__
@@ -66,12 +63,6 @@ static const char* getExecutablePath()
 #endif
 }
 
-// When compiling as a library + module architecture:
-// 1. PCLMockAPI, ExportHelper, etc. are in a library (e.g., libPCLMock.a)
-// 2. SandboxInterface, SandboxProcess, etc. are in the final executable
-// 3. Symbol scanning needs to look at the FINAL executable, not the library
-
-// Raw constructor types
 using RawCtor0 = void (*)(void*);
 using RawCtor1 = void (*)(void*, void*);
 
@@ -87,7 +78,7 @@ static void* mustResolve(const char* name)
     // If name starts with __, try with single _ (remove one)
     if (name[0] == '_' && name[1] == '_')
     {
-        const char* singleUnderscore = name + 1;  // Skip first _
+        const char* singleUnderscore = name + 1;
         p = dlsym(RTLD_MAIN_ONLY, singleUnderscore);
         if (p) {
             fprintf(stderr, "INFO: Found with single underscore: %s\n", singleUnderscore);
@@ -101,7 +92,7 @@ static void* mustResolve(const char* name)
         }
     }
     
-    // If name starts with single _, try with double __ (add one)
+    // If name starts with single _, try with double __
     if (name[0] == '_' && name[1] != '_')
     {
         std::string doubleUnderscore = std::string("_") + name;
@@ -118,11 +109,10 @@ static void* mustResolve(const char* name)
         }
     }
     
-    fprintf(stderr, "WARNING: dlsym(%s) failed: %s\n", name, dlerror());
     return nullptr;
 }
 
-static void* dynamicNew(void* ctorAddr, size_t size, void* arg1 = nullptr)
+static void* dynamicNew(void* ctorAddr, size_t size)
 {
     if (!ctorAddr) {
         fprintf(stderr, "ERROR: Null constructor address\n");
@@ -130,90 +120,107 @@ static void* dynamicNew(void* ctorAddr, size_t size, void* arg1 = nullptr)
     }
     
     void* mem = ::operator new(size);
-    if (!arg1)
-    {
-        RawCtor0 ctor = reinterpret_cast<RawCtor0>(ctorAddr);
-        ctor(mem);
-    }
-    else
-    {
-        RawCtor1 ctor = reinterpret_cast<RawCtor1>(ctorAddr);
-        ctor(mem, arg1);
-    }
+    RawCtor0 ctor = reinterpret_cast<RawCtor0>(ctorAddr);
+    ctor(mem);
     return mem;
 }
 
-// Size estimation for ProcessInterface derivatives
-size_t sizeForInterfaceClass(const std::string& className)
+// ============================================================================
+// Automatic Class Discovery
+// ============================================================================
+
+struct DiscoveredClass
 {
-    // Base size - most interfaces are close to this
-    size_t baseSize = sizeof(pcl::ProcessInterface);
+    std::string className;
+    std::string mangledCtorName;
+    void* ctorAddress;
+};
+
+DiscoveredClass findModuleClass()
+{
+    qDebug() << "Scanning for Module class...";
     
-    // Add padding for derived class members
-    // Most ProcessInterface derivatives add 50-200 bytes of members
-    return baseSize + 256;  // Conservative estimate
+    auto allSymbols = collectAllExternalFunctionSymbols();
+    
+    for (const auto& mangled : allSymbols)
+    {
+        std::string demangled = demangle(mangled.c_str());
+        
+        // Look for Module constructor: SomeModule::SomeModule()
+        // Must end with "Module" and be a constructor
+        if (demangled.find("Module::") != std::string::npos &&
+            demangled.find("()") != std::string::npos)
+        {
+            // Extract class name
+            size_t parenPos = demangled.find('(');
+            size_t colonPos = demangled.rfind("::", parenPos);
+            std::string className = demangled.substr(0, colonPos);
+            
+            // Must end with "Module" and not be "MetaModule"
+            if (className.length() >= 6 &&
+                className.substr(className.length() - 6) == "Module" &&
+                className.find("MetaModule") == std::string::npos)
+            {
+                void* addr = mustResolve(mangled.c_str());
+                if (addr)
+                {
+                    qDebug() << "  ✓ Found Module:" << className.c_str();
+                    qDebug() << "    Symbol:" << mangled.c_str();
+                    return {className, mangled, addr};
+                }
+            }
+        }
+    }
+    
+    qCritical() << "  ❌ Module class not found!";
+    return {"", "", nullptr};
 }
 
-// Try to find MetaProcess by scanning the module
-pcl::MetaProcess* findMetaProcessForInterface(const std::string& className)
+DiscoveredClass findProcessClass()
 {
-    // Access the global Module
-    if (!Module) {
-        fprintf(stderr, "ERROR: Global Module is null\n");
-        return nullptr;
-    }
+    qDebug() << "Scanning for Process class...";
     
-    // Scan through all processes in the module
-    for (size_t i = 0; i < Module->Length(); ++i)
+    auto allSymbols = collectAllExternalFunctionSymbols();
+    
+    for (const auto& mangled : allSymbols)
     {
-        const pcl::MetaObject* obj = (*Module)[i];
-        if (!obj) continue;
+        std::string demangled = demangle(mangled.c_str());
         
-        // Cast to MetaProcess
-        pcl::MetaProcess* process = const_cast<pcl::MetaProcess*>(
-            dynamic_cast<const pcl::MetaProcess*>(obj)
-        );
-        if (!process) continue;
-        
-        // Try to match by name heuristics
-        std::string processId = process->Id().c_str();
-        
-        // e.g., "SandboxInterface" -> look for "Sandbox" process
-        // Remove "Interface" suffix
-        std::string baseName = className;
-        size_t ifacePos = baseName.rfind("Interface");
-        if (ifacePos != std::string::npos) {
-            baseName = baseName.substr(0, ifacePos);
-        }
-        
-        // Remove namespace
-        size_t colonPos = baseName.rfind("::");
-        if (colonPos != std::string::npos) {
-            baseName = baseName.substr(colonPos + 2);
-        }
-        
-        qDebug() << "  Checking process:" << processId.c_str() 
-                 << "against" << baseName.c_str();
-        
-        if (processId.find(baseName) != std::string::npos ||
-            baseName.find(processId) != std::string::npos)
+        // Look for Process constructor: SomeProcess::SomeProcess()
+        // Must end with "Process" but NOT "MetaProcess"
+        if (demangled.find("Process::") != std::string::npos &&
+            demangled.find("Interface") == std::string::npos &&
+            demangled.find("Implementation") == std::string::npos &&
+            demangled.find("()") != std::string::npos)
         {
-            qDebug() << "  ✓ Matched!";
-            return process;
+            // Extract class name
+            size_t parenPos = demangled.find('(');
+            size_t colonPos = demangled.rfind("::", parenPos);
+            std::string className = demangled.substr(0, colonPos);
+            
+            // Must end with "Process" and not be "MetaProcess"
+            if (className.length() >= 7 &&
+                className.substr(className.length() - 7) == "Process" &&
+                className.find("MetaProcess") == std::string::npos)
+            {
+                void* addr = mustResolve(mangled.c_str());
+                if (addr)
+                {
+                    qDebug() << "  ✓ Found Process:" << className.c_str();
+                    qDebug() << "    Symbol:" << mangled.c_str();
+                    return {className, mangled, addr};
+                }
+            }
         }
     }
     
-    // If no match found, just return the first process
-    if (Module->Length() > 0) {
-        qWarning() << "  No exact match, using first process";
-        const pcl::MetaObject* obj = (*Module)[0];
-        return const_cast<pcl::MetaProcess*>(
-            dynamic_cast<const pcl::MetaProcess*>(obj)
-        );
-    }
-    
-    return nullptr;
+    qWarning() << "  ⚠️  Process class not found (continuing without)";
+    return {"", "", nullptr};
 }
+
+// ============================================================================
+// Main Program
+// ============================================================================
 
 int main(int argc, char** argv)
 {
@@ -221,225 +228,143 @@ int main(int argc, char** argv)
     SetDebugLogging(true);
 
     qDebug() << "===========================================";
-    qDebug() << "PCL Interface Export Tool (Library Mode)";
+    qDebug() << "PCL Interface Export Tool";
+    qDebug() << "Fully Automatic Symbol Discovery";
     qDebug() << "===========================================\n";
 
-    qDebug() << "Architecture: Mock library + Module executable";
     qDebug() << "Executable:" << getExecutablePath();
     qDebug() << "";
 
-    qDebug() << "";
-    qDebug() << "Creating module instance...";
+    // ========================================================================
+    // Step 1: Discover and create Module
+    // ========================================================================
     
-    // Call the factory function to create the module
-    // The module code must implement:
-    //   extern "C" pcl::MetaModule* CreateModuleInstance() { return new YourModule(); }
-    Module = CreateModuleInstance();
+    auto moduleInfo = findModuleClass();
+    if (!moduleInfo.ctorAddress)
+    {
+        qCritical() << "\n❌ ERROR: Could not find Module class!";
+        qCritical() << "Make sure your module defines a class ending with 'Module'";
+        qCritical() << "Example: class SandboxModule : public pcl::MetaModule";
+        return 1;
+    }
+
+    qDebug() << "\nCreating module instance...";
+    Module = reinterpret_cast<pcl::MetaModule*>(
+        dynamicNew(moduleInfo.ctorAddress, 512)  // Conservative size
+    );
     
     if (!Module)
     {
-        qCritical() << "❌ ERROR: CreateModuleInstance() returned null!";
-        qCritical() << "Make sure your module code implements:";
-        qCritical() << "  extern \"C\" pcl::MetaModule* CreateModuleInstance()";
-        qCritical() << "";
-        qCritical() << "Example:";
-        qCritical() << "  extern \"C\" pcl::MetaModule* CreateModuleInstance() {";
-        qCritical() << "      return new SandboxModule();";
-        qCritical() << "  }";
+        qCritical() << "❌ ERROR: Module construction failed!";
         return 1;
     }
     
-    qDebug() << "✓ Module instance created:" << (void*)Module;
-    qDebug() << "";
+    qDebug() << "✓ Module created:" << (void*)Module;
     
-    // Initialize the module with PCL API
-    qDebug() << "Initializing module with PCL API...";
+    // ========================================================================
+    // Step 2: Initialize PCL API
+    // ========================================================================
+    
+    qDebug() << "\nInitializing PCL API...";
     InitializePixInsightModule(Module, GetMockFunctionResolver(), 
                               PCL_API_Version, nullptr);
-
-    if (!Module)
-    {
-        qCritical() << "ERROR: Module initialization failed!";
-        qCritical() << "Make sure InitializePixInsightModule() is properly implemented";
-        qCritical() << "in your module and creates a MetaModule instance.";
-        return 1;
-    }
-
-    qDebug() << "Module initialized successfully";
-    qDebug() << "Module name:" << Module->Name().c_str();
-    qDebug() << "Process count:" << Module->Length();
-    qDebug() << "";
-
-    // ============================================
-    // Process Registration in PCL
-    // ============================================
-    // In PCL, MetaProcess objects register themselves automatically
-    // via their constructor: MetaProcess::MetaProcess() -> MetaObject(Module)
-    //
-    // There is NO Install() method in the PCL API!
-    //
-    // Processes get registered when:
-    // - new SandboxProcess is called (heap allocation)
-    // - SandboxProcess proc; is declared (stack allocation)  
-    // - Static/global MetaProcess instances are created
-    //
-    // The Module constructor or static initialization typically creates
-    // MetaProcess instances, which auto-register.
-    // ============================================
     
-    // In mock environment, processes are optional
-    // The interface can be launched without a real MetaProcess
-    bool hasProcesses = (Module->Length() > 0);
+    qDebug() << "✓ Module initialized";
+    qDebug() << "  Name:" << Module->Name().c_str();
+    qDebug() << "  Registered processes:" << Module->Length();
     
-    if (!hasProcesses)
+    // ========================================================================
+    // Step 3: Discover and create Process
+    // ========================================================================
+    
+    auto processInfo = findProcessClass();
+    pcl::MetaProcess* MP = nullptr;
+    
+    if (processInfo.ctorAddress)
     {
-        qWarning() << "⚠️  No processes registered (Process count: 0)";
-        qWarning() << "This is OK for mock environment - interface will show without MetaProcess";
-        qWarning() << "Note: MetaProcess instances auto-register via constructor";
-        qWarning() << "";
-    }
-    else
-    {
-        // List all processes
-        qDebug() << "Available processes:";
-        for (size_t i = 0; i < Module->Length(); ++i)
+        qDebug() << "\nCreating process instance...";
+        MP = reinterpret_cast<pcl::MetaProcess*>(
+            dynamicNew(processInfo.ctorAddress, 512)
+        );
+        
+        if (MP)
         {
-            const pcl::MetaObject* obj = (*Module)[i];
-            if (obj) {
-                pcl::MetaProcess* process = const_cast<pcl::MetaProcess*>(
-                    dynamic_cast<const pcl::MetaProcess*>(obj)
-                );
-                if (process) {
-                    qDebug() << "  [" << i << "]" << process->Id().c_str();
-                }
-            }
+            qDebug() << "✓ Process created:" << (void*)MP;
+            qDebug() << "  ID:" << MP->Id().c_str();
         }
-        qDebug() << "";
+        else
+        {
+            qWarning() << "⚠️  Process construction failed (continuing without)";
+        }
     }
-
+    
     // ========================================================================
-    // Discover interface classes in the final executable
+    // Step 4: Discover Interface classes
     // ========================================================================
     
-    qDebug() << "Scanning for ProcessInterface derivatives...";
+    qDebug() << "\nScanning for ProcessInterface derivatives...";
     auto discovered = scanDerivedPCLInterfaces();
 
     if (discovered.empty())
     {
-        qCritical() << "\n❌ ERROR: No PCL ProcessInterface derivatives found!\n";
-        qCritical() << "This could mean:";
-        qCritical() << "1. The module's interface classes aren't linked into the executable";
-        qCritical() << "2. Symbols were stripped from the final binary";
-        qCritical() << "3. The interface classes don't follow expected naming conventions";
-        qCritical() << "";
+        qCritical() << "\n❌ ERROR: No ProcessInterface derivatives found!\n";
         qCritical() << "To diagnose:";
         qCritical() << "  nm" << getExecutablePath() << "| grep Interface";
-        qCritical() << "";
-        qCritical() << "To fix:";
-        qCritical() << "  - Ensure module interface .cpp files are linked";
-        qCritical() << "  - Build with -g flag (keep debug symbols)";
-        qCritical() << "  - Don't use -s flag (don't strip)";
         return 1;
     }
 
-    qDebug() << "\n✓ Discovered" << discovered.size() << "interface(s):\n";
+    qDebug() << "\n✓ Discovered" << discovered.size() << "interface(s):";
     for (const auto& di : discovered) {
-        qDebug() << "  Class:  " << di.className.c_str();
-        qDebug() << "  Symbol: " << di.mangledCtorName.c_str();
-        qDebug() << "";
+        qDebug() << "  -" << di.className.c_str();
     }
 
     // ========================================================================
-    // Choose which interface to export
+    // Step 5: Choose interface to export
     // ========================================================================
     
     const DiscoveredInterface* chosen = nullptr;
     
-    // Strategy 1: User specified via command line
-    if (argc > 1) {
+    // Command line argument?
+    if (argc > 1)
+    {
         std::string requested = argv[1];
-        qDebug() << "Looking for requested interface:" << requested.c_str();
-        
-        for (const auto& di : discovered) {
-            if (di.className.find(requested) != std::string::npos) {
+        for (const auto& di : discovered)
+        {
+            if (di.className.find(requested) != std::string::npos)
+            {
                 chosen = &di;
-                qDebug() << "✓ Found:" << di.className.c_str();
-                break;
-            }
-        }
-        
-        if (!chosen) {
-            qWarning() << "⚠ Requested interface not found, using heuristic selection";
-        }
-    }
-    
-    // Strategy 2: Prefer "Sandbox" if present (common test module)
-    if (!chosen) {
-        for (const auto& di : discovered) {
-            if (di.className.find("Sandbox") != std::string::npos) {
-                chosen = &di;
-                qDebug() << "Auto-selected (Sandbox):" << di.className.c_str();
+                qDebug() << "\n✓ Selected (requested):" << di.className.c_str();
                 break;
             }
         }
     }
     
-    // Strategy 3: Just use the first one
-    if (!chosen) {
+    // Auto-select first one
+    if (!chosen)
+    {
         chosen = &discovered.front();
-        qDebug() << "Auto-selected (first):" << chosen->className.c_str();
-    }
-
-    qDebug() << "\n===========================================";
-    qDebug() << "Selected interface:" << chosen->className.c_str();
-    qDebug() << "===========================================\n";
-
-    // ========================================================================
-    // Find the MetaProcess for this interface (optional in mock mode)
-    // ========================================================================
-    
-    qDebug() << "Finding MetaProcess for interface...";
-    pcl::MetaProcess* MP = findMetaProcessForInterface(chosen->className);
-    
-    if (!MP)
-    {
-        qWarning() << "";
-        qWarning() << "⚠️  Could not find MetaProcess (no processes registered)";
-        qWarning() << "Continuing in MOCK MODE - interface will launch without real process";
-        qWarning() << "";
-	MP = CreateProcessInstance();
-    }
-    else
-    {
-        qDebug() << "✓ Found MetaProcess:" << MP->Id().c_str();
+        qDebug() << "\n✓ Selected (first):" << chosen->className.c_str();
     }
 
     // ========================================================================
-    // Dynamically construct the interface
+    // Step 6: Construct Interface
     // ========================================================================
     
-    qDebug() << "\nResolving constructor symbol...";
-    void* ctorAddr = mustResolve(chosen->mangledCtorName.c_str());
+    qDebug() << "\nResolving interface constructor...";
+    void* ifaceCtorAddr = mustResolve(chosen->mangledCtorName.c_str());
     
-    if (!ctorAddr)
+    if (!ifaceCtorAddr)
     {
         qCritical() << "\n❌ ERROR: Could not resolve constructor!";
         qCritical() << "Symbol:" << chosen->mangledCtorName.c_str();
-        qCritical() << "";
-        qCritical() << "This usually means:";
-        qCritical() << "1. The symbol is present but not exported (not extern)";
-        qCritical() << "2. The symbol was stripped after linking";
-        qCritical() << "3. The interface is in a separate shared library";
         return 1;
     }
 
-    qDebug() << "✓ Constructor resolved at:" << ctorAddr;
+    qDebug() << "✓ Constructor resolved:" << ifaceCtorAddr;
 
-    qDebug() << "\nConstructing interface instance...";
-    size_t sz = sizeForInterfaceClass(chosen->className);
-    qDebug() << "  Allocating" << sz << "bytes";
-    
-    pcl::ProcessInterface* IF = reinterpret_cast<pcl::ProcessInterface*>(dynamicNew(ctorAddr, sz)
+    qDebug() << "\nConstructing interface...";
+    pcl::ProcessInterface* IF = reinterpret_cast<pcl::ProcessInterface*>(
+        dynamicNew(ifaceCtorAddr, 1024)  // Conservative size for interface
     );
     
     if (!IF)
@@ -448,100 +373,100 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    qDebug() << "✓ Interface constructed at:" << IF;
+    qDebug() << "✓ Interface created:" << (void*)IF;
 
     // ========================================================================
-    // Create process instance and launch interface
+    // Step 7: Set up mock Qt container
     // ========================================================================
     
-    pcl::ProcessImplementation* inst = nullptr;
+    qDebug() << "\nSetting up Qt container...";
+    
+    MockBase* interfaceRoot = new MockBase();
+    interfaceRoot->isSizer = false;
+    interfaceRoot->widget = new QWidget(nullptr);
+    
+    // Extract short name for window title
+    std::string shortName = chosen->className;
+    size_t colonPos = shortName.rfind("::");
+    if (colonPos != std::string::npos)
+        shortName = shortName.substr(colonPos + 2);
+    
+    interfaceRoot->widget->setWindowTitle(QString::fromStdString(shortName));
+    g_topLevelWidgets.append(interfaceRoot);
+    
+    // Set interface handle
+    IF->handle = (control_handle)interfaceRoot;
+    
+    qDebug() << "✓ Container ready";
+
+    // ========================================================================
+    // Step 8: Launch interface
+    // ========================================================================
     
     if (MP)
     {
-        qDebug() << "\nCreating process instance...";
-        inst = MP->Create();
+        qDebug() << "\nLaunching interface with process...";
         
+        pcl::ProcessImplementation* inst = MP->Create();
         if (!inst)
         {
-            qCritical() << "\n❌ ERROR: MetaProcess::Create() returned null!";
+            qCritical() << "❌ ERROR: Could not create process instance!";
             return 1;
         }
-        qDebug() << "✓ Process instance created";
-
-	MockBase* interfaceRoot = new MockBase();
-	interfaceRoot->isSizer = false;
-	interfaceRoot->widget = new QWidget(nullptr);  // True top-level
-	interfaceRoot->widget->setWindowTitle("MockMain");
-
-	// Add to top-level list
-	g_topLevelWidgets.append(interfaceRoot);
-
-	// Set the interface's handle (simulate what PixInsight core does)
-	// This is what InterfaceDispatcher::Initialize() does:
-	IF->handle = (control_handle)interfaceRoot;
-	
-        qDebug() << "\nLaunching interface...";
+        
         bool dynamic = false;
         unsigned flags = 0;
+        
         IF->Launch(*MP, inst, dynamic, flags);
         IF->Show();
+        
         qDebug() << "✓ Interface launched and shown";
     }
     else
     {
-        // Mock mode: No MetaProcess available
-        // Just show the interface without launching
-        qDebug() << "\nMock mode: Showing interface without Launch()";
-        qDebug() << "⚠️  Interface shown but not launched (no process)";
-        qDebug() << "⚠️  For full testing, implement Module->Install() with your process";
+        qWarning() << "\nMock mode: Showing interface without process...";
         IF->Show();
-        qDebug() << "✓ Interface shown";
+        qDebug() << "✓ Interface shown (limited functionality)";
     }
 
     // ========================================================================
-    // Allow Qt to render the interface
+    // Step 9: Wait for UI to initialize
     // ========================================================================
     
-    qDebug() << "\nProcessing Qt events...";
+    qDebug() << "\nInitializing UI...";
     QApplication::processEvents();
-    QThread::msleep(200);  // Give widgets time to initialize
+    QThread::msleep(200);
     QApplication::processEvents();
-    QThread::msleep(100);  // Extra time for complex layouts
+    QThread::msleep(100);
     QApplication::processEvents();
 
     // ========================================================================
-    // Find and select the best root widget
+    // Step 10: Find root widget
     // ========================================================================
     
     qDebug() << "\n===========================================";
-    qDebug() << "Searching for interface widgets...";
+    qDebug() << "Finding interface widgets...";
     qDebug() << "===========================================\n";
     
-    qDebug() << "Top-level widgets found:" << g_topLevelWidgets.size();
+    qDebug() << "Top-level widgets:" << g_topLevelWidgets.size();
 
     QList<QWidget*> candidates;
     for (MockBase* base : g_topLevelWidgets)
     {
         if (base && base->widget)
         {
-            qDebug() << "  Candidate:";
-            qDebug() << "    Widget:" << base->widget;
-            qDebug() << "    Type:  " << base->widget->metaObject()->className();
-            qDebug() << "    Size:  " << base->widget->size();
-            qDebug() << "    Name:  " << base->widget->objectName();
+            qDebug() << "  Widget:" << base->widget->metaObject()->className()
+                     << "Size:" << base->widget->size();
             candidates.append(base->widget);
         }
     }
 
     if (candidates.isEmpty())
     {
-        qCritical() << "\n❌ ERROR: No top-level widgets found!";
-        qCritical() << "The interface may not have created any widgets.";
-        qCritical() << "Check that your ProcessInterface::Initialize() creates controls.";
+        qCritical() << "\n❌ ERROR: No widgets found!";
         return 1;
     }
 
-    qDebug() << "\nSelecting best root widget...";
     QWidget* root = RootWidgetSelector::selectBestRoot(candidates, true);
     
     if (!root)
@@ -550,34 +475,25 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    qDebug() << "\n===========================================";
-    qDebug() << "✓ Root widget selected";
-    qDebug() << "===========================================";
-    qDebug() << "Widget:     " << root;
-    qDebug() << "Type:       " << root->metaObject()->className();
-    qDebug() << "Size:       " << root->size();
-    qDebug() << "Object Name:" << root->objectName();
-    qDebug() << "===========================================\n";
+    qDebug() << "\n✓ Root widget selected:" << root->metaObject()->className();
 
     // ========================================================================
-    // Export the interface
+    // Step 11: Export interface
     // ========================================================================
     
-    // Extract base name from class name
-    // e.g., "pcl::SandboxInterface" -> "SandboxInterface"
     std::string baseName = chosen->className;
-    size_t colonPos = baseName.rfind("::");
-    if (colonPos != std::string::npos) {
+    colonPos = baseName.rfind("::");
+    if (colonPos != std::string::npos)
         baseName = baseName.substr(colonPos + 2);
-    }
     
     QString qBaseName = QString::fromStdString(baseName);
     QString outputDir = "./exported";
 
+    qDebug() << "\n===========================================";
     qDebug() << "Exporting interface...";
-    qDebug() << "  Base name: " << qBaseName;
-    qDebug() << "  Output:    " << outputDir;
-    qDebug() << "";
+    qDebug() << "===========================================\n";
+    qDebug() << "Interface:" << qBaseName;
+    qDebug() << "Output:   " << outputDir;
 
     bool success = ExportHelper::exportInterface(root, qBaseName, outputDir);
 
@@ -585,164 +501,85 @@ int main(int argc, char** argv)
     {
         qDebug() << "\n===========================================";
         qDebug() << "✅ EXPORT COMPLETED SUCCESSFULLY!";
-        qDebug() << "===========================================";
-        qDebug() << "";
+        qDebug() << "===========================================\n";
         qDebug() << "Generated files in:" << outputDir;
         qDebug() << "  -" << qBaseName + ".h";
         qDebug() << "  -" << qBaseName + ".cpp";
         qDebug() << "  -" << qBaseName + "_metadata.json";
         qDebug() << "  - CMakeLists.txt";
         qDebug() << "  - main.cpp";
-        qDebug() << "  - README.md";
-        qDebug() << "";
-        qDebug() << "To build the exported interface:";
+        qDebug() << "  - README.md\n";
+        qDebug() << "To build:";
         qDebug() << "  cd" << outputDir;
         qDebug() << "  mkdir build && cd build";
-        qDebug() << "  cmake ..";
-        qDebug() << "  make";
+        qDebug() << "  cmake .. && make";
         qDebug() << "  ./" + qBaseName;
         qDebug() << "===========================================\n";
     }
     else
     {
         qCritical() << "\n❌ EXPORT FAILED!";
-        qCritical() << "Check error messages above for details.";
         return 1;
     }
 
     // ========================================================================
-    // Optional: Keep interface open for inspection
+    // Step 12: Keep window open
     // ========================================================================
     
-    qDebug() << "Interface is ready. Close the window to exit.";
-    qDebug() << "(Or press Ctrl+C to exit immediately)\n";
+    qDebug() << "Interface ready. Close window to exit.\n";
+    
+    // Show the window
+    if (root)
+    {
+        root->show();
+        root->raise();
+        root->activateWindow();
+    }
     
     return app.exec();
 }
 
 // ============================================================================
-// USAGE
+// USAGE NOTES
 // ============================================================================
 /*
 
-ARCHITECTURE:
--------------
-This tool is designed for the following build architecture:
+FULLY AUTOMATIC - NO FACTORY FUNCTIONS NEEDED!
+-----------------------------------------------
 
-1. Core mock library (built once):
-   - PCLMockAPI.cpp
-   - PCLThreadMock.cpp
-   - ExportHelper.cpp
-   - QtUiExporter.cpp
-   - PCLInterfaceScanner.cpp
-   → Compiled into: libPCLMock.a (or .dylib)
+This version discovers everything automatically via symbol scanning:
+- Finds Module class (anything ending with "Module")
+- Finds Process class (anything ending with "Process")  
+- Finds Interface classes (anything ending with "Interface")
 
-2. Module-specific code (built per module):
-   - SandboxModule.cpp (or YourModule.cpp)
-   - SandboxProcess.cpp (or YourProcess.cpp)
-   - SandboxInterface.cpp (or YourInterface.cpp)
-   - MockMain_Library.cpp (this file)
-   → Linked with libPCLMock.a
-   → Produces: Sandbox-pxm.mock (or YourModule-pxm.mock)
+Your module code needs NO special factory functions!
 
-BUILD EXAMPLE:
--------------
+Just define your classes normally:
 
-Step 1: Build the mock library (once)
-$ clang++ -std=c++17 -c -g \
-    -I/opt/homebrew/include \
-    -I/path/to/PCL/include \
-    PCLMockAPI.cpp \
-    PCLThreadMock.cpp \
-    ExportHelper.cpp \
-    QtUiExporter.cpp \
-    PCLInterfaceScanner.cpp
+    class SandboxModule : public pcl::MetaModule { ... };
+    class SandboxProcess : public pcl::MetaProcess { ... };
+    class SandboxInterface : public pcl::ProcessInterface { ... };
 
-$ ar rcs libPCLMock.a *.o
+Build and run:
 
-Step 2: Build the module executable (per module)
-$ clang++ -std=c++17 -g \
-    -I/opt/homebrew/include \
-    -I/path/to/PCL/include \
-    -L. -L/opt/homebrew/lib \
-    MockMain_Library.cpp \
-    SandboxModule.cpp \
-    SandboxProcess.cpp \
-    SandboxInterface.cpp \
-    -lPCLMock \
-    -framework QtCore -framework QtWidgets \
-    -o Sandbox-pxm.mock
+    $ make
+    $ ./Sandbox-pxm.mock
 
-Step 3: Run
-$ ./Sandbox-pxm.mock
+The tool will:
+1. Scan the binary for your classes
+2. Construct them dynamically
+3. Launch the interface
+4. Export Qt code
 
-Step 4: Use exported code
-$ cd exported
-$ mkdir build && cd build
-$ cmake ..
-$ make
-$ ./SandboxInterface
+Command line options:
 
-COMMAND LINE OPTIONS:
---------------------
+    $ ./Sandbox-pxm.mock              # Auto-select first interface
+    $ ./Sandbox-pxm.mock Sandbox      # Select specific interface
 
-Export a specific interface (if multiple are present):
-$ ./Sandbox-pxm.mock SandboxInterface
+Build requirements:
 
-Or just run without arguments to auto-select:
-$ ./Sandbox-pxm.mock
-
-TROUBLESHOOTING:
----------------
-
-If you get "No PCL ProcessInterface derivatives found":
-
-1. Check symbols are present:
-   $ nm Sandbox-pxm.mock | grep Interface
-
-2. Check symbols aren't stripped:
-   $ nm -a Sandbox-pxm.mock | wc -l
-   (Should be > 1000 for a typical module)
-
-3. Build with debug symbols:
-   Add -g flag, remove -s flag
-
-4. Ensure interface .cpp is actually linked:
-   $ nm Sandbox-pxm.mock | grep SandboxInterface
-   Should show C1, C2, D0, D1, D2 symbols
+    - Link with: -Wl,-export_dynamic (for dlsym to work)
+    - Keep symbols: Don't use -s flag
+    - Debug info helpful: Use -g flag
 
 */
-
-int _main(int argc, char** argv)
-{
-    QApplication app(argc, argv);
-    SetDebugLogging(true);
-
-    // Initialize API before Console
-    
-    Module = CreateModuleInstance();
-    InitializePixInsightModule(Module, GetMockFunctionResolver(), PCL_API_Version, nullptr );
-
-    pcl::MetaProcess* MP = CreateProcessInstance();
-
-    pcl::ProcessInterface* IF = CreateProcessInterface();
-    MockBase* interfaceRoot = new MockBase();
-    interfaceRoot->isSizer = false;
-    interfaceRoot->widget = new QWidget(nullptr);  // True top-level
-    interfaceRoot->widget->setWindowTitle("MockMain");
-    
-    // Add to top-level list
-    g_topLevelWidgets.append(interfaceRoot);
-    
-    // Set the interface's handle (simulate what PixInsight core does)
-    // This is what InterfaceDispatcher::Initialize() does:
-    IF->handle = (control_handle)interfaceRoot;
-
-    bool dynamic = false;
-    unsigned flags = 0;
-    
-    IF->Launch(*MP, nullptr, dynamic, flags);
-    IF->Show();
-
-    return app.exec();
-}

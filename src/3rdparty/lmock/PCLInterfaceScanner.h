@@ -14,3 +14,4 @@ struct DiscoveredInterface
 // Scan the current executable for derived ProcessInterface classes.
 // Returns ctor mangled name and demangled class name.
 std::vector<DiscoveredInterface> scanDerivedPCLInterfaces();
+std::vector<std::string> collectAllExternalFunctionSymbols();

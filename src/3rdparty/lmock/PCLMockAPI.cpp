@@ -3545,6 +3545,190 @@ function_resolver GetMockFunctionResolver() {
     return mock_function_resolver;
 }
 
+// PCLMockAPI_Additional.cpp
+// Additional mock implementations for PCL API functions
+// Add these to the END of your existing PCLMockAPI.cpp
+
+// =============================================================
+// ViewContext
+// =============================================================
+
+api_bool ViewContext::IsPreview(const void* handle)
+{
+    // In mock environment, nothing is a preview
+    return api_false;
+}
+
+// =============================================================
+// CursorContext
+// =============================================================
+
+void* CursorContext::CloneCursor(void* handle, const void* cursor)
+{
+    // Return the same cursor (no actual cloning in mock)
+    return const_cast<void*>(cursor);
+}
+
+void* CursorContext::CreateCursor(void* handle, int cursorShape)
+{
+    // Return a dummy cursor handle
+    static int dummyCursor = 0;
+    return &dummyCursor;
+}
+
+// =============================================================
+// DialogContext
+// =============================================================
+
+control_handle DialogContext::CreateDialog(void* handle, void* parent, 
+                                          control_handle control, unsigned int flags)
+{
+    // Return a dummy dialog handle
+    static int dummyDialog = 0;
+    return (control_handle)&dummyDialog;
+}
+
+void DialogContext::ReturnDialog(control_handle control, int result)
+{
+    // No-op in mock
+}
+
+int32 DialogContext::ExecuteDialog(control_handle control)
+{
+    // Always return "accepted" (1) in mock
+    return 1;
+}
+
+// =============================================================
+// ControlContext
+// =============================================================
+
+void ControlContext::SetControlCursor(control_handle control, const void* cursor)
+{
+    // No-op in mock
+}
+
+api_bool ControlContext::SetViewDragEventRoutine(control_handle control, void* receiver,
+                                                 pcl::view_drag_event_handler handler)
+{
+    // No-op in mock - drag/drop not supported
+    return api_true;
+}
+
+api_bool ControlContext::SetViewDropEventRoutine(control_handle control, void* receiver,
+                                                 pcl::view_drag_event_handler handler)
+{
+    // No-op in mock - drag/drop not supported
+    return api_true;
+}
+
+// =============================================================
+// ViewListContext
+// =============================================================
+
+control_handle ViewListContext::CreateViewList(void* handle, void* parent, 
+                                               control_handle control, unsigned int flags)
+{
+    // Return a dummy view list handle
+    static int dummyViewList = 0;
+    return (control_handle)&dummyViewList;
+}
+
+void ViewListContext::RegenerateViewList(control_handle control, 
+                                         unsigned int currentView,
+                                         unsigned int mainViews, 
+                                         unsigned int previews)
+{
+    // No-op in mock
+}
+
+void ViewListContext::SetViewListCurrentView(control_handle control, void* view)
+{
+    // No-op in mock
+}
+
+api_bool ViewListContext::SetViewListViewSelectedEventRoutine(
+    control_handle control, 
+    void* receiver,
+    pcl::view_event_routine handler)
+{
+    // No-op in mock
+    return api_true;
+}
+
+// =============================================================
+// NumericalContext
+// =============================================================
+
+void* NumericalContext::FFTCreateComplexTransformF(size_t length)
+{
+    // Return a dummy FFT handle
+    static int dummyFFT = 0;
+    return &dummyFFT;
+}
+
+void* NumericalContext::FFTCreateComplexInverseTransformF(size_t length)
+{
+    // Return a dummy inverse FFT handle
+    static int dummyIFFT = 0;
+    return &dummyIFFT;
+}
+
+api_bool NumericalContext::FFTComplexTransformF(void* handle, void* out, const void* in)
+{
+    // No-op in mock - FFT not actually performed
+    return api_true;
+}
+
+api_bool NumericalContext::FFTComplexInverseTransformF(void* handle, void* out, const void* in)
+{
+    // No-op in mock - inverse FFT not actually performed
+    return api_true;
+}
+
+size_t NumericalContext::FFTComplexOptimizedLengthF(size_t length)
+{
+    // Return next power of 2
+    size_t n = 1;
+    while (n < length)
+        n <<= 1;
+    return n;
+}
+
+size_t NumericalContext::FFTComplexOptimizedLengthD(size_t length)
+{
+    // Same as float version
+    return FFTComplexOptimizedLengthF(length);
+}
+
+// =============================================================
+// ImageWindowContext
+// =============================================================
+
+void ImageWindowContext::AddImageWindowKeyword(void* handle, const char* name, 
+                                               const char* value, const char* comment)
+{
+    // No-op in mock
+}
+
+void ImageWindowContext::ResetImageWindowKeywords(void* handle)
+{
+    // No-op in mock
+}
+
+int32 ImageWindowContext::GetImageWindowKeywordCount(const void* handle)
+{
+    // No keywords in mock
+    return 0;
+}
+
+void ImageWindowContext::GetImageWindowKeyword(const void* handle, int index,
+                                               char* name, size_t nameSize,
+                                               char* value, size_t valueSize,
+                                               char* comment, size_t commentSize)
+{
+    // No keywords to retrieve - just return (void return type)
+}
 
 // =============================================================
 // END OF IMPLEMENTATION
