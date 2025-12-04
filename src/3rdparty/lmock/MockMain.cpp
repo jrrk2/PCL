@@ -1,6 +1,7 @@
 // MockMain_Library.cpp
 // Main program for use with pre-compiled mock library
-// This version requires explicit module instantiation via extern functions
+// This version understands that PCLMockAPI is a library and 
+// the actual ProcessInterface classes come from the linked module
 
 #include <QApplication>
 #include <QThread>
@@ -28,42 +29,26 @@
 #include "RootWidgetSelector.h"
 
 // ============================================================================
-// MODULE INSTANTIATION - CONFIGURE THIS SECTION
+// Module Factory Function
 // ============================================================================
-// 
-// Each module must provide a factory function that creates its MetaModule.
-// Declare it here as extern and the linker will find it from your module code.
-//
-// Example for Sandbox module:
-//   extern pcl::MetaModule* CreateSandboxModule();
-//
-// Then in your SandboxModule.cpp, implement:
-//   pcl::MetaModule* CreateSandboxModule() {
-//       return new SandboxModule();
+// Each module must provide this factory function to create its MetaModule.
+// The module code should implement:
+//   extern "C" pcl::MetaModule* CreateModuleInstance() {
+//       return new YourModule();
 //   }
-//
-// Or, if you prefer a more generic approach, use a preprocessor define:
-//   Compile with: -DMODULE_FACTORY=CreateSandboxModule
 
-#ifndef MODULE_FACTORY
-// Default: Try to find a factory function by naming convention
-// If your module is "Sandbox", it looks for CreateSandboxModule()
-// You can override this by defining MODULE_FACTORY at compile time
-#define MODULE_FACTORY CreateModuleInstance
-#endif
-
-// Declare the module factory function
-// Your module code must implement this
-extern "C" pcl::MetaModule* MODULE_FACTORY();
-
-// Helper for error messages
-#define STRINGIFY(x) #x
-#define TO_STRING(x) STRINGIFY(x)
+extern "C"
+  {
+    pcl::MetaModule* CreateModuleInstance();
+    pcl::MetaProcess* CreateProcessInstance();
+    pcl::ProcessInterface* CreateProcessInterface();
+  };
 
 // ============================================================================
-// Cross-platform executable path helper
+// Library Architecture Support
 // ============================================================================
 
+// Cross-platform way to get executable path
 static const char* getExecutablePath()
 {
 #ifdef __APPLE__
@@ -81,10 +66,6 @@ static const char* getExecutablePath()
 #endif
 }
 
-// ============================================================================
-// Library Architecture Support
-// ============================================================================
-
 // When compiling as a library + module architecture:
 // 1. PCLMockAPI, ExportHelper, etc. are in a library (e.g., libPCLMock.a)
 // 2. SandboxInterface, SandboxProcess, etc. are in the final executable
@@ -96,19 +77,49 @@ using RawCtor1 = void (*)(void*, void*);
 
 static void* mustResolve(const char* name)
 {
-    // Try resolving from the main program first
+    // Try the name as-is first
     void* p = dlsym(RTLD_MAIN_ONLY, name);
-    if (!p) {
-        // Fall back to default search
-        p = dlsym(RTLD_DEFAULT, name);
+    if (p) return p;
+    
+    p = dlsym(RTLD_DEFAULT, name);
+    if (p) return p;
+    
+    // If name starts with __, try with single _ (remove one)
+    if (name[0] == '_' && name[1] == '_')
+    {
+        const char* singleUnderscore = name + 1;  // Skip first _
+        p = dlsym(RTLD_MAIN_ONLY, singleUnderscore);
+        if (p) {
+            fprintf(stderr, "INFO: Found with single underscore: %s\n", singleUnderscore);
+            return p;
+        }
+        
+        p = dlsym(RTLD_DEFAULT, singleUnderscore);
+        if (p) {
+            fprintf(stderr, "INFO: Found with single underscore: %s\n", singleUnderscore);
+            return p;
+        }
     }
     
-    if (!p)
+    // If name starts with single _, try with double __ (add one)
+    if (name[0] == '_' && name[1] != '_')
     {
-        fprintf(stderr, "WARNING: dlsym(%s) failed: %s\n", name, dlerror());
-        return nullptr;
+        std::string doubleUnderscore = std::string("_") + name;
+        p = dlsym(RTLD_MAIN_ONLY, doubleUnderscore.c_str());
+        if (p) {
+            fprintf(stderr, "INFO: Found with double underscore: %s\n", doubleUnderscore.c_str());
+            return p;
+        }
+        
+        p = dlsym(RTLD_DEFAULT, doubleUnderscore.c_str());
+        if (p) {
+            fprintf(stderr, "INFO: Found with double underscore: %s\n", doubleUnderscore.c_str());
+            return p;
+        }
     }
-    return p;
+    
+    fprintf(stderr, "WARNING: dlsym(%s) failed: %s\n", name, dlerror());
+    return nullptr;
 }
 
 static void* dynamicNew(void* ctorAddr, size_t size, void* arg1 = nullptr)
@@ -217,53 +228,94 @@ int main(int argc, char** argv)
     qDebug() << "Executable:" << getExecutablePath();
     qDebug() << "";
 
-    // ========================================================================
-    // Initialize Module - Create instance then initialize
-    // ========================================================================
-    
+    qDebug() << "";
     qDebug() << "Creating module instance...";
     
     // Call the factory function to create the module
-    Module = MODULE_FACTORY();
+    // The module code must implement:
+    //   extern "C" pcl::MetaModule* CreateModuleInstance() { return new YourModule(); }
+    Module = CreateModuleInstance();
     
     if (!Module)
     {
-        qCritical() << "ERROR: Module factory returned null!";
+        qCritical() << "❌ ERROR: CreateModuleInstance() returned null!";
         qCritical() << "Make sure your module code implements:";
-        qCritical() << "  extern \"C\" pcl::MetaModule*" << TO_STRING(MODULE_FACTORY) << "()";
+        qCritical() << "  extern \"C\" pcl::MetaModule* CreateModuleInstance()";
         qCritical() << "";
-        qCritical() << "Example implementation:";
-        qCritical() << "  extern \"C\" pcl::MetaModule*" << TO_STRING(MODULE_FACTORY) << "() {";
-        qCritical() << "      return new YourModule();";
+        qCritical() << "Example:";
+        qCritical() << "  extern \"C\" pcl::MetaModule* CreateModuleInstance() {";
+        qCritical() << "      return new SandboxModule();";
         qCritical() << "  }";
         return 1;
     }
     
-    qDebug() << "✓ Module instance created:" << Module;
+    qDebug() << "✓ Module instance created:" << (void*)Module;
+    qDebug() << "";
     
-    qDebug() << "\nInitializing module with PCL API...";
+    // Initialize the module with PCL API
+    qDebug() << "Initializing module with PCL API...";
     InitializePixInsightModule(Module, GetMockFunctionResolver(), 
                               PCL_API_Version, nullptr);
 
-    qDebug() << "✓ Module initialized successfully";
+    if (!Module)
+    {
+        qCritical() << "ERROR: Module initialization failed!";
+        qCritical() << "Make sure InitializePixInsightModule() is properly implemented";
+        qCritical() << "in your module and creates a MetaModule instance.";
+        return 1;
+    }
+
+    qDebug() << "Module initialized successfully";
     qDebug() << "Module name:" << Module->Name().c_str();
     qDebug() << "Process count:" << Module->Length();
+    qDebug() << "";
 
-    // List all processes
-    qDebug() << "\nAvailable processes:";
-    for (size_t i = 0; i < Module->Length(); ++i)
+    // ============================================
+    // Process Registration in PCL
+    // ============================================
+    // In PCL, MetaProcess objects register themselves automatically
+    // via their constructor: MetaProcess::MetaProcess() -> MetaObject(Module)
+    //
+    // There is NO Install() method in the PCL API!
+    //
+    // Processes get registered when:
+    // - new SandboxProcess is called (heap allocation)
+    // - SandboxProcess proc; is declared (stack allocation)  
+    // - Static/global MetaProcess instances are created
+    //
+    // The Module constructor or static initialization typically creates
+    // MetaProcess instances, which auto-register.
+    // ============================================
+    
+    // In mock environment, processes are optional
+    // The interface can be launched without a real MetaProcess
+    bool hasProcesses = (Module->Length() > 0);
+    
+    if (!hasProcesses)
     {
-        const pcl::MetaObject* obj = (*Module)[i];
-        if (obj) {
-            pcl::MetaProcess* process = const_cast<pcl::MetaProcess*>(
-                dynamic_cast<const pcl::MetaProcess*>(obj)
-            );
-            if (process) {
-                qDebug() << "  [" << i << "]" << process->Id().c_str();
+        qWarning() << "⚠️  No processes registered (Process count: 0)";
+        qWarning() << "This is OK for mock environment - interface will show without MetaProcess";
+        qWarning() << "Note: MetaProcess instances auto-register via constructor";
+        qWarning() << "";
+    }
+    else
+    {
+        // List all processes
+        qDebug() << "Available processes:";
+        for (size_t i = 0; i < Module->Length(); ++i)
+        {
+            const pcl::MetaObject* obj = (*Module)[i];
+            if (obj) {
+                pcl::MetaProcess* process = const_cast<pcl::MetaProcess*>(
+                    dynamic_cast<const pcl::MetaProcess*>(obj)
+                );
+                if (process) {
+                    qDebug() << "  [" << i << "]" << process->Id().c_str();
+                }
             }
         }
+        qDebug() << "";
     }
-    qDebug() << "";
 
     // ========================================================================
     // Discover interface classes in the final executable
@@ -343,7 +395,7 @@ int main(int argc, char** argv)
     qDebug() << "===========================================\n";
 
     // ========================================================================
-    // Find the MetaProcess for this interface
+    // Find the MetaProcess for this interface (optional in mock mode)
     // ========================================================================
     
     qDebug() << "Finding MetaProcess for interface...";
@@ -351,12 +403,16 @@ int main(int argc, char** argv)
     
     if (!MP)
     {
-        qCritical() << "\n❌ ERROR: Could not find MetaProcess!";
-        qCritical() << "The module must define at least one MetaProcess.";
-        return 1;
+        qWarning() << "";
+        qWarning() << "⚠️  Could not find MetaProcess (no processes registered)";
+        qWarning() << "Continuing in MOCK MODE - interface will launch without real process";
+        qWarning() << "";
+	MP = CreateProcessInstance();
     }
-
-    qDebug() << "✓ Found MetaProcess:" << MP->Id().c_str();
+    else
+    {
+        qDebug() << "✓ Found MetaProcess:" << MP->Id().c_str();
+    }
 
     // ========================================================================
     // Dynamically construct the interface
@@ -383,8 +439,7 @@ int main(int argc, char** argv)
     size_t sz = sizeForInterfaceClass(chosen->className);
     qDebug() << "  Allocating" << sz << "bytes";
     
-    pcl::ProcessInterface* IF = reinterpret_cast<pcl::ProcessInterface*>(
-        dynamicNew(ctorAddr, sz)
+    pcl::ProcessInterface* IF = reinterpret_cast<pcl::ProcessInterface*>(dynamicNew(ctorAddr, sz)
     );
     
     if (!IF)
@@ -399,25 +454,49 @@ int main(int argc, char** argv)
     // Create process instance and launch interface
     // ========================================================================
     
-    qDebug() << "\nCreating process instance...";
-    pcl::ProcessImplementation* inst = MP->Create();
+    pcl::ProcessImplementation* inst = nullptr;
     
-    if (!inst)
+    if (MP)
     {
-        qCritical() << "\n❌ ERROR: MetaProcess::Create() returned null!";
-        return 1;
+        qDebug() << "\nCreating process instance...";
+        inst = MP->Create();
+        
+        if (!inst)
+        {
+            qCritical() << "\n❌ ERROR: MetaProcess::Create() returned null!";
+            return 1;
+        }
+        qDebug() << "✓ Process instance created";
+
+	MockBase* interfaceRoot = new MockBase();
+	interfaceRoot->isSizer = false;
+	interfaceRoot->widget = new QWidget(nullptr);  // True top-level
+	interfaceRoot->widget->setWindowTitle("MockMain");
+
+	// Add to top-level list
+	g_topLevelWidgets.append(interfaceRoot);
+
+	// Set the interface's handle (simulate what PixInsight core does)
+	// This is what InterfaceDispatcher::Initialize() does:
+	IF->handle = (control_handle)interfaceRoot;
+	
+        qDebug() << "\nLaunching interface...";
+        bool dynamic = false;
+        unsigned flags = 0;
+        IF->Launch(*MP, inst, dynamic, flags);
+        IF->Show();
+        qDebug() << "✓ Interface launched and shown";
     }
-
-    qDebug() << "✓ Process instance created";
-
-    qDebug() << "\nLaunching interface...";
-    bool dynamic = false;
-    unsigned flags = 0;
-
-    IF->Launch(*MP, inst, dynamic, flags);
-    IF->Show();
-
-    qDebug() << "✓ Interface launched and shown";
+    else
+    {
+        // Mock mode: No MetaProcess available
+        // Just show the interface without launching
+        qDebug() << "\nMock mode: Showing interface without Launch()";
+        qDebug() << "⚠️  Interface shown but not launched (no process)";
+        qDebug() << "⚠️  For full testing, implement Module->Install() with your process";
+        IF->Show();
+        qDebug() << "✓ Interface shown";
+    }
 
     // ========================================================================
     // Allow Qt to render the interface
@@ -542,96 +621,128 @@ int main(int argc, char** argv)
 }
 
 // ============================================================================
-// USAGE DOCUMENTATION
+// USAGE
 // ============================================================================
 /*
 
-MODULE FACTORY FUNCTION
-=======================
+ARCHITECTURE:
+-------------
+This tool is designed for the following build architecture:
 
-Your module code must provide a factory function that creates the MetaModule.
+1. Core mock library (built once):
+   - PCLMockAPI.cpp
+   - PCLThreadMock.cpp
+   - ExportHelper.cpp
+   - QtUiExporter.cpp
+   - PCLInterfaceScanner.cpp
+   → Compiled into: libPCLMock.a (or .dylib)
 
-METHOD 1: Default naming (recommended)
----------------------------------------
-Implement in your module code:
+2. Module-specific code (built per module):
+   - SandboxModule.cpp (or YourModule.cpp)
+   - SandboxProcess.cpp (or YourProcess.cpp)
+   - SandboxInterface.cpp (or YourInterface.cpp)
+   - MockMain_Library.cpp (this file)
+   → Linked with libPCLMock.a
+   → Produces: Sandbox-pxm.mock (or YourModule-pxm.mock)
 
-    extern "C" pcl::MetaModule* CreateModuleInstance() {
-        return new SandboxModule();  // or YourModule()
-    }
+BUILD EXAMPLE:
+-------------
 
-Then compile normally.
+Step 1: Build the mock library (once)
+$ clang++ -std=c++17 -c -g \
+    -I/opt/homebrew/include \
+    -I/path/to/PCL/include \
+    PCLMockAPI.cpp \
+    PCLThreadMock.cpp \
+    ExportHelper.cpp \
+    QtUiExporter.cpp \
+    PCLInterfaceScanner.cpp
 
-METHOD 2: Custom factory name
-------------------------------
-If you want a different name, define it at compile time:
+$ ar rcs libPCLMock.a *.o
 
-    -DMODULE_FACTORY=CreateSandboxModule
+Step 2: Build the module executable (per module)
+$ clang++ -std=c++17 -g \
+    -I/opt/homebrew/include \
+    -I/path/to/PCL/include \
+    -L. -L/opt/homebrew/lib \
+    MockMain_Library.cpp \
+    SandboxModule.cpp \
+    SandboxProcess.cpp \
+    SandboxInterface.cpp \
+    -lPCLMock \
+    -framework QtCore -framework QtWidgets \
+    -o Sandbox-pxm.mock
 
-Then implement in your module code:
+Step 3: Run
+$ ./Sandbox-pxm.mock
 
-    extern "C" pcl::MetaModule* CreateSandboxModule() {
-        return new SandboxModule();
-    }
+Step 4: Use exported code
+$ cd exported
+$ mkdir build && cd build
+$ cmake ..
+$ make
+$ ./SandboxInterface
 
-METHOD 3: Module-specific header
----------------------------------
-Create a header that your module includes:
+COMMAND LINE OPTIONS:
+--------------------
 
-    // ModuleFactory.h
-    #define CREATE_MODULE_FACTORY(ModuleClass) \
-        extern "C" pcl::MetaModule* CreateModuleInstance() { \
-            return new ModuleClass(); \
-        }
+Export a specific interface (if multiple are present):
+$ ./Sandbox-pxm.mock SandboxInterface
 
-Then in your module:
+Or just run without arguments to auto-select:
+$ ./Sandbox-pxm.mock
 
-    #include "ModuleFactory.h"
-    CREATE_MODULE_FACTORY(SandboxModule)
+TROUBLESHOOTING:
+---------------
 
-EXAMPLE: SandboxModule.cpp
-==========================
+If you get "No PCL ProcessInterface derivatives found":
 
-    #include <pcl/MetaModule.h>
-    #include "SandboxModule.h"
-    
-    // Module factory function
-    extern "C" pcl::MetaModule* CreateModuleInstance() {
-        return new SandboxModule();
-    }
-    
-    // Rest of your module code...
-    SandboxModule::SandboxModule() { ... }
+1. Check symbols are present:
+   $ nm Sandbox-pxm.mock | grep Interface
 
-BUILD EXAMPLE
-=============
+2. Check symbols aren't stripped:
+   $ nm -a Sandbox-pxm.mock | wc -l
+   (Should be > 1000 for a typical module)
 
-    clang++ -std=c++17 -g \
-        -I/opt/homebrew/include \
-        -I/path/to/PCL/include \
-        MockMain_Library.cpp \
-        SandboxModule.cpp \
-        SandboxProcess.cpp \
-        SandboxInterface.cpp \
-        -lPCLMock \
-        -framework QtCore -framework QtWidgets \
-        -o Sandbox-pxm.mock
+3. Build with debug symbols:
+   Add -g flag, remove -s flag
 
-Or with custom factory name:
-
-    clang++ -std=c++17 -g \
-        -DMODULE_FACTORY=CreateSandboxModule \
-        ...
-
-TROUBLESHOOTING
-===============
-
-Error: "Module factory returned null"
-→ Make sure you implemented the factory function in your module code
-
-Error: "undefined reference to CreateModuleInstance"  
-→ Your module code doesn't export the factory function
-
-Error: "MODULE_FACTORY is not defined"
-→ Normal - it uses the default "CreateModuleInstance"
+4. Ensure interface .cpp is actually linked:
+   $ nm Sandbox-pxm.mock | grep SandboxInterface
+   Should show C1, C2, D0, D1, D2 symbols
 
 */
+
+int _main(int argc, char** argv)
+{
+    QApplication app(argc, argv);
+    SetDebugLogging(true);
+
+    // Initialize API before Console
+    
+    Module = CreateModuleInstance();
+    InitializePixInsightModule(Module, GetMockFunctionResolver(), PCL_API_Version, nullptr );
+
+    pcl::MetaProcess* MP = CreateProcessInstance();
+
+    pcl::ProcessInterface* IF = CreateProcessInterface();
+    MockBase* interfaceRoot = new MockBase();
+    interfaceRoot->isSizer = false;
+    interfaceRoot->widget = new QWidget(nullptr);  // True top-level
+    interfaceRoot->widget->setWindowTitle("MockMain");
+    
+    // Add to top-level list
+    g_topLevelWidgets.append(interfaceRoot);
+    
+    // Set the interface's handle (simulate what PixInsight core does)
+    // This is what InterfaceDispatcher::Initialize() does:
+    IF->handle = (control_handle)interfaceRoot;
+
+    bool dynamic = false;
+    unsigned flags = 0;
+    
+    IF->Launch(*MP, nullptr, dynamic, flags);
+    IF->Show();
+
+    return app.exec();
+}

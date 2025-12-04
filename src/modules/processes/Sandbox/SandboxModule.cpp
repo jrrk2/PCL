@@ -182,8 +182,19 @@ PCL_MODULE_EXPORT int InstallPixInsightModule( int mode )
    return 0;
 }
 
-extern "C" pcl::MetaModule* CreateModuleInstance() {
+extern "C" pcl::MetaModule* CreateModuleInstance()
+{
     return new SandboxModule();
+}
+
+extern "C" pcl::MetaProcess* CreateProcessInstance()
+{
+    return new SandboxProcess();
+}
+
+extern "C" pcl::ProcessInterface* CreateProcessInterface()
+{
+    return new SandboxInterface();
 }
 
 // ----------------------------------------------------------------------------
