@@ -3730,6 +3730,241 @@ void ImageWindowContext::GetImageWindowKeyword(const void* handle, int index,
     // No keywords to retrieve - just return (void return type)
 }
 
+// PCLMockAPI_Gaia.cpp
+// Additional mock implementations for Gaia module
+// Add these to the END of your existing PCLMockAPI.cpp
+
+// Note: Make sure PCLMockAPI.cpp includes:
+// #include <QTextEdit>
+// #include <QComboBox>
+
+// =============================================================
+// FontContext
+// =============================================================
+
+int32 FontContext::GetCharPixelWidth(const void* handle, int ch)
+{
+    // Return approximate width for any character
+    return 8; // Average character width in pixels
+}
+
+// =============================================================
+// DialogContext - Additional
+// =============================================================
+
+api_bool DialogContext::ExecuteSaveFileDialog(
+    char16_type* path,
+    const char16_type* initialPath,
+    const char16_type* caption,
+    const char16_type* filters,
+    const char16_type* defaultExt,
+    uint32 flags)
+{
+    // Mock: return false (user cancelled)
+    return api_false;
+}
+
+api_bool DialogContext::SetReturnDialogEventRoutine(
+    control_handle control,
+    void* receiver,
+    void (*handler)(control_handle, control_handle, int))
+{
+    // No-op in mock
+  return api_true;
+}
+
+// =============================================================
+// GlobalContext - Settings
+// =============================================================
+
+api_bool GlobalContext::DeleteSettingsItem(void* handle, const char* key, uint32 flags)
+{
+    // No-op in mock - settings not persisted
+  return api_true;
+}
+
+api_bool GlobalContext::ReadSettingsString(
+    void* handle,
+    char16_type** value,
+    const char* key,
+    uint32 flags)
+{
+    // Mock: no settings available
+    *value = nullptr;
+    return api_false;
+}
+
+api_bool GlobalContext::WriteSettingsString(
+    void* handle,
+    const char16_type* value,
+    const char* key,
+    uint32 flags)
+{
+    // No-op in mock - settings not persisted
+    return api_true;
+}
+
+// =============================================================
+// ControlContext - Additional
+// =============================================================
+
+void ControlContext::RestyleControl(control_handle control)
+{
+    // No-op in mock
+}
+
+void ControlContext::SetControlStyleSheet(control_handle control, const char16_type* css)
+{
+    // No-op in mock - stylesheets not supported
+}
+
+// =============================================================
+// TextBoxContext
+// =============================================================
+
+control_handle TextBoxContext::CreateTextBox(
+    void* handle,
+    void* parent,
+    const char16_type* text,
+    control_handle control,
+    uint32 flags)
+{
+    // Create a mock QTextEdit
+    qDebug() << "[Mock] createControl<QTextEdit>";
+    
+    MockBase* base = new MockBase();
+    base->isSizer = false;
+    base->widget = new QTextEdit(nullptr);
+    
+    if (text)
+        base->widget->setProperty("text", QString::fromUtf16(text));
+    
+    g_topLevelWidgets.append(base);
+    return (control_handle)base;
+}
+
+void TextBoxContext::SetTextBoxText(control_handle control, const char16_type* text)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+    {
+        QTextEdit* textBox = qobject_cast<QTextEdit*>(base->widget);
+        if (textBox && text)
+            textBox->setPlainText(QString::fromUtf16(text));
+    }
+}
+
+void TextBoxContext::InsertTextBoxText(control_handle control, const char16_type* text)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+    {
+        QTextEdit* textBox = qobject_cast<QTextEdit*>(base->widget);
+        if (textBox && text)
+            textBox->insertPlainText(QString::fromUtf16(text));
+    }
+}
+
+void TextBoxContext::SetTextBoxReadOnly(control_handle control, uint32 readOnly)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+    {
+        QTextEdit* textBox = qobject_cast<QTextEdit*>(base->widget);
+        if (textBox)
+            textBox->setReadOnly(readOnly != 0);
+    }
+}
+
+// =============================================================
+// ComboBoxContext - Additional
+// =============================================================
+
+int32 ComboBoxContext::GetComboBoxCurrentItem(const_control_handle control)
+{
+    const MockBase* base = reinterpret_cast<const MockBase*>(control);
+    if (base && base->widget)
+    {
+        const QComboBox* combo = qobject_cast<const QComboBox*>(base->widget);
+        if (combo)
+            return combo->currentIndex();
+    }
+    return -1;
+}
+
+// =============================================================
+// NetworkTransferContext
+// =============================================================
+
+void* NetworkTransferContext::CreateNetworkTransfer(void* handle, void* parent)
+{
+    // Return a dummy network transfer handle
+    static int dummyTransfer = 0;
+    return &dummyTransfer;
+}
+
+api_bool NetworkTransferContext::SetNetworkTransferURL(
+    void* handle,
+    const char16_type* url,
+    const char16_type* username,
+    const char16_type* password)
+{
+    // No-op in mock - network transfers not supported
+    return api_true;
+}
+
+void NetworkTransferContext::GetNetworkTransferTotalSpeed(const void* handle, double* speed)
+{
+    // Mock: no transfer happening
+    if (speed)
+        *speed = 0.0;
+}
+
+api_bool NetworkTransferContext::PerformNetworkTransferDownload(void* handle)
+{
+    // Mock: download always fails
+    return api_false;
+}
+
+fsize_type NetworkTransferContext::GetNetworkTransferBytesTransferred(const void* handle)
+{
+    // Mock: no bytes transferred
+    return 0;
+}
+
+api_bool NetworkTransferContext::GetNetworkTransferErrorInformation(
+    const void* handle,
+    char16_type* errorText,
+    size_type* errorTextSize)
+{
+    // Mock: return generic error
+    if (errorText && errorTextSize)
+    {
+        QString error = "Network transfers not supported in mock environment";
+        memcpy(errorText, error.utf16(), *errorTextSize * sizeof(char16_type));
+        *errorTextSize = error.length();
+    }
+    return api_true;
+}
+
+api_bool NetworkTransferContext::SetNetworkTransferDownloadEventRoutine(
+    void* handle,
+    void* receiver,
+    uint32 (*handler)(void*, control_handle, const void*, int64))
+{
+    // No-op in mock - events not supported
+    return api_false;
+}
+
+api_bool NetworkTransferContext::SetNetworkTransferProgressEventRoutine(
+    void* handle,
+    void* receiver,
+    uint32 (*handler)(void*, control_handle, int64, int64, int64, int64))
+{
+    // No-op in mock - events not supported
+    return api_false;
+}
+
 // =============================================================
 // END OF IMPLEMENTATION
 // =============================================================
