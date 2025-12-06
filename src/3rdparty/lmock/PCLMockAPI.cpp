@@ -4593,5 +4593,357 @@ api_bool ImageWindowContext::GetImageWindowHasAstrometricSolution(const void* ha
 }
 
 // =============================================================
+// DialogContext - Additional Stubs
+// =============================================================
+
+api_bool DialogContext::ExecuteGetDirectoryDialog(char16_type* output_path,
+                                                   const char16_type* initial_path,
+                                                   const char16_type* caption)
+{
+    logf("[Mock] DialogContext::ExecuteGetDirectoryDialog");
+    
+    // Mock implementation: return empty path or copy initial path
+    if (output_path)
+    {
+        if (initial_path)
+        {
+            // Copy initial path to output
+            size_t len = 0;
+            while (initial_path[len] != 0 && len < 1024)
+            {
+                output_path[len] = initial_path[len];
+                len++;
+            }
+            output_path[len] = 0;
+        }
+        else
+        {
+            output_path[0] = 0;  // Empty string
+        }
+    }
+    return api_true;
+}
+
+// =============================================================
+// GlobalContext - Additional Stubs
+// =============================================================
+
+api_bool GlobalContext::ExecuteCommand(api_handle handle, console_handle console,
+                                       const char16_type* command_string)
+{
+    logf("[Mock] GlobalContext::ExecuteCommand");
+    // Mock implementation: command executes silently with no result
+    return api_true;
+}
+
+// =============================================================
+// ModuleContext - Additional Stubs
+// =============================================================
+
+api_bool ModuleContext::EvaluateScript(api_handle handle, api_property_value* result,
+                                       const char16_type* script_text,
+                                       const char* language)
+{
+    logf("[Mock] ModuleContext::EvaluateScript (language=%s)", language ? language : "null");
+    // Mock implementation: script evaluates to null/empty
+    if (result)
+    {
+        result->type = 0;  // Assuming 0 = undefined/null
+        // Don't try to access .ptr member - it may not exist in the union
+    }
+    return api_true;
+}
+
+// =============================================================
+// ComboBoxContext - Additional Stubs
+// =============================================================
+
+void ComboBoxContext::RemoveComboBoxItem(control_handle control, int item_index)
+{
+    logf("[Mock] ComboBoxContext::RemoveComboBoxItem (index=%d)", item_index);
+    
+    QWidget* w = widgetFromHandle(control);
+    QComboBox* combo = qobject_cast<QComboBox*>(w);
+    if (combo && item_index >= 0 && item_index < combo->count())
+    {
+        combo->removeItem(item_index);
+    }
+}
+
+void ComboBoxContext::SetComboBoxIconSize(control_handle control, int width, int height)
+{
+    logf("[Mock] ComboBoxContext::SetComboBoxIconSize (%d x %d)", width, height);
+    
+    QWidget* w = widgetFromHandle(control);
+    QComboBox* combo = qobject_cast<QComboBox*>(w);
+    if (combo)
+    {
+        combo->setIconSize(QSize(width, height));
+    }
+}
+
+api_bool ComboBoxContext::SetComboBoxItemHighlightedEventRoutine(
+    control_handle control,
+    api_handle receiver,
+    pcl::value_event_routine callback)
+{
+    logf("[Mock] ComboBoxContext::SetComboBoxItemHighlightedEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        QComboBox* combo = qobject_cast<QComboBox*>(base->widget);
+        if (combo)
+        {
+            // Connect Qt signal to invoke the callback
+            QObject::connect(combo, QOverload<int>::of(&QComboBox::highlighted),
+                [base, callback](int index)
+                {
+                    if (callback)
+                        callback(base->pcl_handle, base->pcl_handle, index);
+                });
+        }
+    }
+    return api_true;
+}
+
+// =============================================================
+// GraphicsContext - Additional Drawing Stubs
+// =============================================================
+
+void GraphicsContext::FillEllipseD(void* handle, double x, double y,
+                                   double width, double height,
+                                   const void* brush)
+{
+    logf("[Mock] GraphicsContext::FillEllipseD (%.1f, %.1f, %.1f x %.1f)",
+         x, y, width, height);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::FillPolygonD(void* handle, const double* points_array,
+                                   size_type num_points, int fill_rule,
+                                   const void* brush)
+{
+    logf("[Mock] GraphicsContext::FillPolygonD (%zu points, rule=%d)",
+         (size_t)num_points, fill_rule);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::StrokePolygonD(void* handle, const double* points_array,
+                                     size_type num_points, int fill_rule,
+                                     const void* pen)
+{
+    logf("[Mock] GraphicsContext::StrokePolygonD (%zu points, rule=%d)",
+         (size_t)num_points, fill_rule);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawTiledBitmap(void* handle, int x, int y,
+                                      int width, int height,
+                                      const void* bitmap,
+                                      int tile_x, int tile_y)
+{
+    logf("[Mock] GraphicsContext::DrawTiledBitmap (%d, %d, %d x %d, tile: %d, %d)",
+         x, y, width, height, tile_x, tile_y);
+    // No-op - graphics not rendered in mock
+}
+
+api_bool GraphicsContext::BeginBitmapPaint(graphics_handle handle, bitmap_handle bitmap)
+{
+    logf("[Mock] GraphicsContext::BeginBitmapPaint");
+    // No-op - initialize graphics context for bitmap painting
+    return api_true;
+}
+
+void GraphicsContext::DrawLine(void* handle, int x1, int y1, int x2, int y2)
+{
+    logf("[Mock] GraphicsContext::DrawLine (%d, %d) -> (%d, %d)",
+         x1, y1, x2, y2);
+    // No-op - graphics not rendered in mock
+}
+
+// =============================================================
+// ImageWindowContext - Additional Stubs
+// =============================================================
+
+api_bool ImageWindowContext::CelestialToImage(const_window_handle window_context,
+                                              double* ra, double* dec)
+{
+    logf("[Mock] ImageWindowContext::CelestialToImage (%.6f, %.6f)",
+         ra ? *ra : 0.0, dec ? *dec : 0.0);
+    
+    // Mock implementation: leave coordinates unchanged
+    // In a real implementation, this would transform celestial coordinates
+    // (RA/Dec) to image pixel coordinates using astrometric solution
+    return api_true;
+}
+
+// =============================================================
+// END OF APPENDED STUBS
+// =============================================================
+
+// =============================================================
+// TimerContext - Additional Stubs
+// =============================================================
+
+timer_handle TimerContext::CreateTimer(api_handle module, api_handle receiver,
+                                       uint32 flags)
+{
+    logf("[Mock] TimerContext::CreateTimer");
+    
+    // Create a QTimer as the underlying implementation
+    QTimer* qtTimer = new QTimer();
+    
+    // Create mock wrapper
+    auto base = std::make_unique<MockBase>();
+    base->timer_api_handle = receiver;  // Store the receiver control
+    base->isSizer = false;
+    base->isTreeNode = false;
+    base->qtTimer = qtTimer;  // Store QTimer pointer
+    
+    timer_handle handle = reinterpret_cast<timer_handle>(base.get());
+    g_objects[handle] = std::move(base);
+    
+    return handle;
+}
+
+void TimerContext::SetTimerInterval(timer_handle handle, uint32 milliseconds)
+{
+    logf("[Mock] TimerContext::SetTimerInterval (%u ms)", milliseconds);
+    
+    MockBase* base = get(handle);
+    if (base && base->qtTimer)
+    {
+        base->qtTimer->setInterval(milliseconds);
+    }
+}
+
+void TimerContext::SetTimerSingleShot(timer_handle handle, uint32 singleShot)
+{
+    logf("[Mock] TimerContext::SetTimerSingleShot (%s)", singleShot ? "true" : "false");
+    
+    MockBase* base = get(handle);
+    if (base && base->qtTimer)
+    {
+        base->qtTimer->setSingleShot(singleShot != 0);
+    }
+}
+
+api_bool TimerContext::SetTimerNotifyEventRoutine(timer_handle handle, api_handle receiver,
+                                              void (*callback)(timer_handle, pcl::Control*))
+{
+    logf("[Mock] TimerContext::SetTimerNotifyEventRoutine");
+    
+    MockBase* base = get(handle);
+    if (base && base->qtTimer)
+    {
+        // Store the callback and receiver
+        base->onTimerNotify = callback;
+        base->timerReceiver = receiver;
+        
+        // Connect QTimer timeout signal to invoke the callback
+        QObject::connect(base->qtTimer, &QTimer::timeout,
+            [base, callback, receiver]()
+            {
+                if (callback)
+                    callback(reinterpret_cast<timer_handle>(base), 
+                           reinterpret_cast<pcl::Control*>(receiver));
+            });
+    }
+    return api_true;
+}
+
+// =============================================================
+// GlobalContext - Additional Stubs
+// =============================================================
+
+void GlobalContext::BroadcastImageUpdated(const_view_handle view, const_bitmap_handle bitmap)
+{
+    logf("[Mock] GlobalContext::BroadcastImageUpdated");
+    // Mock implementation: broadcast image update notification
+    // In real implementation, this would notify all interested listeners
+}
+
+// =============================================================
+// GraphicsContext - Additional Drawing Stubs
+// =============================================================
+
+void GraphicsContext::DrawEllipseD(void* handle, double x, double y,
+                                   double width, double height)
+{
+    logf("[Mock] GraphicsContext::DrawEllipseD (%.1f, %.1f, %.1f x %.1f)",
+         x, y, width, height);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawScaledBitmap(void* handle, int x, int y,
+                                       int width, int height,
+                                       const void* bitmap)
+{
+    logf("[Mock] GraphicsContext::DrawScaledBitmap (%d, %d, %d x %d)",
+         x, y, width, height);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::EnableGraphicsSmoothInterpolation(void* handle, uint32 enabled)
+{
+    logf("[Mock] GraphicsContext::EnableGraphicsSmoothInterpolation (%s)",
+         enabled ? "enabled" : "disabled");
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawRectD(void* handle, double x, double y,
+                                double width, double height)
+{
+    logf("[Mock] GraphicsContext::DrawRectD (%.1f, %.1f, %.1f x %.1f)",
+         x, y, width, height);
+    // No-op - graphics not rendered in mock
+}
+
+// =============================================================
+// ImageWindowContext - Additional Stubs
+// =============================================================
+
+void ImageWindowContext::ImageToViewport(const_window_handle window_context,
+                                         int* x, int* y)
+{
+    logf("[Mock] ImageWindowContext::ImageToViewport (%d, %d)",
+         x ? *x : 0, y ? *y : 0);
+    // Mock implementation: coordinates unchanged (1:1 mapping)
+    // In real implementation, this would transform image coordinates to viewport
+}
+
+void ImageWindowContext::UpdateImageRect(window_handle window_context,
+                                         double x, double y,
+                                         double width, double height)
+{
+    logf("[Mock] ImageWindowContext::UpdateImageRect (%.1f, %.1f, %.1f x %.1f)",
+         x, y, width, height);
+    // Mock implementation: request viewport update for image region
+}
+
+void ImageWindowContext::RegenerateImageRect(window_handle window_context,
+                                             double x, double y,
+                                             double width, double height)
+{
+    logf("[Mock] ImageWindowContext::RegenerateImageRect (%.1f, %.1f, %.1f x %.1f)",
+         x, y, width, height);
+    // Mock implementation: regenerate rendering for image region
+}
+
+void ImageWindowContext::ViewportScalarToImageD(const_window_handle window_context,
+                                                double* value)
+{
+    logf("[Mock] ImageWindowContext::ViewportScalarToImageD (%.6f)",
+         value ? *value : 0.0);
+    // Mock implementation: value unchanged (1:1 scale)
+    // In real implementation, this would transform viewport scalar to image scale
+}
+
+// =============================================================
+// END OF ADDITIONAL STUBS
+// =============================================================
+
+// =============================================================
 // END OF IMPLEMENTATION
 // =============================================================

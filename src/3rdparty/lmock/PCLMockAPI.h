@@ -81,7 +81,13 @@ struct MockBase
     pcl::item_value_event_routine onTreeNodeActivated = nullptr;
     pcl::item_range_event_routine onTreeNodeUpdated = nullptr;
     pcl::event_routine onTreeSelectionUpdated = nullptr;
-    
+
+    // Add these for Timer support:
+    api_handle timer_api_handle = nullptr;
+    QTimer* qtTimer = nullptr;
+    void (*onTimerNotify)(timer_handle, pcl::Control*) = nullptr;
+    api_handle timerReceiver = nullptr;
+
     // Destructor - Qt manages memory via parent-child relationships
     ~MockBase()
     {
