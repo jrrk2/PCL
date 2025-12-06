@@ -50,6 +50,11 @@
 namespace pcl
 {
 
+  ImageModule::ImageModule()
+  {
+
+  }
+  
 // ----------------------------------------------------------------------------
 
 const char* ImageModule::Version() const

@@ -1,0 +1,162 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:57.296Z
+# Project id ...... Image
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+DEVELOPER_ID=pleiades
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/Image/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/Image-pxm.mock
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../CreateAlphaChannelsInstance.cpp \
+../../CreateAlphaChannelsInterface.cpp \
+../../CreateAlphaChannelsParameters.cpp \
+../../CreateAlphaChannelsProcess.cpp \
+../../DynamicPSFInstance.cpp \
+../../DynamicPSFInterface.cpp \
+../../DynamicPSFParameters.cpp \
+../../DynamicPSFProcess.cpp \
+../../ExtractAlphaChannelsInstance.cpp \
+../../ExtractAlphaChannelsInterface.cpp \
+../../ExtractAlphaChannelsParameters.cpp \
+../../ExtractAlphaChannelsProcess.cpp \
+../../FITSHeaderAction.cpp \
+../../FITSHeaderInstance.cpp \
+../../FITSHeaderInterface.cpp \
+../../FITSHeaderParameters.cpp \
+../../FITSHeaderProcess.cpp \
+../../ImageIdentifierInstance.cpp \
+../../ImageIdentifierInterface.cpp \
+../../ImageIdentifierParameters.cpp \
+../../ImageIdentifierProcess.cpp \
+../../ImageModule.cpp \
+../../NewImageAction.cpp \
+../../NewImageInstance.cpp \
+../../NewImageInterface.cpp \
+../../NewImageParameters.cpp \
+../../NewImageProcess.cpp \
+../../SampleFormatConversionInstance.cpp \
+../../SampleFormatConversionInterface.cpp \
+../../SampleFormatConversionParameters.cpp \
+../../SampleFormatConversionProcess.cpp \
+../../StarDetector.cpp \
+../../StatisticsInterface.cpp \
+../../StatisticsProcess.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/CreateAlphaChannelsInstance.o \
+./arm64/Release/CreateAlphaChannelsInterface.o \
+./arm64/Release/CreateAlphaChannelsParameters.o \
+./arm64/Release/CreateAlphaChannelsProcess.o \
+./arm64/Release/DynamicPSFInstance.o \
+./arm64/Release/DynamicPSFInterface.o \
+./arm64/Release/DynamicPSFParameters.o \
+./arm64/Release/DynamicPSFProcess.o \
+./arm64/Release/ExtractAlphaChannelsInstance.o \
+./arm64/Release/ExtractAlphaChannelsInterface.o \
+./arm64/Release/ExtractAlphaChannelsParameters.o \
+./arm64/Release/ExtractAlphaChannelsProcess.o \
+./arm64/Release/FITSHeaderAction.o \
+./arm64/Release/FITSHeaderInstance.o \
+./arm64/Release/FITSHeaderInterface.o \
+./arm64/Release/FITSHeaderParameters.o \
+./arm64/Release/FITSHeaderProcess.o \
+./arm64/Release/ImageIdentifierInstance.o \
+./arm64/Release/ImageIdentifierInterface.o \
+./arm64/Release/ImageIdentifierParameters.o \
+./arm64/Release/ImageIdentifierProcess.o \
+./arm64/Release/ImageModule.o \
+./arm64/Release/NewImageAction.o \
+./arm64/Release/NewImageInstance.o \
+./arm64/Release/NewImageInterface.o \
+./arm64/Release/NewImageParameters.o \
+./arm64/Release/NewImageProcess.o \
+./arm64/Release/SampleFormatConversionInstance.o \
+./arm64/Release/SampleFormatConversionInterface.o \
+./arm64/Release/SampleFormatConversionParameters.o \
+./arm64/Release/SampleFormatConversionProcess.o \
+./arm64/Release/StarDetector.o \
+./arm64/Release/StatisticsInterface.o \
+./arm64/Release/StatisticsProcess.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/CreateAlphaChannelsInstance.d \
+./arm64/Release/CreateAlphaChannelsInterface.d \
+./arm64/Release/CreateAlphaChannelsParameters.d \
+./arm64/Release/CreateAlphaChannelsProcess.d \
+./arm64/Release/DynamicPSFInstance.d \
+./arm64/Release/DynamicPSFInterface.d \
+./arm64/Release/DynamicPSFParameters.d \
+./arm64/Release/DynamicPSFProcess.d \
+./arm64/Release/ExtractAlphaChannelsInstance.d \
+./arm64/Release/ExtractAlphaChannelsInterface.d \
+./arm64/Release/ExtractAlphaChannelsParameters.d \
+./arm64/Release/ExtractAlphaChannelsProcess.d \
+./arm64/Release/FITSHeaderAction.d \
+./arm64/Release/FITSHeaderInstance.d \
+./arm64/Release/FITSHeaderInterface.d \
+./arm64/Release/FITSHeaderParameters.d \
+./arm64/Release/FITSHeaderProcess.d \
+./arm64/Release/ImageIdentifierInstance.d \
+./arm64/Release/ImageIdentifierInterface.d \
+./arm64/Release/ImageIdentifierParameters.d \
+./arm64/Release/ImageIdentifierProcess.d \
+./arm64/Release/ImageModule.d \
+./arm64/Release/NewImageAction.d \
+./arm64/Release/NewImageInstance.d \
+./arm64/Release/NewImageInterface.d \
+./arm64/Release/NewImageParameters.d \
+./arm64/Release/NewImageProcess.d \
+./arm64/Release/SampleFormatConversionInstance.d \
+./arm64/Release/SampleFormatConversionInterface.d \
+./arm64/Release/SampleFormatConversionParameters.d \
+./arm64/Release/SampleFormatConversionProcess.d \
+./arm64/Release/StarDetector.d \
+./arm64/Release/StatisticsInterface.d \
+./arm64/Release/StatisticsProcess.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/Image-pxm.mock: $(OBJ_FILES)
+	clang++ -arch arm64 -fsanitize=address -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -stdlib=libc++ -Wl,-export_dynamic -Wl,-dead_strip -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/Image-pxm.mock $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lMock-pxi -F/opt/homebrew/Cellar/qt@5/5.15.17_1/lib -framework QtCore -framework QtWidgets -framework QtGui -framework QtSvg
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/Image-pxm.mock
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/Image-pxm.mock $(PCLBINDIR64)
+	codesign --deep --options=runtime -s $(DEVELOPER_ID) -f -v --timestamp $(PCLBINDIR64)/Image-pxm.mock
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

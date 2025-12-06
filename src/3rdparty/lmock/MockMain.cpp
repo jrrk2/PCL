@@ -32,18 +32,178 @@
 // ============================================================================
 
 #include <cxxabi.h>
+#include <string>
+#include <regex>
 
-static std::string demangle(const char* mangled)
+static std::string demangle(const char* mangled, bool includeParams = true)
 {
+    if (!mangled)
+        return std::string();
+    
     int status = 0;
     char* dem = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
-    if (status == 0 && dem)
+    
+    if (status != 0 || !dem)
+        return std::string(mangled);
+    
+    std::string result(dem);
+    std::free(dem);
+    
+    if (!includeParams)
     {
-        std::string s(dem);
-        std::free(dem);
-        return s;
+        // Strip parameters - keep only up to first '('
+        size_t parenPos = result.find('(');
+        if (parenPos != std::string::npos)
+            result = result.substr(0, parenPos);
     }
-    return mangled ? std::string(mangled) : std::string();
+    
+    return result;
+}
+
+// Enhanced version with parameter demangling and cleanup
+static std::string demangleVerbose(const char* mangled)
+{
+    if (!mangled)
+        return std::string();
+    
+    int status = 0;
+    char* dem = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
+    
+    if (status != 0 || !dem)
+        return std::string(mangled);
+    
+    std::string result(dem);
+    std::free(dem);
+    
+    // Clean up common cruft for readability
+    
+    // Replace "std::__1::" with "std::" (libc++ implementation detail)
+    size_t pos = 0;
+    while ((pos = result.find("std::__1::", pos)) != std::string::npos)
+    {
+        result.replace(pos, 10, "std::");
+        pos += 5;
+    }
+    
+    // Replace "std::basic_string<char, ...>" with "std::string"
+    std::regex string_regex(R"(std::basic_string<char, std::char_traits<char>, std::allocator<char>\s*>)");
+    result = std::regex_replace(result, string_regex, "std::string");
+    
+    // Replace "unsigned long" with "size_t" where appropriate
+    std::regex ulong_regex(R"(\bunsigned long\b)");
+    result = std::regex_replace(result, ulong_regex, "size_t");
+    
+    return result;
+}
+
+// Extract just the class name from a fully qualified function signature
+static std::string extractClassName(const std::string& demangled)
+{
+    // For "pcl::SandboxInterface::SandboxInterface()" -> "pcl::SandboxInterface"
+    
+    size_t parenPos = demangled.find('(');
+    if (parenPos == std::string::npos)
+        return demangled; // No parameters, return as-is
+    
+    // Find the last "::" before the '('
+    std::string beforeParen = demangled.substr(0, parenPos);
+    size_t lastColon = beforeParen.rfind("::");
+    
+    if (lastColon == std::string::npos)
+        return beforeParen; // No namespace
+    
+    return beforeParen.substr(0, lastColon);
+}
+
+// Extract just the method/function name (no namespace, no parameters)
+static std::string extractMethodName(const std::string& demangled)
+{
+    // For "pcl::SandboxInterface::SandboxInterface()" -> "SandboxInterface"
+    
+    size_t parenPos = demangled.find('(');
+    std::string beforeParen = (parenPos != std::string::npos) 
+        ? demangled.substr(0, parenPos) 
+        : demangled;
+    
+    size_t lastColon = beforeParen.rfind("::");
+    if (lastColon != std::string::npos)
+        return beforeParen.substr(lastColon + 2);
+    
+    return beforeParen;
+}
+
+// Parse parameter types from demangled signature
+static std::vector<std::string> extractParameters(const std::string& demangled)
+{
+    std::vector<std::string> params;
+    
+    size_t parenStart = demangled.find('(');
+    size_t parenEnd = demangled.rfind(')');
+    
+    if (parenStart == std::string::npos || parenEnd == std::string::npos || parenEnd <= parenStart)
+        return params;
+    
+    std::string paramStr = demangled.substr(parenStart + 1, parenEnd - parenStart - 1);
+    
+    // Handle empty parameters
+    if (paramStr.empty() || paramStr == "void")
+        return params;
+    
+    // Parse parameters (simple comma split - doesn't handle nested templates perfectly)
+    size_t start = 0;
+    int angleDepth = 0;
+    int parenDepth = 0;
+    
+    for (size_t i = 0; i < paramStr.length(); ++i)
+    {
+        if (paramStr[i] == '<') angleDepth++;
+        else if (paramStr[i] == '>') angleDepth--;
+        else if (paramStr[i] == '(') parenDepth++;
+        else if (paramStr[i] == ')') parenDepth--;
+        else if (paramStr[i] == ',' && angleDepth == 0 && parenDepth == 0)
+        {
+            std::string param = paramStr.substr(start, i - start);
+            // Trim whitespace
+            size_t first = param.find_first_not_of(" \t");
+            size_t last = param.find_last_not_of(" \t");
+            if (first != std::string::npos)
+                params.push_back(param.substr(first, last - first + 1));
+            start = i + 1;
+        }
+    }
+    
+    // Last parameter
+    std::string param = paramStr.substr(start);
+    size_t first = param.find_first_not_of(" \t");
+    size_t last = param.find_last_not_of(" \t");
+    if (first != std::string::npos)
+        params.push_back(param.substr(first, last - first + 1));
+    
+    return params;
+}
+
+// Pretty-print a demangled function signature
+static void printSignature(const std::string& mangled)
+{
+    std::string demangled = demangleVerbose(mangled.c_str());
+    std::string className = extractClassName(demangled);
+    std::string methodName = extractMethodName(demangled);
+    auto params = extractParameters(demangled);
+    
+    qDebug() << "Full:   " << demangled.c_str() << "\n";
+    qDebug() << "Class:  " << className.c_str() << "\n";
+    qDebug() << "Method: " << methodName.c_str() << "\n";
+    
+    if (!params.empty())
+    {
+        qDebug() << "Params: (" << params.size() << ")\n";
+        for (size_t i = 0; i < params.size(); ++i)
+            qDebug() << "  [" << i << "] " << params[i].c_str() << "\n";
+    }
+    else
+    {
+        qDebug() << "Params: (none)\n";
+    }
 }
 
 static const char* getExecutablePath()
@@ -133,18 +293,20 @@ struct DiscoveredClass
 {
     std::string className;
     std::string mangledCtorName;
+    std::string demangledCtorName;
     void* ctorAddress;
 };
 
-DiscoveredClass findModuleClass()
+QList<DiscoveredClass> findModuleClass()
 {
+    QList<DiscoveredClass> modlst;
     qDebug() << "Scanning for Module class...";
     
     auto allSymbols = collectAllExternalFunctionSymbols();
     
     for (const auto& mangled : allSymbols)
     {
-        std::string demangled = demangle(mangled.c_str());
+        std::string demangled = demangleVerbose(mangled.c_str());
         
         // Look for Module constructor: SomeModule::SomeModule()
         // Must end with "Module" and be a constructor
@@ -152,28 +314,37 @@ DiscoveredClass findModuleClass()
             demangled.find("()") != std::string::npos)
         {
             // Extract class name
+	    qDebug() << "Full prototype: " << demangled.c_str();
             size_t parenPos = demangled.find('(');
             size_t colonPos = demangled.rfind("::", parenPos);
             std::string className = demangled.substr(0, colonPos);
-            
+            std::string membName = demangled.substr(colonPos+2);
+	    std::string classBase = className.length() > membName.length() ?
+	      className.substr(className.length() - (membName.length() - 2)) : "";
             // Must end with "Module" and not be "MetaModule"
-            if (className.length() >= 6 &&
-                className.substr(className.length() - 6) == "Module" &&
-                className.find("MetaModule") == std::string::npos)
+            if (membName.length() >= 8 &&
+		membName.substr(0, membName.length() - 2) == classBase &&
+                membName.substr(membName.length() - 8) == "Module()" &&
+                membName.find("MetaModule()") == std::string::npos)
             {
                 void* addr = mustResolve(mangled.c_str());
+		qDebug() << "className: " << className.c_str();
+		qDebug() << "classBase: " << classBase.c_str();
+		qDebug() << "membName: " << membName.c_str();
+		qDebug() << QString("addr: 0x%1").arg((size_t)addr, 0, 16);
                 if (addr)
                 {
                     qDebug() << "  ✓ Found Module:" << className.c_str();
                     qDebug() << "    Symbol:" << mangled.c_str();
-                    return {className, mangled, addr};
+                    modlst.append({className, mangled, demangled, addr});
                 }
             }
         }
     }
-    
-    qCritical() << "  ❌ Module class not found!";
-    return {"", "", nullptr};
+
+    if (modlst.isEmpty())
+        qCritical() << "  ❌ Module class not found!";
+    return modlst;
 }
 
 DiscoveredClass findProcessClass()
@@ -208,14 +379,14 @@ DiscoveredClass findProcessClass()
                 {
                     qDebug() << "  ✓ Found Process:" << className.c_str();
                     qDebug() << "    Symbol:" << mangled.c_str();
-                    return {className, mangled, addr};
+                    return {className, mangled, demangled, addr};
                 }
             }
         }
     }
     
     qWarning() << "  ⚠️  Process class not found (continuing without)";
-    return {"", "", nullptr};
+    return {"", "", "", nullptr};
 }
 
 // ============================================================================
@@ -238,20 +409,40 @@ int main(int argc, char** argv)
     // ========================================================================
     // Step 1: Discover and create Module
     // ========================================================================
-    
-    auto moduleInfo = findModuleClass();
-    if (!moduleInfo.ctorAddress)
-    {
-        qCritical() << "\n❌ ERROR: Could not find Module class!";
-        qCritical() << "Make sure your module defines a class ending with 'Module'";
-        qCritical() << "Example: class SandboxModule : public pcl::MetaModule";
-        return 1;
-    }
 
-    qDebug() << "\nCreating module instance...";
-    Module = reinterpret_cast<pcl::MetaModule*>(
-        dynamicNew(moduleInfo.ctorAddress, 512)  // Conservative size
-    );
+    // Early Init if needed
+    API = new APIInterface( GetMockFunctionResolver() );
+
+    auto modlst = findModuleClass();
+    for (auto moduleInfo: modlst)
+      {
+	qDebug() << "Mangled: " << moduleInfo.mangledCtorName.c_str();
+	if (!moduleInfo.ctorAddress)
+	  {
+	    qCritical() << "\n❌ ERROR: Could not find Module class!";
+	    qCritical() << "Make sure your module defines a class ending with 'Module'";
+	    qCritical() << "Example: class SandboxModule : public pcl::MetaModule";
+	    return 1;
+	  }
+
+	qDebug() << "\nCreating module instance...";
+	if (!Module)
+	  {
+	    Module = reinterpret_cast<pcl::MetaModule*>(
+                dynamicNew(moduleInfo.ctorAddress, 16384)  // Conservative size
+            );
+	    /*
+	    qDebug() << "Module->m_parent = " << Module->m_parent;
+	    qDebug() << "Module->m_children.Length() == " << Module->m_children.Length();
+	    for (auto child : Module->m_children)
+	      {
+		qDebug() << "Module->m_child = " << child;
+	      }
+	    */
+	  }
+      }
+    
+    API = nullptr;
     
     if (!Module)
     {

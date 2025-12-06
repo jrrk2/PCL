@@ -44,3 +44,8 @@ __private
 Debug
 .gitignore
 bin
+*.mock
+exported/
+*~
+.DS_Store
+*.moc

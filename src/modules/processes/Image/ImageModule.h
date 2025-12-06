@@ -31,7 +31,7 @@ class ImageModule : public MetaModule
 {
 public:
 
-   ImageModule() = default;
+   ImageModule();
 
    const char* Version() const override;
    IsoString Name() const override;

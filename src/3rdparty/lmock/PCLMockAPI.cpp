@@ -3965,6 +3965,633 @@ api_bool NetworkTransferContext::SetNetworkTransferProgressEventRoutine(
     return api_false;
 }
 
+// Image stubs
+// PCLMockAPI_Image.cpp
+// Additional mock implementations for Image module
+// Add these to the END of your existing PCLMockAPI.cpp
+
+// Note: This module uses advanced graphics features - all stubbed for UI export
+
+// =============================================================
+// PenContext
+// =============================================================
+
+void* PenContext::ClonePen(void* handle, const void* pen)
+{
+    return const_cast<void*>(pen);
+}
+
+void* PenContext::CreatePen(void* handle, uint32 color, float width, 
+                            int style, int cap, int join)
+{
+    static int dummyPen = 0;
+    return &dummyPen;
+}
+
+// =============================================================
+// BrushContext
+// =============================================================
+
+void* BrushContext::CloneBrush(void* handle, const void* brush)
+{
+    return const_cast<void*>(brush);
+}
+
+void* BrushContext::CreateBrush(void* handle, uint32 color, int style)
+{
+    static int dummyBrush = 0;
+    return &dummyBrush;
+}
+
+void* BrushContext::CreateBitmapBrush(void* handle, const void* bitmap)
+{
+    static int dummyBitmapBrush = 0;
+    return &dummyBitmapBrush;
+}
+
+// =============================================================
+// FontContext - Additional
+// =============================================================
+
+int32 FontContext::GetFontAscent(const void* handle)
+{
+    return 12; // Mock ascent value
+}
+
+void FontContext::SetFontWeight(void* handle, int weight)
+{
+    // No-op
+}
+
+void* FontContext::CreateFontByFace(void* handle, const char16_type* face, double size)
+{
+    static int dummyFont = 0;
+    return &dummyFont;
+}
+
+// =============================================================
+// ViewContext - Views and Images
+// =============================================================
+
+api_bool ViewContext::IsViewColorImage(const void* handle)
+{
+    return api_true; // Mock: assume color
+}
+
+api_bool ViewContext::GetViewDimensions(const void* handle, int* width, int* height)
+{
+    if (width) *width = 1024;
+    if (height) *height = 768;
+    return api_true;
+}
+
+api_bool ViewContext::ComputeViewProperty(void* handle, void* view, 
+                                         const char* property, uint32 flags,
+                                         api_property_value* value)
+{
+    return api_false; // No computed properties in mock
+}
+
+void* ViewContext::GetViewParentWindow(const void* handle)
+{
+    static int dummyWindow = 0;
+    return &dummyWindow;
+}
+
+api_bool ViewContext::IsViewDynamicTarget(const void* handle)
+{
+    return api_false;
+}
+
+api_bool ViewContext::GetViewPropertyValue(void* handle, const void* view,
+                                          const char* property,
+                                          api_property_value* value)
+{
+    return api_false; // No properties in mock
+}
+
+api_bool ViewContext::GetViewPropertyExists(void* handle, const void* view,
+                                           const char* property, uint64* type)
+{
+    return api_false;
+}
+
+void ViewContext::AddViewToDynamicTargets(void* handle)
+{
+    // No-op
+}
+
+api_bool ViewContext::EnumerateViewProperties(const void* handle,
+                                              uint32 (*callback)(const char*, uint64, void*),
+                                              char* buffer, size_type* size, void* data)
+{
+    if (size) *size = 0; // No properties
+    return api_false;
+}
+
+void ViewContext::RemoveViewFromDynamicTargets(void* handle)
+{
+    // No-op
+}
+
+api_bool ViewContext::SetViewId(void* handle, const char* id)
+{
+    // No-op
+    return api_true;
+}
+
+// =============================================================
+// FrameContext
+// =============================================================
+
+void FrameContext::SetFrameStyle(control_handle control, int style)
+{
+    // No-op - frame styling not supported in mock
+}
+
+void FrameContext::SetFrameLineWidth(control_handle control, int width)
+{
+    // No-op
+}
+
+// =============================================================
+// LabelContext - Additional
+// =============================================================
+
+void LabelContext::SetLabelWordWrappingEnabled(control_handle control, uint32 enabled)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+    {
+        QLabel* label = qobject_cast<QLabel*>(base->widget);
+        if (label)
+            label->setWordWrap(enabled != 0);
+    }
+}
+
+// =============================================================
+// ActionContext
+// =============================================================
+
+void ActionContext::SetActionToolTip(void* handle, const char16_type* tooltip)
+{
+    // No-op
+}
+
+void* ActionContext::CreateActionSVGFile(void* handle, void* parent,
+                                         const char16_type* menuText,
+                                         const char16_type* iconSVGFile,
+                                         const char16_type* toolBar,
+                                         uint32 flags)
+{
+    static int dummyAction = 0;
+    return &dummyAction;
+}
+
+void ActionContext::SetActionAccelerator(void* handle, int keyCode, int modifiers)
+{
+    // No-op
+}
+
+api_bool ActionContext::SetActionExecutionRoutine(void* handle, void (*callback)(void*))
+{
+    // No-op
+    return api_true;
+}
+
+api_bool ActionContext::SetActionStateQueryRoutine(void* handle,
+                                                   uint32 (*callback)(const void*, const void*))
+{
+    // No-op
+    return api_true;
+}
+
+// =============================================================
+// DialogContext - Additional
+// =============================================================
+
+api_bool DialogContext::SetExecuteDialogEventRoutine(control_handle control, void* receiver,
+                                                     void (*handler)(control_handle, control_handle))
+{
+    // No-op
+    return api_true;
+}
+
+// =============================================================
+// GlobalContext - Additional
+// =============================================================
+
+api_bool GlobalContext::GetGlobalFont(const char* id, char16_type* face,
+                                     size_type* faceLen, int* size)
+{
+    if (face && faceLen && *faceLen > 0)
+    {
+        QString defaultFont = "Helvetica";
+        // Convert QString to char16_type*
+        for (int i = 0; i < defaultFont.length() && i < (int)*faceLen - 1; i++)
+            face[i] = defaultFont[i].unicode();
+        face[defaultFont.length()] = 0;
+        *faceLen = defaultFont.length();
+    }
+    if (size) *size = 12;
+    return api_true;
+}
+
+api_bool GlobalContext::ReadSettingsFlag(void* handle, uint32* value,
+                                        const char* key, uint32 flags)
+{
+    if (value) *value = 0;
+    return api_false;
+}
+
+api_bool GlobalContext::WriteSettingsFlag(void* handle, uint32 value,
+                                         const char* key, uint32 flags)
+{
+    // No-op
+    return api_true;
+}
+
+// =============================================================
+// ControlContext - Additional
+// =============================================================
+
+void ControlContext::UpdateControl(control_handle control)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+        base->widget->update();
+}
+
+void ControlContext::ActivateWindow(control_handle control)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+        base->widget->activateWindow();
+}
+
+api_bool ControlContext::GetTrackViewActive(const_control_handle control)
+{
+    return api_false;
+}
+
+void ControlContext::SetTrackViewActive(control_handle control, uint32 active)
+{
+    // No-op
+}
+
+api_bool ControlContext::SetPaintEventRoutine(control_handle control, void* receiver,
+                                              uint32 (*handler)(control_handle, control_handle,
+                                                               int, int, int, int))
+{
+    // No-op - painting not supported in mock
+    return api_true;
+}
+
+// =============================================================
+// SpinBoxContext - Additional
+// =============================================================
+
+void SpinBoxContext::GetSpinBoxRange(const_control_handle control, int* min, int* max)
+{
+    const MockBase* base = reinterpret_cast<const MockBase*>(control);
+    if (base && base->widget)
+    {
+        const QSpinBox* spin = qobject_cast<const QSpinBox*>(base->widget);
+        if (spin)
+        {
+            if (min) *min = spin->minimum();
+            if (max) *max = spin->maximum();
+        }
+    }
+}
+
+// =============================================================
+// TreeBoxContext
+// =============================================================
+
+void TreeBoxContext::SetTreeBoxIconSize(control_handle control, int width, int height)
+{
+    // No-op
+}
+
+api_bool TreeBoxContext::GetTreeBoxHeaderText(const_control_handle control, int section,
+                                              char16_type* text, size_type* len)
+{
+    if (len) *len = 0;
+    return api_false;
+}
+
+void TreeBoxContext::SetTreeBoxHeaderIcon(control_handle control, int section,
+                                         const void* icon)
+{
+    // No-op
+}
+
+void TreeBoxContext::SetTreeBoxHeaderText(control_handle control, int section,
+                                         const char16_type* text)
+{
+    // No-op
+}
+
+int32 TreeBoxContext::GetTreeBoxColumnCount(const_control_handle control)
+{
+    return 1; // Mock: one column
+}
+
+void TreeBoxContext::SetTreeBoxNodeIntoView(control_handle control, void* node)
+{
+    // No-op
+}
+
+api_bool TreeBoxContext::GetTreeBoxHeaderVisible(const_control_handle control)
+{
+    return api_true;
+}
+
+api_bool TreeBoxContext::GetTreeBoxSelectedNodes(const_control_handle control,
+                                                 void** nodes, size_type* count)
+{
+    if (count) *count = 0;
+    return api_false;
+}
+
+void TreeBoxContext::SetTreeBoxHeaderAlignment(control_handle control,
+                                               int section, int alignment)
+{
+    // No-op
+}
+
+// =============================================================
+// GraphicsContext - Drawing Operations
+// =============================================================
+
+void GraphicsContext::StrokeRectD(void* handle, double x, double y,
+                                 double w, double h, const void* pen)
+{
+    // No-op - graphics not rendered in mock
+}
+
+void* GraphicsContext::CreateGraphics(void* handle)
+{
+    static int dummyGraphics = 0;
+    return &dummyGraphics;
+}
+
+void GraphicsContext::SetGraphicsPen(void* handle, const void* pen)
+{
+    // No-op
+}
+
+void GraphicsContext::StrokeEllipseD(void* handle, double x, double y,
+                                    double w, double h, const void* pen)
+{
+    // No-op
+}
+
+void GraphicsContext::SetGraphicsBrush(void* handle, const void* brush)
+{
+    // No-op
+}
+
+api_bool GraphicsContext::BeginControlPaint(void* handle, control_handle control)
+{
+    // No-op
+    return api_true;
+}
+
+void GraphicsContext::EnableGraphicsAntialiasing(void* handle, uint32 enabled)
+{
+    // No-op
+}
+
+void GraphicsContext::ResetGraphicsTransformation(void* handle)
+{
+    // No-op
+}
+
+void GraphicsContext::RotateGraphicsTransformation(void* handle, double angle)
+{
+    // No-op
+}
+
+void GraphicsContext::SetGraphicsCompositionOperator(void* handle, int op)
+{
+    // No-op
+}
+
+void GraphicsContext::TranslateGraphicsTransformation(void* handle, double dx, double dy)
+{
+    // No-op
+}
+
+void GraphicsContext::DrawRect(void* handle, int x, int y, int w, int h)
+{
+    // No-op
+}
+
+void GraphicsContext::DrawLineD(void* handle, double x1, double y1, double x2, double y2)
+{
+    // No-op
+}
+
+void GraphicsContext::FillRectD(void* handle, double x, double y, double w, double h,
+                               const void* brush)
+{
+    // No-op
+}
+
+// =============================================================
+// GroupBoxContext
+// =============================================================
+
+control_handle GroupBoxContext::CreateGroupBox(void* handle, void* parent,
+                                               const char16_type* title,
+                                               control_handle control, uint32 flags)
+{
+    qDebug() << "[Mock] createControl<QGroupBox>";
+    
+    MockBase* base = new MockBase();
+    base->isSizer = false;
+    base->widget = new QGroupBox(nullptr);
+    
+    if (title)
+        static_cast<QGroupBox*>(base->widget)->setTitle(QString::fromUtf16(title));
+    
+    g_topLevelWidgets.append(base);
+    return (control_handle)base;
+}
+
+void GroupBoxContext::SetGroupBoxTitle(control_handle control, const char16_type* title)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+    {
+        QGroupBox* group = qobject_cast<QGroupBox*>(base->widget);
+        if (group && title)
+            group->setTitle(QString::fromUtf16(title));
+    }
+}
+
+void GroupBoxContext::SetGroupBoxChecked(control_handle control, uint32 checked)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+    {
+        QGroupBox* group = qobject_cast<QGroupBox*>(base->widget);
+        if (group)
+            group->setChecked(checked != 0);
+    }
+}
+
+void GroupBoxContext::SetGroupBoxCheckable(control_handle control, uint32 checkable)
+{
+    MockBase* base = reinterpret_cast<MockBase*>(control);
+    if (base && base->widget)
+    {
+        QGroupBox* group = qobject_cast<QGroupBox*>(base->widget);
+        if (group)
+            group->setCheckable(checkable != 0);
+    }
+}
+
+api_bool GroupBoxContext::SetGroupBoxCheckEventRoutine(control_handle control, void* receiver,
+                                                       void (*handler)(control_handle, control_handle, int))
+{
+    // No-op
+    return api_true;
+}
+
+// =============================================================
+// ViewListContext - Additional
+// =============================================================
+
+void* ViewListContext::GetViewListCurrentView(const_control_handle control)
+{
+    return nullptr; // No views in mock
+}
+
+// =============================================================
+// NumericalContext - Surface Spline
+// =============================================================
+
+api_bool NumericalContext::SurfaceSplineCreateD(void** handle, int type, double smoothness,
+                                               uint32 flags, const double* x, const double* y,
+                                               const double* z, int count, int order,
+                                               float tolerance, const float* weights)
+{
+    static int dummySpline = 0;
+    if (handle) *handle = &dummySpline;
+    return api_true;
+}
+
+api_bool NumericalContext::SurfaceSplineDestroy(void* handle)
+{
+    // No-op
+    return api_true;
+}
+
+api_bool NumericalContext::SurfaceSplineEvaluate(const void* handle, double* result,
+                                                  double x, double y)
+{
+    if (result) *result = 0.0; // Mock: return zero
+    return api_true;
+}
+
+api_bool NumericalContext::SurfaceSplineDuplicate(void** clone, const void* handle)
+{
+    static int dummyClone = 0;
+    if (clone) *clone = &dummyClone;
+    return api_true;
+}
+
+api_bool NumericalContext::SurfaceSplineDeserialize(void** handle, const char* data,
+                                                   size_type size, uint32 flags)
+{
+    static int dummySpline = 0;
+    if (handle) *handle = &dummySpline;
+    return api_true;
+}
+
+// =============================================================
+// ImageWindowContext - Image Window Operations
+// =============================================================
+
+void ImageWindowContext::ImageToViewportD(const void* handle, double* x, double* y)
+{
+    // No-op - coordinates unchanged in mock
+}
+
+void ImageWindowContext::UpdateViewportRect(void* handle, int x, int y, int w, int h)
+{
+    // No-op
+}
+
+void ImageWindowContext::EndViewportSelection(void* handle)
+{
+    // No-op
+}
+
+api_bool ImageWindowContext::GetViewportSelection(const void* handle, int* x0, int* y0,
+                                                  int* x1, int* y1, uint32* flags)
+{
+    if (x0) *x0 = 0;
+    if (y0) *y0 = 0;
+    if (x1) *x1 = 0;
+    if (y1) *y1 = 0;
+    if (flags) *flags = 0;
+    return api_false;
+}
+
+void ImageWindowContext::BeginViewportSelection(void* handle, int x, int y, uint32 flags)
+{
+    // No-op
+}
+
+void ImageWindowContext::ImageScalarToViewportD(const void* handle, double* value)
+{
+    // No-op - value unchanged
+}
+
+void ImageWindowContext::SetImageWindowViewport(void* handle, double cx, double cy, int zoom)
+{
+    // No-op
+}
+
+void ImageWindowContext::BringImageWindowToFront(void* handle)
+{
+    // No-op
+}
+
+void ImageWindowContext::ModifyViewportSelection(void* handle, int x, int y, uint32 flags)
+{
+    // No-op
+}
+
+int32 ImageWindowContext::GetImageWindowDisplayChannel(const void* handle)
+{
+    return 0; // Red channel
+}
+
+api_bool ImageWindowContext::GetImageWindowDisplayPixelRatio(const void* handle, double* ratio)
+{
+    if (ratio) *ratio = 1.0;
+    return api_true;
+}
+
+void ImageWindowContext::GetImageWindowVisibleViewportRect(const void* handle,
+                                                           int* x0, int* y0, int* x1, int* y1)
+{
+    if (x0) *x0 = 0;
+    if (y0) *y0 = 0;
+    if (x1) *x1 = 1024;
+    if (y1) *y1 = 768;
+}
+
+api_bool ImageWindowContext::GetImageWindowHasAstrometricSolution(const void* handle)
+{
+    return api_false; // No astrometry in mock
+}
+
 // =============================================================
 // END OF IMPLEMENTATION
 // =============================================================
