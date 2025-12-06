@@ -1,0 +1,132 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:52.229Z
+# Project id ...... ColorSpaces
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+DEVELOPER_ID=pleiades
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/ColorSpaces/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/ColorSpaces-pxm.mock
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../ChannelCombinationInstance.cpp \
+../../ChannelCombinationInterface.cpp \
+../../ChannelCombinationParameters.cpp \
+../../ChannelCombinationProcess.cpp \
+../../ChannelExtractionInstance.cpp \
+../../ChannelExtractionInterface.cpp \
+../../ChannelExtractionParameters.cpp \
+../../ChannelExtractionProcess.cpp \
+../../ChannelParameters.cpp \
+../../ChannelSourceSelectionDialog.cpp \
+../../ColorSpacesModule.cpp \
+../../ExtractCIELAction.cpp \
+../../GrayscaleRGBActions.cpp \
+../../GrayscaleRGBInstances.cpp \
+../../GrayscaleRGBProcesses.cpp \
+../../LRGBCombinationInstance.cpp \
+../../LRGBCombinationInterface.cpp \
+../../LRGBCombinationParameters.cpp \
+../../LRGBCombinationProcess.cpp \
+../../RGBWorkingSpaceInstance.cpp \
+../../RGBWorkingSpaceInterface.cpp \
+../../RGBWorkingSpaceParameters.cpp \
+../../RGBWorkingSpaceProcess.cpp \
+../../SplitRGBChannelsAction.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/ChannelCombinationInstance.o \
+./arm64/Release/ChannelCombinationInterface.o \
+./arm64/Release/ChannelCombinationParameters.o \
+./arm64/Release/ChannelCombinationProcess.o \
+./arm64/Release/ChannelExtractionInstance.o \
+./arm64/Release/ChannelExtractionInterface.o \
+./arm64/Release/ChannelExtractionParameters.o \
+./arm64/Release/ChannelExtractionProcess.o \
+./arm64/Release/ChannelParameters.o \
+./arm64/Release/ChannelSourceSelectionDialog.o \
+./arm64/Release/ColorSpacesModule.o \
+./arm64/Release/ExtractCIELAction.o \
+./arm64/Release/GrayscaleRGBActions.o \
+./arm64/Release/GrayscaleRGBInstances.o \
+./arm64/Release/GrayscaleRGBProcesses.o \
+./arm64/Release/LRGBCombinationInstance.o \
+./arm64/Release/LRGBCombinationInterface.o \
+./arm64/Release/LRGBCombinationParameters.o \
+./arm64/Release/LRGBCombinationProcess.o \
+./arm64/Release/RGBWorkingSpaceInstance.o \
+./arm64/Release/RGBWorkingSpaceInterface.o \
+./arm64/Release/RGBWorkingSpaceParameters.o \
+./arm64/Release/RGBWorkingSpaceProcess.o \
+./arm64/Release/SplitRGBChannelsAction.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/ChannelCombinationInstance.d \
+./arm64/Release/ChannelCombinationInterface.d \
+./arm64/Release/ChannelCombinationParameters.d \
+./arm64/Release/ChannelCombinationProcess.d \
+./arm64/Release/ChannelExtractionInstance.d \
+./arm64/Release/ChannelExtractionInterface.d \
+./arm64/Release/ChannelExtractionParameters.d \
+./arm64/Release/ChannelExtractionProcess.d \
+./arm64/Release/ChannelParameters.d \
+./arm64/Release/ChannelSourceSelectionDialog.d \
+./arm64/Release/ColorSpacesModule.d \
+./arm64/Release/ExtractCIELAction.d \
+./arm64/Release/GrayscaleRGBActions.d \
+./arm64/Release/GrayscaleRGBInstances.d \
+./arm64/Release/GrayscaleRGBProcesses.d \
+./arm64/Release/LRGBCombinationInstance.d \
+./arm64/Release/LRGBCombinationInterface.d \
+./arm64/Release/LRGBCombinationParameters.d \
+./arm64/Release/LRGBCombinationProcess.d \
+./arm64/Release/RGBWorkingSpaceInstance.d \
+./arm64/Release/RGBWorkingSpaceInterface.d \
+./arm64/Release/RGBWorkingSpaceParameters.d \
+./arm64/Release/RGBWorkingSpaceProcess.d \
+./arm64/Release/SplitRGBChannelsAction.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/ColorSpaces-pxm.mock: $(OBJ_FILES)
+	clang++ -arch arm64 -fsanitize=address -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -stdlib=libc++ -Wl,-export_dynamic -Wl,-dead_strip -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/ColorSpaces-pxm.mock $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lMock-pxi -F/opt/homebrew/Cellar/qt@5/5.15.17_1/lib -framework QtCore -framework QtWidgets -framework QtGui -framework QtSvg
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/ColorSpaces-pxm.mock
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/ColorSpaces-pxm.mock $(PCLBINDIR64)
+	codesign --deep --options=runtime -s $(DEVELOPER_ID) -f -v --timestamp $(PCLBINDIR64)/ColorSpaces-pxm.mock
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

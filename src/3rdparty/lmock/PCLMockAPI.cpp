@@ -4945,5 +4945,1235 @@ void ImageWindowContext::ViewportScalarToImageD(const_window_handle window_conte
 // =============================================================
 
 // =============================================================
+// EditContext - Additional Stubs
+// =============================================================
+
+void EditContext::SetEditReadOnly(control_handle control, uint32 readOnly)
+{
+    logf("[Mock] EditContext::SetEditReadOnly (%s)", readOnly ? "true" : "false");
+    
+    QWidget* w = widgetFromHandle(control);
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(w);
+    if (lineEdit)
+    {
+        lineEdit->setReadOnly(readOnly != 0);
+        return;
+    }
+    
+    QTextEdit* textEdit = qobject_cast<QTextEdit*>(w);
+    if (textEdit)
+    {
+        textEdit->setReadOnly(readOnly != 0);
+    }
+}
+
+// =============================================================
+// GlobalContext - Color Profile Support
+// =============================================================
+
+api_bool GlobalContext::GetProfilesDirectory(int32 index, char16_type* path,
+                                             size_type* length)
+{
+    logf("[Mock] GlobalContext::GetProfilesDirectory (index=%d)", index);
+    
+    // Mock implementation: return standard macOS ICC profile directories
+    static const char* profileDirs[] = {
+        "/System/Library/ColorSync/Profiles",
+        "/Library/ColorSync/Profiles",
+        "~/Library/ColorSync/Profiles"
+    };
+    
+    if (index < 0 || index >= 3)
+        return api_false;
+    
+    QString dirPath = QString::fromUtf8(profileDirs[index]);
+    if (dirPath.startsWith("~/"))
+    {
+        dirPath.replace(0, 1, QDir::homePath());
+    }
+    
+    if (path && length)
+    {
+        // Convert to UTF-16 and copy
+        std::u16string u16str = dirPath.toStdU16String();
+        size_type copyLen = std::min(*length - 1, u16str.length());
+        std::memcpy(path, u16str.c_str(), copyLen * sizeof(char16_type));
+        path[copyLen] = 0;
+        *length = copyLen;
+    }
+    else if (length)
+    {
+        // Just return the required length
+        *length = dirPath.length() + 1;
+    }
+    
+    return api_true;
+}
+
+// =============================================================
+// ComboBoxContext - Additional Stubs
+// =============================================================
+
+void ComboBoxContext::ClearComboBox(control_handle control)
+{
+    logf("[Mock] ComboBoxContext::ClearComboBox");
+    
+    QWidget* w = widgetFromHandle(control);
+    QComboBox* combo = qobject_cast<QComboBox*>(w);
+    if (combo)
+    {
+        combo->clear();
+    }
+}
+
+// =============================================================
+// ImageWindowContext - ICC Profile Support
+// =============================================================
+
+void ImageWindowContext::GetImageWindowICCProfile(const_window_handle window_context,
+                                                      void* profile_handle)
+{
+    logf("[Mock] ImageWindowContext::GetImageWindowICCProfile");
+    
+    // Mock implementation: no ICC profile attached to mock image windows
+    // In real implementation, this would copy the ICC profile data
+}
+
+void ImageWindowContext::SetImageWindowICCProfile(window_handle window_context,
+                                                  const void* profile_handle)
+{
+    logf("[Mock] ImageWindowContext::SetImageWindowICCProfile");
+    
+    // Mock implementation: store ICC profile with image window
+    // In real implementation, this would embed the profile in the image
+}
+
+void ImageWindowContext::DeleteImageWindowICCProfile(window_handle window_context)
+{
+    logf("[Mock] ImageWindowContext::DeleteImageWindowICCProfile");
+    
+    // Mock implementation: remove ICC profile from image window
+    // In real implementation, this would strip the embedded profile
+}
+
+uint32 ImageWindowContext::GetImageWindowICCProfileLength(const_window_handle window_context)
+{
+    logf("[Mock] ImageWindowContext::GetImageWindowICCProfileLength");
+    
+    // Mock implementation: no ICC profile, return 0
+    // In real implementation, this would return the profile data size in bytes
+    return 0;
+}
+
+// =============================================================
+// END OF COLOR MANAGEMENT STUBS
+// =============================================================
+
+// =============================================================
+// ViewContext - Property Management Stubs
+// =============================================================
+
+api_bool ViewContext::SetViewPropertyValue(view_handle view, void* image,
+                                          const char* propertyId,
+                                          const api_property_value* value,
+                                          uint32 notify, uint32 flags)
+{
+    logf("[Mock] ViewContext::SetViewPropertyValue (propertyId=%s, notify=%u, flags=%u)",
+         propertyId ? propertyId : "null", notify, flags);
+    
+    // Mock implementation: accept property but don't actually store it
+    // In real implementation, this would set a property on the view/image
+    return api_true;
+}
+
+api_bool ViewContext::IsReservedViewPropertyId(const char* propertyId)
+{
+    logf("[Mock] ViewContext::IsReservedViewPropertyId (propertyId=%s)",
+         propertyId ? propertyId : "null");
+    
+    // Mock implementation: check if property ID is reserved
+    // Reserved properties in PCL typically start with specific prefixes
+    if (!propertyId)
+        return api_false;
+    
+    // Check for common reserved property prefixes
+    if (std::strncmp(propertyId, "PCL:", 4) == 0)
+        return api_true;
+    if (std::strncmp(propertyId, "PI:", 3) == 0)
+        return api_true;
+    
+    return api_false;
+}
+
+api_bool ViewContext::GetViewPropertyAttributes(view_handle view, const void* image,
+                                               const char* propertyId,
+                                               uint32* type, uint64* attributes)
+{
+    logf("[Mock] ViewContext::GetViewPropertyAttributes (propertyId=%s)",
+         propertyId ? propertyId : "null");
+    
+    // Mock implementation: no properties stored, return false
+    // In real implementation, this would return property type and attributes
+    if (type)
+        *type = 0;
+    if (attributes)
+        *attributes = 0;
+    
+    return api_false;
+}
+
+// =============================================================
+// ComboBoxContext - Text Retrieval Stub
+// =============================================================
+
+api_bool ComboBoxContext::GetComboBoxItemText(const_control_handle control, int index,
+                                              char16_type* text, size_type* length)
+{
+    logf("[Mock] ComboBoxContext::GetComboBoxItemText (index=%d)", index);
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QComboBox* combo = qobject_cast<QComboBox*>(w);
+    
+    if (!combo || index < 0 || index >= combo->count())
+        return api_false;
+    
+    QString itemText = combo->itemText(index);
+    
+    if (text && length)
+    {
+        // Convert to UTF-16 and copy
+        std::u16string u16str = itemText.toStdU16String();
+        size_type copyLen = std::min(*length - 1, u16str.length());
+        std::memcpy(text, u16str.c_str(), copyLen * sizeof(char16_type));
+        text[copyLen] = 0;
+        *length = copyLen;
+    }
+    else if (length)
+    {
+        // Just return the required length
+        *length = itemText.length() + 1;
+    }
+    
+    return api_true;
+}
+
+// =============================================================
+// ImageWindowContext - Resolution and Astrometry Stubs
+// =============================================================
+
+void ImageWindowContext::GetImageWindowResolution(const_window_handle window_context,
+                                                     double* xRes, double* yRes,
+                                                     uint32* metric)
+{
+    logf("[Mock] ImageWindowContext::GetImageWindowResolution");
+    
+    // Mock implementation: return default 72 DPI resolution
+    if (xRes)
+        *xRes = 72.0;
+    if (yRes)
+        *yRes = 72.0;
+    if (metric)
+        *metric = 0;  // 0 = inches, 1 = centimeters    
+}
+
+void ImageWindowContext::SetImageWindowResolution(window_handle window_context,
+                                                  double xRes, double yRes,
+                                                  uint32 metric)
+{
+    logf("[Mock] ImageWindowContext::SetImageWindowResolution (%.2f, %.2f, %s)",
+         xRes, yRes, metric ? "cm" : "inches");
+    
+    // Mock implementation: store resolution metadata
+    // In real implementation, this would set the image resolution
+}
+
+api_bool ImageWindowContext::CopyImageWindowAstrometricSolution(window_handle target,
+                                                            const_window_handle source,
+                                                            uint32 notify)
+{
+    logf("[Mock] ImageWindowContext::CopyImageWindowAstrometricSolution (notify=%u)",
+         notify);
+
+    return api_true;
+    
+    // Mock implementation: copy astrometric solution from source to target
+    // In real implementation, this would copy WCS (World Coordinate System) data
+}
+
+// =============================================================
+// END OF VIEW PROPERTIES AND IMAGE WINDOW STUBS
+// =============================================================
+
+// =============================================================
+// TimerContext - Additional Stubs
+// =============================================================
+
+api_bool TimerContext::StartTimer(timer_handle handle)
+{
+    logf("[Mock] TimerContext::StartTimer");
+    
+    MockBase* base = get(handle);
+    if (base && base->qtTimer)
+    {
+        base->qtTimer->start();
+        return api_true;
+    }
+    return api_false;
+}
+
+// =============================================================
+// DialogContext - Additional Stubs
+// =============================================================
+
+void DialogContext::SetDialogResizable(control_handle control, uint32 resizable)
+{
+    logf("[Mock] DialogContext::SetDialogResizable (%s)", resizable ? "true" : "false");
+    
+    QWidget* w = widgetFromHandle(control);
+    QDialog* dialog = qobject_cast<QDialog*>(w);
+    if (dialog)
+    {
+        if (resizable)
+        {
+            dialog->setSizeGripEnabled(true);
+            dialog->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+            dialog->setMinimumSize(0, 0);
+        }
+        else
+        {
+            dialog->setSizeGripEnabled(false);
+            dialog->setFixedSize(dialog->size());
+        }
+    }
+}
+
+// =============================================================
+// TabBoxContext - Tab Widget Stubs
+// =============================================================
+
+control_handle TabBoxContext::CreateTabBox(api_handle module, control_handle client,
+                                           control_handle parent, uint32 flags)
+{
+    logf("[Mock] TabBoxContext::CreateTabBox");
+    
+    // Determine parent Qt widget
+    QWidget* parentWidget = determineParentWidget(parent);
+    
+    // Create Qt tab widget
+    QTabWidget* qtTabWidget = new QTabWidget(parentWidget);
+    
+    // Create mock wrapper
+    auto base = std::make_unique<MockBase>();
+    base->pcl_handle = client;
+    base->isSizer = false;
+    base->isTreeNode = false;
+    base->widget = qtTabWidget;
+    
+    control_handle handle = client;
+    g_objects[handle] = std::move(base);
+    
+    return handle;
+}
+
+int32 TabBoxContext::GetTabBoxLength(const_control_handle control)
+{
+    logf("[Mock] TabBoxContext::GetTabBoxLength");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QTabWidget* tabWidget = qobject_cast<QTabWidget*>(w);
+    if (tabWidget)
+    {
+        return tabWidget->count();
+    }
+    return 0;
+}
+
+void TabBoxContext::InsertTabBoxPage(control_handle control, int32 index,
+                                     control_handle page, const char16_type* title,
+                                     const void* icon)
+{
+    logf("[Mock] TabBoxContext::InsertTabBoxPage (index=%d)", index);
+    
+    QWidget* w = widgetFromHandle(control);
+    QTabWidget* tabWidget = qobject_cast<QTabWidget*>(w);
+    
+    QWidget* pageWidget = widgetFromHandle(page);
+    
+    if (tabWidget && pageWidget)
+    {
+        QString tabTitle = title ? QString::fromUtf16(title) : QString();
+        
+        if (index < 0 || index >= tabWidget->count())
+        {
+            tabWidget->addTab(pageWidget, tabTitle);
+        }
+        else
+        {
+            tabWidget->insertTab(index, pageWidget, tabTitle);
+        }
+        
+        // Set icon if provided
+        if (icon)
+        {
+            // Icon handling would go here
+            // For now, just add without icon
+        }
+    }
+}
+
+void TabBoxContext::SetTabBoxCurrentPageIndex(control_handle control, int32 index)
+{
+    logf("[Mock] TabBoxContext::SetTabBoxCurrentPageIndex (index=%d)", index);
+    
+    QWidget* w = widgetFromHandle(control);
+    QTabWidget* tabWidget = qobject_cast<QTabWidget*>(w);
+    if (tabWidget && index >= 0 && index < tabWidget->count())
+    {
+        tabWidget->setCurrentIndex(index);
+    }
+}
+
+api_bool TabBoxContext::SetTabBoxPageSelectedEventRoutine(control_handle control,
+                                                         api_handle receiver,
+                                                         pcl::value_event_routine callback)
+{
+    logf("[Mock] TabBoxContext::SetTabBoxPageSelectedEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        QTabWidget* tabWidget = qobject_cast<QTabWidget*>(base->widget);
+        if (tabWidget)
+        {
+            // Connect currentChanged signal to invoke the callback
+            QObject::connect(tabWidget, &QTabWidget::currentChanged,
+                [base, callback](int index)
+                {
+                    if (callback)
+                        callback(base->pcl_handle, base->pcl_handle, index);
+                });
+            return api_true;
+        }
+    }
+    return api_false;
+}
+
+// =============================================================
+// ControlContext - Additional Stubs
+// =============================================================
+
+uint32 ControlContext::GetControlCanvasColor(const_control_handle control)
+{
+    logf("[Mock] ControlContext::GetControlCanvasColor");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    if (w)
+    {
+        QPalette palette = w->palette();
+        QColor color = palette.color(QPalette::Window);
+        // Return RGBA format: 0xAARRGGBB
+        return (0xFF000000 | (color.red() << 16) | (color.green() << 8) | color.blue());
+    }
+    
+    // Default: white
+    return 0xFFFFFFFF;
+}
+
+api_bool ControlContext::GetRealTimePreviewActive(const_control_handle control)
+{
+    logf("[Mock] ControlContext::GetRealTimePreviewActive");
+    
+    // Mock implementation: no real-time preview active
+    return api_false;
+}
+
+// =============================================================
+// TextBoxContext - Text Box Stubs
+// =============================================================
+
+api_bool TextBoxContext::GetTextBoxText(const_control_handle control,
+                                       char16_type* text, size_type* length)
+{
+    logf("[Mock] TextBoxContext::GetTextBoxText");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QTextEdit* textEdit = qobject_cast<QTextEdit*>(w);
+    if (!textEdit)
+        return api_false;
+    
+    QString plainText = textEdit->toPlainText();
+    
+    if (text && length)
+    {
+        // Convert to UTF-16 and copy
+        std::u16string u16str = plainText.toStdU16String();
+        size_type copyLen = std::min(*length - 1, u16str.length());
+        std::memcpy(text, u16str.c_str(), copyLen * sizeof(char16_type));
+        text[copyLen] = 0;
+        *length = copyLen;
+    }
+    else if (length)
+    {
+        // Just return the required length
+        *length = plainText.length() + 1;
+    }
+    
+    return api_true;
+}
+
+api_bool TextBoxContext::SetTextBoxCaretPositionUpdatedEventRoutine(
+    control_handle control,
+    api_handle receiver,
+    pcl::range_event_routine callback)
+{
+    logf("[Mock] TextBoxContext::SetTextBoxCaretPositionUpdatedEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        QTextEdit* textEdit = qobject_cast<QTextEdit*>(base->widget);
+        if (textEdit)
+        {
+            // Connect cursorPositionChanged signal to invoke the callback
+            QObject::connect(textEdit, &QTextEdit::cursorPositionChanged,
+                [base, callback, textEdit]()
+                {
+                    if (callback)
+                    {
+                        QTextCursor cursor = textEdit->textCursor();
+                        int line = cursor.blockNumber();
+                        int column = cursor.columnNumber();
+                        callback(base->pcl_handle, base->pcl_handle, line, column);
+                    }
+                });
+            return api_true;
+        }
+    }
+    return api_false;
+}
+
+// =============================================================
+// ComboBoxContext - Additional Stubs
+// =============================================================
+
+int32 ComboBoxContext::FindComboBoxItem(const_control_handle control,
+                                       const char16_type* text,
+                                       int32 startIndex,
+                                       uint32 exactMatch,
+                                       uint32 caseSensitive)
+{
+    logf("[Mock] ComboBoxContext::FindComboBoxItem (startIndex=%d, exact=%u, case=%u)",
+         startIndex, exactMatch, caseSensitive);
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QComboBox* combo = qobject_cast<QComboBox*>(w);
+    if (!combo || !text)
+        return -1;
+    
+    QString searchText = QString::fromUtf16(text);
+    Qt::MatchFlags flags = Qt::MatchFlags();
+    
+    if (exactMatch)
+        flags |= Qt::MatchExactly;
+    else
+        flags |= Qt::MatchContains;
+    
+    if (caseSensitive)
+        flags |= Qt::MatchCaseSensitive;
+    
+    // Find item starting from startIndex
+    for (int i = startIndex; i < combo->count(); ++i)
+    {
+        QString itemText = combo->itemText(i);
+        
+        if (exactMatch)
+        {
+            if (caseSensitive)
+            {
+                if (itemText == searchText)
+                    return i;
+            }
+            else
+            {
+                if (itemText.compare(searchText, Qt::CaseInsensitive) == 0)
+                    return i;
+            }
+        }
+        else
+        {
+            if (caseSensitive)
+            {
+                if (itemText.contains(searchText))
+                    return i;
+            }
+            else
+            {
+                if (itemText.contains(searchText, Qt::CaseInsensitive))
+                    return i;
+            }
+        }
+    }
+    
+    return -1;  // Not found
+}
+
+// =============================================================
+// GraphicsContext - Additional Stubs
+// =============================================================
+
+void GraphicsContext::FillRect(void* handle, int x, int y, int w, int h,
+                               const void* brush)
+{
+    logf("[Mock] GraphicsContext::FillRect (%d, %d, %d x %d)", x, y, w, h);
+    // No-op - graphics not rendered in mock
+}
+
+// =============================================================
+// RealTimePreviewContext - Real-Time Preview Stubs
+// =============================================================
+
+void RealTimePreviewContext::UpdateRealTimePreview()
+{
+    logf("[Mock] RealTimePreviewContext::UpdateRealTimePreview");
+    // Mock implementation: trigger preview update
+    // In real implementation, this would refresh the real-time preview
+}
+
+api_bool RealTimePreviewContext::SetRealTimePreviewOwner(interface_handle owner, uint32 flags)
+{
+    logf("[Mock] RealTimePreviewContext::SetRealTimePreviewOwner (flags=%u)", flags);
+    // Mock implementation: set the process interface that owns this preview
+    // In real implementation, this would link the preview to its owner interface
+    return api_true;
+}
+
+// =============================================================
+// END OF TIMER, DIALOG, TAB, TEXT, AND PREVIEW STUBS
+// =============================================================
+
+// =============================================================
+// GlobalContext - Version Information Stubs
+// =============================================================
+
+void GlobalContext::GetPixInsightVersion(uint32* major, uint32* minor, uint32* release,
+                                         uint32* revision, uint32* betaRelease,
+                                         uint32* confidentialRelease, uint32* leVersion,
+                                         char* langCode)
+{
+    logf("[Mock] GlobalContext::GetPixInsightVersion");
+    
+    // Mock version: 1.8.9
+    if (major)
+        *major = 1;
+    if (minor)
+        *minor = 8;
+    if (release)
+        *release = 9;
+    if (revision)
+        *revision = 2;
+    if (betaRelease)
+        *betaRelease = 0;
+    if (confidentialRelease)
+        *confidentialRelease = 0;
+    if (leVersion)
+        *leVersion = 0;
+    if (langCode)
+    {
+        // Return "eng" for English
+        langCode[0] = 'e';
+        langCode[1] = 'n';
+        langCode[2] = 'g';
+        langCode[3] = '\0';
+    }
+}
+
+char16_type* GlobalContext::GetPixInsightCodename(api_handle hModule)
+{
+    logf("[Mock] GlobalContext::GetPixInsightCodename");
+    
+    // Return a mock codename
+    // The caller module is responsible for allocating and freeing this string
+    const char16_t* codename = u"Ripley";
+    size_t len = std::char_traits<char16_t>::length(codename);
+    
+    // Allocate using the module's allocator
+    char16_type* result = reinterpret_cast<char16_type*>(
+        API->Global->Allocate((len + 1) * sizeof(char16_type))
+    );
+    
+    if (result)
+    {
+        std::memcpy(result, codename, (len + 1) * sizeof(char16_type));
+    }
+    
+    return result;
+}
+
+// =============================================================
+// TextBoxContext - Event Handler Stubs
+// =============================================================
+
+api_bool TextBoxContext::SetTextBoxUpdatedEventRoutine(control_handle control,
+                                                       api_handle receiver,
+                                                       pcl::unicode_event_routine callback)
+{
+    logf("[Mock] TextBoxContext::SetTextBoxUpdatedEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        QTextEdit* textEdit = qobject_cast<QTextEdit*>(base->widget);
+        if (textEdit)
+        {
+            // Connect textChanged signal to invoke the callback
+            QObject::connect(textEdit, &QTextEdit::textChanged,
+                [base, callback, textEdit]()
+                {
+                    if (callback)
+                    {
+                        QString text = textEdit->toPlainText();
+                        std::u16string u16str = text.toStdU16String();
+                        callback(base->pcl_handle, base->pcl_handle,
+                                reinterpret_cast<const char16_type*>(u16str.c_str()));
+                    }
+                });
+            return api_true;
+        }
+    }
+    return api_false;
+}
+
+// =============================================================
+// CodeEditorContext - Code Editor Stubs
+// =============================================================
+
+control_handle CodeEditorContext::CreateCodeEditor(api_handle module, control_handle client,
+                                                   control_handle parent, uint32 flags)
+{
+    logf("[Mock] CodeEditorContext::CreateCodeEditor");
+    
+    // Determine parent Qt widget
+    QWidget* parentWidget = determineParentWidget(parent);
+    
+    // Create Qt text edit as a code editor (could be QPlainTextEdit for better performance)
+    QTextEdit* qtCodeEditor = new QTextEdit(parentWidget);
+    
+    // Set monospace font for code editing
+    QFont monoFont("Courier New", 10);
+    monoFont.setStyleHint(QFont::Monospace);
+    qtCodeEditor->setFont(monoFont);
+    
+    // Enable tab/space handling for code
+    qtCodeEditor->setTabStopDistance(40); // 4 spaces worth
+    qtCodeEditor->setAcceptRichText(false);
+    
+    // Create mock wrapper
+    auto base = std::make_unique<MockBase>();
+    base->pcl_handle = client;
+    base->isSizer = false;
+    base->isTreeNode = false;
+    base->widget = qtCodeEditor;
+    
+    control_handle handle = client;
+    g_objects[handle] = std::move(base);
+    
+    return handle;
+}
+
+void CodeEditorContext::SetEditorText(control_handle control, const char16_type* text)
+{
+    logf("[Mock] CodeEditorContext::SetEditorText");
+    
+    QWidget* w = widgetFromHandle(control);
+    QTextEdit* editor = qobject_cast<QTextEdit*>(w);
+    if (editor && text)
+    {
+        QString qtext = QString::fromUtf16(text);
+        editor->setPlainText(qtext);
+    }
+}
+
+void CodeEditorContext::SetEditorReadOnly(control_handle control, uint32 readOnly)
+{
+    logf("[Mock] CodeEditorContext::SetEditorReadOnly (%s)", readOnly ? "true" : "false");
+    
+    QWidget* w = widgetFromHandle(control);
+    QTextEdit* editor = qobject_cast<QTextEdit*>(w);
+    if (editor)
+    {
+        editor->setReadOnly(readOnly != 0);
+    }
+}
+
+// =============================================================
+// END OF VERSION, TEXTBOX, AND CODEEDITOR STUBS
+// =============================================================
+
+// =============================================================
+// EditContext - Additional Stubs
+// =============================================================
+
+api_bool EditContext::GetEditModified(const_control_handle control)
+{
+    logf("[Mock] EditContext::GetEditModified");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(w);
+    if (lineEdit)
+    {
+        return lineEdit->isModified() ? api_true : api_false;
+    }
+    
+    return api_false;
+}
+
+void EditContext::SetEditModified(control_handle control, uint32 modified)
+{
+    logf("[Mock] EditContext::SetEditModified (%s)", modified ? "true" : "false");
+    
+    QWidget* w = widgetFromHandle(control);
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(w);
+    if (lineEdit)
+    {
+        lineEdit->setModified(modified != 0);
+    }
+}
+
+// =============================================================
+// FontContext - Additional Stubs
+// =============================================================
+
+void FontContext::GetStringPixelRect(const_font_handle font, const char16_type* text,
+                                     int32* x, int32* y, int32* w, int32* h,
+                                     uint32 flags)
+{
+    logf("[Mock] FontContext::GetStringPixelRect");
+    
+    // Create a QFont from the handle (simplified - assumes font handle has basic info)
+    QFont qfont("Arial", 10);
+    QFontMetrics fm(qfont);
+    QString qtext = text ? QString::fromUtf16(text) : QString();
+    
+    QRect rect = fm.tightBoundingRect(qtext);
+    
+    if (x) *x = rect.x();
+    if (y) *y = rect.y();
+    if (w) *w = rect.width();
+    if (h) *h = rect.height();
+}
+
+// =============================================================
+// LabelContext - Additional Stubs
+// =============================================================
+
+api_bool LabelContext::GetLabelText(const_control_handle control,
+                                    char16_type* text, size_type* length)
+{
+    logf("[Mock] LabelContext::GetLabelText");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QLabel* label = qobject_cast<QLabel*>(w);
+    if (!label)
+        return api_false;
+    
+    QString labelText = label->text();
+    
+    if (text && length)
+    {
+        // Convert to UTF-16 and copy
+        std::u16string u16str = labelText.toStdU16String();
+        size_type copyLen = std::min(*length - 1, u16str.length());
+        std::memcpy(text, u16str.c_str(), copyLen * sizeof(char16_type));
+        text[copyLen] = 0;
+        *length = copyLen;
+    }
+    else if (length)
+    {
+        // Just return the required length
+        *length = labelText.length() + 1;
+    }
+    
+    return api_true;
+}
+
+// =============================================================
+// DialogContext - Additional Stubs
+// =============================================================
+
+void DialogContext::OpenDialog(control_handle control)
+{
+    logf("[Mock] DialogContext::OpenDialog");
+    
+    QWidget* w = widgetFromHandle(control);
+    QDialog* dialog = qobject_cast<QDialog*>(w);
+    if (dialog)
+    {
+        dialog->show();
+    }
+}
+
+// =============================================================
+// GlobalContext - Additional Stubs
+// =============================================================
+
+api_bool GlobalContext::ResetProcessStatus()
+{
+    logf("[Mock] GlobalContext::ResetProcessStatus");
+    // Mock implementation: reset any process status flags
+    return api_true;
+}
+
+// =============================================================
+// ControlContext - Additional Stubs
+// =============================================================
+
+api_bool ControlContext::SetCloseEventRoutine(control_handle control, api_handle receiver,
+                                              pcl::control_event_routine callback)
+{
+    logf("[Mock] ControlContext::SetCloseEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        QWidget* w = base->widget;
+        
+        // Store the callback
+        base->onClose = callback;
+        
+        // Install event filter to catch close events
+        // Note: This is a simplified implementation
+        // Full implementation would need proper QEvent::Close handling
+        
+        return api_true;
+    }
+    return api_false;
+}
+
+// =============================================================
+// ProcessContext - Additional Stubs
+// =============================================================
+
+char16_type* ProcessContext::GetProcessInstanceSourceCode(api_handle hModule,
+                                                          const_process_handle process,
+                                                          const char* language,
+                                                          const char* varId,
+                                                          uint32 indent)
+{
+    logf("[Mock] ProcessContext::GetProcessInstanceSourceCode");
+    
+    // Return a mock source code string
+    const char16_t* mockCode = u"// Mock process instance source code\n";
+    size_t len = std::char_traits<char16_t>::length(mockCode);
+    
+    // Allocate using the module's allocator
+    char16_type* result = reinterpret_cast<char16_type*>(
+        API->Global->Allocate((len + 1) * sizeof(char16_type))
+    );
+    
+    if (result)
+    {
+        std::memcpy(result, mockCode, (len + 1) * sizeof(char16_type));
+    }
+    
+    return result;
+}
+
+// =============================================================
+// GraphicsContext - Additional Drawing Stubs
+// =============================================================
+
+void GraphicsContext::DrawTextRect(graphics_handle handle, int32 x, int32 y,
+                                   int32 w, int32 h, const char16_type* text,
+                                   int32 align)
+{
+    logf("[Mock] GraphicsContext::DrawTextRect (%d, %d, %d x %d, align=%d)",
+         x, y, w, h, align);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::EnableGraphicsTextAntialiasing(graphics_handle handle, uint32 enabled)
+{
+    logf("[Mock] GraphicsContext::EnableGraphicsTextAntialiasing (%s)",
+         enabled ? "enabled" : "disabled");
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::SetGraphicsTransparentBackground(graphics_handle handle, uint32 transparent)
+{
+    logf("[Mock] GraphicsContext::SetGraphicsTransparentBackground (%s)",
+         transparent ? "true" : "false");
+    // No-op - graphics not rendered in mock
+}
+
+// =============================================================
+// NumericalContext - Additional Stubs
+// =============================================================
+
+char* NumericalContext::SurfaceSplineSerialize(api_handle hModule,
+                                               const_sspline_handle hSS,
+                                               uint32 flags)
+{
+    logf("[Mock] NumericalContext::SurfaceSplineSerialize");
+    
+    // Return a mock serialized string
+    const char* mockData = "MOCK_SURFACE_SPLINE_DATA";
+    size_t len = std::strlen(mockData);
+    
+    // Allocate using the module's allocator
+    char* result = reinterpret_cast<char*>(
+        API->Global->Allocate((len + 1) * sizeof(char))
+    );
+    
+    if (result)
+    {
+        std::memcpy(result, mockData, len + 1);
+    }
+    
+    return result;
+}
+
+// =============================================================
+// FileFormatContext - Comprehensive File Format Stubs
+// =============================================================
+
+api_bool FileFormatContext::AddKeyword(file_format_handle handle,
+                                       const char* name, const char* value,
+                                       const char* comment)
+{
+    logf("[Mock] FileFormatContext::AddKeyword (name=%s)", name ? name : "null");
+    // Mock implementation: accept keyword but don't store
+    return api_true;
+}
+
+api_bool FileFormatContext::WriteImage(file_format_handle handle, const_image_handle image)
+{
+    logf("[Mock] FileFormatContext::WriteImage");
+    // Mock implementation: pretend to write image
+    return api_true;
+}
+
+const void* FileFormatContext::GetICCProfile(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::GetICCProfile");
+    // Mock implementation: no ICC profile
+    return nullptr;
+}
+
+api_bool FileFormatContext::SetICCProfile(file_format_handle handle, const void* profile)
+{
+    logf("[Mock] FileFormatContext::SetICCProfile");
+    // Mock implementation: accept profile but don't store
+    return api_true;
+}
+
+api_bool FileFormatContext::CloseImageFile(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::CloseImageFile");
+    // Mock implementation: close file handle
+    return api_true;
+}
+
+api_bool FileFormatContext::GetNextKeyword(file_format_handle handle,
+                                           char* name, char* value, char* comment,
+                                           uint32 maxLen)
+{
+    logf("[Mock] FileFormatContext::GetNextKeyword");
+    // Mock implementation: no more keywords
+    return api_false;
+}
+
+size_type FileFormatContext::GetKeywordCount(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::GetKeywordCount");
+    // Mock implementation: no keywords
+    return 0;
+}
+
+api_bool FileFormatContext::SetImageOptions(file_format_handle handle,
+                                            const api_image_options* options)
+{
+    logf("[Mock] FileFormatContext::SetImageOptions");
+    // Mock implementation: accept options
+    return api_true;
+}
+
+api_bool FileFormatContext::GetImageProperty(file_format_handle handle,
+                                             const char* id, api_property_value* value)
+{
+    logf("[Mock] FileFormatContext::GetImageProperty (id=%s)", id ? id : "null");
+    // Mock implementation: property not found
+    return api_false;
+}
+
+api_bool FileFormatContext::SetImageProperty(file_format_handle handle,
+                                             const char* id,
+                                             const api_property_value* value)
+{
+    logf("[Mock] FileFormatContext::SetImageProperty (id=%s)", id ? id : "null");
+    // Mock implementation: accept property
+    return api_true;
+}
+
+api_bool FileFormatContext::CreateImageFileEx(file_format_handle handle,
+                                              const char16_type* filePath,
+                                              uint32 imageCount,
+                                              const char* hints, uint32 flags)
+{
+    logf("[Mock] FileFormatContext::CreateImageFileEx");
+    // Mock implementation: pretend to create file
+    return api_true;
+}
+
+void FileFormatContext::EndKeywordEmbedding(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::EndKeywordEmbedding");
+    // Mock implementation: finalize keyword embedding
+}
+
+void FileFormatContext::EndKeywordExtraction(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::EndKeywordExtraction");
+    // Mock implementation: finalize keyword extraction
+}
+
+api_bool FileFormatContext::BeginKeywordEmbedding(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::BeginKeywordEmbedding");
+    // Mock implementation: begin keyword embedding
+    return api_true;
+}
+
+const void* FileFormatContext::GetFormatSpecificData(const_file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::GetFormatSpecificData");
+    // Mock implementation: no format-specific data
+    return nullptr;
+}
+
+api_bool FileFormatContext::SetFormatSpecificData(file_format_handle handle,
+                                                  const void* data)
+{
+    logf("[Mock] FileFormatContext::SetFormatSpecificData");
+    // Mock implementation: accept data
+    return api_true;
+}
+
+api_bool FileFormatContext::BeginKeywordExtraction(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::BeginKeywordExtraction");
+    // Mock implementation: begin keyword extraction
+    return api_true;
+}
+
+void FileFormatContext::EndICCProfileEmbedding(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::EndICCProfileEmbedding");
+    // Mock implementation: finalize ICC profile embedding
+}
+
+void FileFormatContext::EndICCProfileExtraction(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::EndICCProfileExtraction");
+    // Mock implementation: finalize ICC profile extraction
+}
+
+api_bool FileFormatContext::BeginICCProfileEmbedding(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::BeginICCProfileEmbedding");
+    // Mock implementation: begin ICC profile embedding
+    return api_true;
+}
+
+api_bool FileFormatContext::EnumerateImageProperties(file_format_handle handle,
+                                                     pcl::property_enumeration_callback callback,
+                                                     char* id, size_type* length, void* data)
+{
+    logf("[Mock] FileFormatContext::EnumerateImageProperties");
+    // Mock implementation: no properties to enumerate
+    return api_true;
+}
+
+api_bool FileFormatContext::BeginICCProfileExtraction(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::BeginICCProfileExtraction");
+    // Mock implementation: begin ICC profile extraction
+    return api_true;
+}
+
+void FileFormatContext::EndImagePropertyEmbedding(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::EndImagePropertyEmbedding");
+    // Mock implementation: finalize image property embedding
+}
+
+void FileFormatContext::EndImagePropertyExtraction(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::EndImagePropertyExtraction");
+    // Mock implementation: finalize image property extraction
+}
+
+api_bool FileFormatContext::BeginImagePropertyEmbedding(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::BeginImagePropertyEmbedding");
+    // Mock implementation: begin image property embedding
+    return api_true;
+}
+
+meta_format_handle FileFormatContext::GetFileFormatInstanceFormat(const_file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::GetFileFormatInstanceFormat");
+    // Mock implementation: return a dummy meta format handle
+    static int dummyMetaFormat = 0;
+    return &dummyMetaFormat;
+}
+
+api_bool FileFormatContext::BeginImagePropertyExtraction(file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::BeginImagePropertyExtraction");
+    // Mock implementation: begin image property extraction
+    return api_true;
+}
+
+// =============================================================
+// ImageWindowContext - Additional Stubs
+// =============================================================
+
+void ImageWindowContext::ImageScalarToViewport(const_window_handle window_context, int32* value)
+{
+    logf("[Mock] ImageWindowContext::ImageScalarToViewport (%d)", value ? *value : 0);
+    // Mock implementation: value unchanged (1:1 scale)
+    // In real implementation, this would scale from image to viewport units
+}
+
+void ImageWindowContext::UpdateImageWindowViewport(window_handle window_context)
+{
+    logf("[Mock] ImageWindowContext::UpdateImageWindowViewport");
+    // Mock implementation: update viewport display
+    // In real implementation, this would refresh the viewport
+}
+
+// =============================================================
+// END OF COMPREHENSIVE STUBS
+// =============================================================
+// =============================================================
+// ComboBoxContext - Additional Stub
+// =============================================================
+
+void ComboBoxContext::SetComboBoxMaxVisibleItemCount(control_handle control, int32 count)
+{
+    logf("[Mock] ComboBoxContext::SetComboBoxMaxVisibleItemCount (count=%d)", count);
+    
+    QWidget* w = widgetFromHandle(control);
+    QComboBox* combo = qobject_cast<QComboBox*>(w);
+    if (combo)
+    {
+        combo->setMaxVisibleItems(count);
+    }
+}
+
+// =============================================================
+// END OF COMBOBOX STUB
+// =============================================================
+// =============================================================
 // END OF IMPLEMENTATION
 // =============================================================

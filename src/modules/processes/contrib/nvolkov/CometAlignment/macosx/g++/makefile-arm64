@@ -1,0 +1,78 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:58:04.863Z
+# Project id ...... CometAlignment
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+DEVELOPER_ID=pleiades
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/contrib/nvolkov/CometAlignment/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/CometAlignment-pxm.mock
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../CentroidDetector.cpp \
+../../CometAlignmentInstance.cpp \
+../../CometAlignmentInterface.cpp \
+../../CometAlignmentModule.cpp \
+../../CometAlignmentParameters.cpp \
+../../CometAlignmentProcess.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/CentroidDetector.o \
+./arm64/Release/CometAlignmentInstance.o \
+./arm64/Release/CometAlignmentInterface.o \
+./arm64/Release/CometAlignmentModule.o \
+./arm64/Release/CometAlignmentParameters.o \
+./arm64/Release/CometAlignmentProcess.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/CentroidDetector.d \
+./arm64/Release/CometAlignmentInstance.d \
+./arm64/Release/CometAlignmentInterface.d \
+./arm64/Release/CometAlignmentModule.d \
+./arm64/Release/CometAlignmentParameters.d \
+./arm64/Release/CometAlignmentProcess.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/CometAlignment-pxm.mock: $(OBJ_FILES)
+	clang++ -arch arm64 -fsanitize=address -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -stdlib=libc++ -Wl,-export_dynamic -Wl,-dead_strip -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/CometAlignment-pxm.mock $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lMock-pxi -F/opt/homebrew/Cellar/qt@5/5.15.17_1/lib -framework QtCore -framework QtWidgets -framework QtGui -framework QtSvg
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/CometAlignment-pxm.mock
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/CometAlignment-pxm.mock $(PCLBINDIR64)
+	codesign --deep --options=runtime -s $(DEVELOPER_ID) -f -v --timestamp $(PCLBINDIR64)/CometAlignment-pxm.mock
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

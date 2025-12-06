@@ -1151,7 +1151,7 @@ struct api_context GroupBoxContext
 
 struct api_context TabBoxContext
 {
-   control_handle (CreateTabBox)( api_handle, api_handle client, control_handle parent, uint32 flags );
+   control_handle (CreateTabBox)( api_handle, control_handle client, control_handle parent, uint32 flags );
 
    int32          (GetTabBoxLength)( const_control_handle );
 
@@ -2749,7 +2749,7 @@ struct api_context ImageViewContext
 
 struct api_context CodeEditorContext
 {
-   control_handle (CreateCodeEditor)( api_handle hModule, api_handle hClient, control_handle hParent, uint32 flags );
+   control_handle (CreateCodeEditor)( api_handle hModule, control_handle hClient, control_handle hParent, uint32 flags );
 
    control_handle (CreateEditorLineNumbersControl)( control_handle, api_handle hClient, control_handle hParent, uint32 flags );
 

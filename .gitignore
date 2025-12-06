@@ -49,3 +49,4 @@ exported/
 *~
 .DS_Store
 *.moc
+*-e

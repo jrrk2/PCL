@@ -1,0 +1,105 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:52.946Z
+# Project id ...... Convolution
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+DEVELOPER_ID=pleiades
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/Convolution/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/Convolution-pxm.mock
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../ConvolutionDialog.cpp \
+../../ConvolutionInstance.cpp \
+../../ConvolutionInterface.cpp \
+../../ConvolutionModule.cpp \
+../../ConvolutionParameters.cpp \
+../../ConvolutionProcess.cpp \
+../../FilterLibrary.cpp \
+../../LarsonSekaninaInstance.cpp \
+../../LarsonSekaninaInterface.cpp \
+../../LarsonSekaninaParameters.cpp \
+../../LarsonSekaninaProcess.cpp \
+../../UnsharpMaskInstance.cpp \
+../../UnsharpMaskInterface.cpp \
+../../UnsharpMaskParameters.cpp \
+../../UnsharpMaskProcess.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/ConvolutionDialog.o \
+./arm64/Release/ConvolutionInstance.o \
+./arm64/Release/ConvolutionInterface.o \
+./arm64/Release/ConvolutionModule.o \
+./arm64/Release/ConvolutionParameters.o \
+./arm64/Release/ConvolutionProcess.o \
+./arm64/Release/FilterLibrary.o \
+./arm64/Release/LarsonSekaninaInstance.o \
+./arm64/Release/LarsonSekaninaInterface.o \
+./arm64/Release/LarsonSekaninaParameters.o \
+./arm64/Release/LarsonSekaninaProcess.o \
+./arm64/Release/UnsharpMaskInstance.o \
+./arm64/Release/UnsharpMaskInterface.o \
+./arm64/Release/UnsharpMaskParameters.o \
+./arm64/Release/UnsharpMaskProcess.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/ConvolutionDialog.d \
+./arm64/Release/ConvolutionInstance.d \
+./arm64/Release/ConvolutionInterface.d \
+./arm64/Release/ConvolutionModule.d \
+./arm64/Release/ConvolutionParameters.d \
+./arm64/Release/ConvolutionProcess.d \
+./arm64/Release/FilterLibrary.d \
+./arm64/Release/LarsonSekaninaInstance.d \
+./arm64/Release/LarsonSekaninaInterface.d \
+./arm64/Release/LarsonSekaninaParameters.d \
+./arm64/Release/LarsonSekaninaProcess.d \
+./arm64/Release/UnsharpMaskInstance.d \
+./arm64/Release/UnsharpMaskInterface.d \
+./arm64/Release/UnsharpMaskParameters.d \
+./arm64/Release/UnsharpMaskProcess.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/Convolution-pxm.mock: $(OBJ_FILES)
+	clang++ -arch arm64 -g -fsanitize=address -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -stdlib=libc++ -Wl,-export_dynamic -Wl,-dead_strip -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/Convolution-pxm.mock $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lMock-pxi -F/opt/homebrew/Cellar/qt@5/5.15.17_1/lib -framework QtCore -framework QtWidgets -framework QtGui -framework QtSvg
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/Convolution-pxm.mock
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/Convolution-pxm.mock $(PCLBINDIR64)
+	codesign --deep --options=runtime -s $(DEVELOPER_ID) -f -v --timestamp $(PCLBINDIR64)/Convolution-pxm.mock
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O0 -g -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

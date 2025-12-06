@@ -88,6 +88,8 @@ struct MockBase
     void (*onTimerNotify)(timer_handle, pcl::Control*) = nullptr;
     api_handle timerReceiver = nullptr;
 
+    pcl::control_event_routine onClose;
+  
     // Destructor - Qt manages memory via parent-child relationships
     ~MockBase()
     {
