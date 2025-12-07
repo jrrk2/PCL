@@ -353,20 +353,8 @@ void ControlContext::SetControlVisible(control_handle h, api_bool visible)
 // Size Sanitization Helpers
 // =============================================================
 
-inline int sanitizePCLWidth(int v, QWidget* w)
+inline int sanitizePCL(int v, QWidget* w, int prev)
 {
-    int prev = w->sizeHint().width();
-    if (prev <= 0) prev = 100;
-    
-    if (v <= 0) return prev;           // Unspecified
-    if (v > 5000) return prev;         // Absurd PCL value
-    
-    return v;  // Reasonable value
-}
-
-inline int sanitizePCLHeight(int v, QWidget* w)
-{
-    int prev = w->sizeHint().height();
     if (prev > 800)
       {
 	logf("SetControlHeight previous %d > 800", v);
@@ -374,7 +362,7 @@ inline int sanitizePCLHeight(int v, QWidget* w)
       }
     if (prev <= 0) prev = 0;
     
-    if (v <= 0) return prev;
+    if (v <= 0 || v > 800) return prev;
     
     return v;
 }
@@ -386,8 +374,8 @@ void ControlContext::SetControlFixedSize(control_handle h, int32 w, int32 hgt)
 
     logf("[Mock] SetControlFixedSize: %d x %d", w, hgt);
     
-    int pxW = sanitizePCLWidth(w, widget);
-    int pxH = sanitizePCLHeight(hgt, widget);
+    int pxW = sanitizePCL(w, widget, widget->sizeHint().width());
+    int pxH = sanitizePCL(hgt, widget, widget->sizeHint().height());
     
     widget->setFixedSize(pxW, pxH);
 }
@@ -397,8 +385,8 @@ void ControlContext::SetControlMinSize(control_handle h, int32 w, int32 hgt)
     QWidget* widget = widgetFromHandle(h);
     if (!widget) return;
     
-    int pxW = sanitizePCLWidth(w, widget);
-    int pxH = sanitizePCLHeight(hgt, widget);
+    int pxW = sanitizePCL(w, widget, widget->sizeHint().width());
+    int pxH = sanitizePCL(hgt, widget, widget->sizeHint().height());
     
     logf("[Mock] SetControlMinSize: %d x %d", pxW, pxH);
     widget->setMinimumSize(pxW, pxH);
@@ -4854,6 +4842,27 @@ api_bool TimerContext::SetTimerNotifyEventRoutine(timer_handle handle, api_handl
 }
 
 // =============================================================
+// TimerContext - Additional Stub
+// =============================================================
+
+api_bool TimerContext::IsTimerActive(const_timer_handle handle)
+{
+    logf("[Mock] TimerContext::IsTimerActive");
+    
+    MockBase* base = get(const_cast<timer_handle>(handle));
+    if (base && base->qtTimer)
+    {
+        return base->qtTimer->isActive() ? api_true : api_false;
+    }
+    
+    return api_false;
+}
+
+// =============================================================
+// END OF TIMER STUB
+// =============================================================
+
+// =============================================================
 // GlobalContext - Additional Stubs
 // =============================================================
 
@@ -5835,7 +5844,7 @@ api_bool ControlContext::SetCloseEventRoutine(control_handle control, api_handle
     MockBase* base = get(control);
     if (base && base->widget)
     {
-        QWidget* w = base->widget;
+      //        QWidget* w = base->widget;
         
         // Store the callback
         base->onClose = callback;
@@ -6174,6 +6183,471 @@ void ComboBoxContext::SetComboBoxMaxVisibleItemCount(control_handle control, int
 // =============================================================
 // END OF COMBOBOX STUB
 // =============================================================
+
+// =============================================================
+// ViewContext - Screen Transfer Functions Stubs
+// =============================================================
+
+api_bool ViewContext::GetViewScreenTransferFunctions(const_view_handle view,
+                                                     double* m, double* c0, double* c1,
+                                                     double* r0, double* r1)
+{
+    logf("[Mock] ViewContext::GetViewScreenTransferFunctions");
+    
+    // Mock implementation: return identity STF (no transformation)
+    if (m) *m = 0.5;    // midtones
+    if (c0) *c0 = 0.0;  // shadows clipping
+    if (c1) *c1 = 1.0;  // highlights clipping
+    if (r0) *r0 = 0.0;  // shadows dynamic range
+    if (r1) *r1 = 1.0;  // highlights dynamic range
+    
+    return api_false;  // No STF currently set
+}
+
+api_bool ViewContext::SetViewScreenTransferFunctions(view_handle view,
+                                                     const double* m, const double* c0,
+                                                     const double* c1, const double* r0,
+                                                     const double* r1, uint32 notify)
+{
+    logf("[Mock] ViewContext::SetViewScreenTransferFunctions");
+    
+    // Mock implementation: accept STF but don't apply
+    return api_true;
+}
+
+api_bool ViewContext::GetViewScreenTransferFunctionsEnabled(view_handle view)
+{
+    logf("[Mock] ViewContext::GetViewScreenTransferFunctionsEnabled");
+    
+    // Mock implementation: STF not enabled
+    return api_false;
+}
+
+void ViewContext::SetViewScreenTransferFunctionsEnabled(view_handle view,
+                                                        uint32 enabled, uint32 notify)
+{
+    logf("[Mock] ViewContext::SetViewScreenTransferFunctionsEnabled (%s)",
+         enabled ? "enabled" : "disabled");
+    
+    // Mock implementation: accept setting but don't apply
+}
+
+// =============================================================
+// BrushContext - Gradient Brush Stubs
+// =============================================================
+
+brush_handle BrushContext::CreateLinearGradientBrush(api_handle module,
+                                                     double x1, double y1,
+                                                     double x2, double y2,
+                                                     int32 spread,
+                                                     const api_gradient_stop* stops,
+                                                     size_type count)
+{
+    logf("[Mock] BrushContext::CreateLinearGradientBrush");
+    
+    // Mock implementation: return a dummy brush handle
+    static int dummyBrush = 0;
+    return &dummyBrush;
+}
+
+brush_handle BrushContext::CreateRadialGradientBrush(api_handle module,
+                                                     double cx, double cy, double r,
+                                                     double fx, double fy,
+                                                     int32 spread,
+                                                     const api_gradient_stop* stops,
+                                                     size_type count)
+{
+    logf("[Mock] BrushContext::CreateRadialGradientBrush");
+    
+    // Mock implementation: return a dummy brush handle
+    static int dummyBrush = 0;
+    return &dummyBrush;
+}
+
+// =============================================================
+// TimerContext - Additional Stubs
+// =============================================================
+
+void TimerContext::StopTimer(timer_handle handle)
+{
+    logf("[Mock] TimerContext::StopTimer");
+    
+    MockBase* base = get(handle);
+    if (base && base->qtTimer)
+    {
+        base->qtTimer->stop();
+    }
+}
+
+// =============================================================
+// ControlContext - Additional Event Stubs
+// =============================================================
+
+api_bool ControlContext::SetWheelEventRoutine(control_handle control, api_handle receiver,
+                                              pcl::wheel_event_routine callback)
+{
+    logf("[Mock] ControlContext::SetWheelEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        // Store callback
+        base->onMouseWheel = callback;
+        
+        // Install event filter to catch wheel events
+        // This would require proper QEvent::Wheel handling
+        
+        return api_true;
+    }
+    return api_false;
+}
+
+api_bool ControlContext::SetMouseDoubleClickEventRoutine(control_handle control,
+                                                         api_handle receiver,
+                                                         pcl::mouse_event_routine callback)
+{
+    logf("[Mock] ControlContext::SetMouseDoubleClickEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        // Store callback
+        base->onMouseDoubleClick = callback;
+        
+        // Connect to Qt double click events
+        // This would be handled by the event filter
+        
+        return api_true;
+    }
+    return api_false;
+}
+
+// =============================================================
+// SpinBoxContext - Additional Stubs
+// =============================================================
+
+int32 SpinBoxContext::GetSpinBoxValue(const_control_handle control)
+{
+    logf("[Mock] SpinBoxContext::GetSpinBoxValue");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QSpinBox* spinBox = qobject_cast<QSpinBox*>(w);
+    if (spinBox)
+    {
+        return spinBox->value();
+    }
+    
+    return 0;
+}
+
+// =============================================================
+// TreeBoxContext - Additional Stubs
+// =============================================================
+
+void TreeBoxContext::SortTreeBox(control_handle control, int32 col, uint32 ascending)
+{
+    logf("[Mock] TreeBoxContext::SortTreeBox (col=%d, ascending=%s)",
+         col, ascending ? "true" : "false");
+    
+    QWidget* w = widgetFromHandle(control);
+    QTreeWidget* tree = qobject_cast<QTreeWidget*>(w);
+    if (tree)
+    {
+        tree->sortItems(col, ascending ? Qt::AscendingOrder : Qt::DescendingOrder);
+    }
+}
+
+void TreeBoxContext::SetTreeBoxColumnWidth(control_handle control, int32 col, int32 width)
+{
+    logf("[Mock] TreeBoxContext::SetTreeBoxColumnWidth (col=%d, width=%d)", col, width);
+    
+    QWidget* w = widgetFromHandle(control);
+    QTreeWidget* tree = qobject_cast<QTreeWidget*>(w);
+    if (tree && col >= 0 && col < tree->columnCount())
+    {
+        tree->setColumnWidth(col, width);
+    }
+}
+
+void TreeBoxContext::SetTreeBoxColumnVisible(control_handle control, int32 col, uint32 visible)
+{
+    logf("[Mock] TreeBoxContext::SetTreeBoxColumnVisible (col=%d, visible=%s)",
+         col, visible ? "true" : "false");
+    
+    QWidget* w = widgetFromHandle(control);
+    QTreeWidget* tree = qobject_cast<QTreeWidget*>(w);
+    if (tree && col >= 0 && col < tree->columnCount())
+    {
+        tree->setColumnHidden(col, !visible);
+    }
+}
+
+void TreeBoxContext::SetTreeBoxHeaderSortingEnabled(control_handle control, uint32 enabled)
+{
+    logf("[Mock] TreeBoxContext::SetTreeBoxHeaderSortingEnabled (%s)",
+         enabled ? "enabled" : "disabled");
+    
+    QWidget* w = widgetFromHandle(control);
+    QTreeWidget* tree = qobject_cast<QTreeWidget*>(w);
+    if (tree)
+    {
+        tree->setSortingEnabled(enabled != 0);
+    }
+}
+
+api_bool TreeBoxContext::SetTreeBoxNodeUpdatedEventRoutine(control_handle control,
+                                                           api_handle receiver,
+                                                           pcl::item_value_event_routine callback)
+{
+    logf("[Mock] TreeBoxContext::SetTreeBoxNodeUpdatedEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        QTreeWidget* tree = qobject_cast<QTreeWidget*>(base->widget);
+        if (tree)
+        {
+            // Connect to itemChanged signal
+            QObject::connect(tree, &QTreeWidget::itemChanged,
+                [base, callback](QTreeWidgetItem* item, int column)
+                {
+                    if (callback)
+                    {
+                        // Get the node handle for this item
+                        // This would require tracking QTreeWidgetItem* -> api_handle mapping
+                        api_handle nodeHandle = nullptr; // Would need proper mapping
+                        callback(base->pcl_handle, base->pcl_handle, nodeHandle, column);
+                    }
+                });
+            return api_true;
+        }
+    }
+    return api_false;
+}
+
+// =============================================================
+// GraphicsContext - Additional Drawing Stubs
+// =============================================================
+
+void GraphicsContext::StrokeRect(graphics_handle handle, int32 x, int32 y,
+                                 int32 w, int32 h, const_pen_handle pen)
+{
+    logf("[Mock] GraphicsContext::StrokeRect (%d, %d, %d x %d)", x, y, w, h);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawEllipse(graphics_handle handle, int32 x, int32 y,
+                                  int32 w, int32 h)
+{
+    logf("[Mock] GraphicsContext::DrawEllipse (%d, %d, %d x %d)", x, y, w, h);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawBitmapRect(graphics_handle handle, int32 x, int32 y,
+                                     const_bitmap_handle bitmap,
+                                     int32 sx, int32 sy, int32 sw, int32 sh)
+{
+    logf("[Mock] GraphicsContext::DrawBitmapRect (%d, %d, src: %d, %d, %d x %d)",
+         x, y, sx, sy, sw, sh);
+    // No-op - graphics not rendered in mock
+}
+
+// =============================================================
+// FileFormatContext - Additional Stubs
+// =============================================================
+
+api_bool FileFormatContext::IsImageFileOpen(const_file_format_handle handle)
+{
+    logf("[Mock] FileFormatContext::IsImageFileOpen");
+    
+    // Mock implementation: pretend file is not open
+    return api_false;
+}
+
+// =============================================================
+// ImageWindowContext - Additional Stubs
+// =============================================================
+
+void ImageWindowContext::ViewportToImageD(const_window_handle window_context,
+                                          double* x, double* y)
+{
+    logf("[Mock] ImageWindowContext::ViewportToImageD (%.2f, %.2f)",
+         x ? *x : 0.0, y ? *y : 0.0);
+    // Mock implementation: coordinates unchanged (1:1 mapping)
+}
+
+void ImageWindowContext::RegenerateImageWindowViewport(window_handle window_context)
+{
+    logf("[Mock] ImageWindowContext::RegenerateImageWindowViewport");
+    // Mock implementation: regenerate viewport rendering
+}
+
+// =============================================================
+// ExternalProcessContext - Process Management Stubs
+// =============================================================
+
+external_process_handle ExternalProcessContext::CreateExternalProcess(api_handle hModule,
+                                                                      api_handle hClient)
+{
+    logf("[Mock] ExternalProcessContext::CreateExternalProcess");
+    
+    // Create mock wrapper for external process
+    auto base = std::make_unique<MockBase>();
+    base->process_handle = hClient;
+    base->isSizer = false;
+    base->isTreeNode = false;
+    
+    external_process_handle handle = reinterpret_cast<external_process_handle>(base.get());
+    g_objects[handle] = std::move(base);
+    
+    return handle;
+}
+
+api_bool ExternalProcessContext::StartExternalProcess(external_process_handle handle,
+                                                      const char16_type* program,
+                                                      const char16_type** argv,
+                                                      size_type argc)
+{
+    logf("[Mock] ExternalProcessContext::StartExternalProcess");
+    
+    // Mock implementation: pretend to start process
+    return api_true;
+}
+
+api_bool ExternalProcessContext::KillExternalProcess(external_process_handle handle)
+{
+    logf("[Mock] ExternalProcessContext::KillExternalProcess");
+    
+    // Mock implementation: kill process
+    return api_true;
+}
+
+api_bool ExternalProcessContext::TerminateExternalProcess(external_process_handle handle)
+{
+    logf("[Mock] ExternalProcessContext::TerminateExternalProcess");
+    
+    // Mock implementation: terminate process gracefully
+    return api_true;
+}
+
+api_bool ExternalProcessContext::WriteToExternalProcess(external_process_handle handle,
+                                                        const void* data, size_type count)
+{
+    logf("[Mock] ExternalProcessContext::WriteToExternalProcess (count=%zu)", (size_t)count);
+    
+    // Mock implementation: pretend to write to process stdin
+    return api_true;
+}
+
+api_bool ExternalProcessContext::ReadFromExternalProcess(api_handle hModule,
+                                                         external_process_handle handle,
+                                                         int32 stream,
+                                                         void** data, size_type* count)
+{
+    logf("[Mock] ExternalProcessContext::ReadFromExternalProcess (stream=%d)", stream);
+    
+    // Mock implementation: no data available
+    if (data) *data = nullptr;
+    if (count) *count = 0;
+    
+    return api_true;
+}
+
+api_bool ExternalProcessContext::CloseExternalProcessStream(external_process_handle handle,
+                                                            int32 stream)
+{
+    logf("[Mock] ExternalProcessContext::CloseExternalProcessStream (stream=%d)", stream);
+    
+    // Mock implementation: close stream
+    return api_true;
+}
+
+api_bool ExternalProcessContext::GetExternalProcessIsRunning(const_external_process_handle handle)
+{
+    logf("[Mock] ExternalProcessContext::GetExternalProcessIsRunning");
+    
+    // Mock implementation: process is not running
+    return api_false;
+}
+
+api_bool ExternalProcessContext::WaitForExternalProcessFinished(external_process_handle handle,
+                                                                int32 ms)
+{
+    logf("[Mock] ExternalProcessContext::WaitForExternalProcessFinished (ms=%d)", ms);
+    
+    // Mock implementation: process already finished
+    return api_true;
+}
+
+api_bool ExternalProcessContext::SetExternalProcessWorkingDirectory(external_process_handle handle,
+                                                                    const char16_type* dir)
+{
+    logf("[Mock] ExternalProcessContext::SetExternalProcessWorkingDirectory");
+    
+    // Mock implementation: set working directory
+    return api_true;
+}
+
+api_bool ExternalProcessContext::SetExternalProcessStartedEventRoutine(
+    external_process_handle handle,
+    api_handle receiver,
+    pcl::external_process_event_routine callback)
+{
+    logf("[Mock] ExternalProcessContext::SetExternalProcessStartedEventRoutine");
+    
+    // Mock implementation: store callback
+    return api_true;
+}
+
+api_bool ExternalProcessContext::SetExternalProcessFinishedEventRoutine(
+    external_process_handle handle,
+    api_handle receiver,
+    pcl::external_process_exit_status_event_routine callback)
+{
+    logf("[Mock] ExternalProcessContext::SetExternalProcessFinishedEventRoutine");
+    
+    // Mock implementation: store callback
+    return api_true;
+}
+
+api_bool ExternalProcessContext::SetExternalProcessErrorEventRoutine(
+    external_process_handle handle,
+    api_handle receiver,
+    pcl::external_process_status_event_routine callback)
+{
+    logf("[Mock] ExternalProcessContext::SetExternalProcessErrorEventRoutine");
+    
+    // Mock implementation: store callback
+    return api_true;
+}
+
+api_bool ExternalProcessContext::SetExternalProcessStandardOutputDataAvailableEventRoutine(
+    external_process_handle handle,
+    api_handle receiver,
+    pcl::external_process_event_routine callback)
+{
+    logf("[Mock] ExternalProcessContext::SetExternalProcessStandardOutputDataAvailableEventRoutine");
+    
+    // Mock implementation: store callback
+    return api_true;
+}
+
+api_bool ExternalProcessContext::SetExternalProcessStandardErrorDataAvailableEventRoutine(
+    external_process_handle handle,
+    api_handle receiver,
+    pcl::external_process_event_routine callback)
+{
+    logf("[Mock] ExternalProcessContext::SetExternalProcessStandardErrorDataAvailableEventRoutine");
+    
+    // Mock implementation: store callback
+    return api_true;
+}
+
+// =============================================================
+// END OF VIEW, BRUSH, TIMER, CONTROL, SPINBOX, TREEBOX, GRAPHICS, AND EXTERNALPROCESS STUBS
+// =============================================================
+
+
 // =============================================================
 // END OF IMPLEMENTATION
 // =============================================================

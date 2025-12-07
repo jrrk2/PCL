@@ -89,6 +89,9 @@ struct MockBase
     api_handle timerReceiver = nullptr;
 
     pcl::control_event_routine onClose;
+    api_handle process_handle;
+    pcl::wheel_event_routine onMouseWheel;
+    pcl::mouse_event_routine onMouseDoubleClick;
   
     // Destructor - Qt manages memory via parent-child relationships
     ~MockBase()
