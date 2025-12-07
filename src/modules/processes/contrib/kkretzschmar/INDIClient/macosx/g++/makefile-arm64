@@ -1,0 +1,127 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:58:04.165Z
+# Project id ...... INDIClient
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+# --------------------------------------------------------------------
+# Additional include search directories:
+# $(INDIGODIR)/indigo_libs
+# --------------------------------------------------------------------
+# Additional library search directories:
+# $(INDIGODIR)/build/lib
+# --------------------------------------------------------------------
+# Additional libraries:
+# indigo
+######################################################################
+
+DEVELOPER_ID=pleiades
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/contrib/kkretzschmar/INDIClient/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/INDIClient-pxm.mock
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../Alignment.cpp \
+../../DeviceConfigBase.cpp \
+../../IIndigoProperty.cpp \
+../../INDICCDFrameInstance.cpp \
+../../INDICCDFrameInterface.cpp \
+../../INDICCDFrameParameters.cpp \
+../../INDICCDFrameProcess.cpp \
+../../INDIClient.cpp \
+../../INDIClientModule.cpp \
+../../INDIDeviceControllerInstance.cpp \
+../../INDIDeviceControllerInterface.cpp \
+../../INDIDeviceControllerParameters.cpp \
+../../INDIDeviceControllerProcess.cpp \
+../../INDIMountInstance.cpp \
+../../INDIMountInterface.cpp \
+../../INDIMountParameters.cpp \
+../../INDIMountProcess.cpp \
+../../IndigoClient.cpp \
+../../ZeroconfServiceDetection.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/Alignment.o \
+./arm64/Release/DeviceConfigBase.o \
+./arm64/Release/IIndigoProperty.o \
+./arm64/Release/INDICCDFrameInstance.o \
+./arm64/Release/INDICCDFrameInterface.o \
+./arm64/Release/INDICCDFrameParameters.o \
+./arm64/Release/INDICCDFrameProcess.o \
+./arm64/Release/INDIClient.o \
+./arm64/Release/INDIClientModule.o \
+./arm64/Release/INDIDeviceControllerInstance.o \
+./arm64/Release/INDIDeviceControllerInterface.o \
+./arm64/Release/INDIDeviceControllerParameters.o \
+./arm64/Release/INDIDeviceControllerProcess.o \
+./arm64/Release/INDIMountInstance.o \
+./arm64/Release/INDIMountInterface.o \
+./arm64/Release/INDIMountParameters.o \
+./arm64/Release/INDIMountProcess.o \
+./arm64/Release/IndigoClient.o \
+./arm64/Release/ZeroconfServiceDetection.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/Alignment.d \
+./arm64/Release/DeviceConfigBase.d \
+./arm64/Release/IIndigoProperty.d \
+./arm64/Release/INDICCDFrameInstance.d \
+./arm64/Release/INDICCDFrameInterface.d \
+./arm64/Release/INDICCDFrameParameters.d \
+./arm64/Release/INDICCDFrameProcess.d \
+./arm64/Release/INDIClient.d \
+./arm64/Release/INDIClientModule.d \
+./arm64/Release/INDIDeviceControllerInstance.d \
+./arm64/Release/INDIDeviceControllerInterface.d \
+./arm64/Release/INDIDeviceControllerParameters.d \
+./arm64/Release/INDIDeviceControllerProcess.d \
+./arm64/Release/INDIMountInstance.d \
+./arm64/Release/INDIMountInterface.d \
+./arm64/Release/INDIMountParameters.d \
+./arm64/Release/INDIMountProcess.d \
+./arm64/Release/IndigoClient.d \
+./arm64/Release/ZeroconfServiceDetection.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/INDIClient-pxm.mock: $(OBJ_FILES)
+	clang++ -arch arm64 -fsanitize=address -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -stdlib=libc++ -Wl,-export_dynamic -Wl,-dead_strip -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/INDIClient-pxm.mock $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lindigo -lMock-pxi -F/opt/homebrew/Cellar/qt@5/5.15.17_1/lib -framework QtCore -framework QtWidgets -framework QtGui -framework QtSvg
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/INDIClient-pxm.mock
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/INDIClient-pxm.dylib $(PCLBINDIR64)
+	install_name_tool -change $(INDIGODIR)/build/lib/libindigo.dylib @loader_path/libindigo.dylib $(PCLBINDIR64)/INDIClient-pxm.mock
+	codesign --deep --options=runtime -s pleiades -f -v --timestamp $(PCLBINDIR64)/INDIClient-pxm.mock
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -I"$(INDIGODIR)/indigo_libs" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

@@ -7581,5 +7581,683 @@ api_bool RealTimePreviewContext::IsRealTimePreviewUpdating()
 // =============================================================
 
 // =============================================================
+// CursorContext - Bitmap Cursor Creation Stub
+// =============================================================
+
+cursor_handle CursorContext::CreateBitmapCursor(api_handle module,
+                                               const_bitmap_handle bitmap,
+                                               int32 hx, int32 hy)
+{
+    logf("[Mock] CursorContext::CreateBitmapCursor (hotspot: %d, %d)", hx, hy);
+    
+    // Mock implementation: return a dummy cursor handle
+    static int dummyCursor = 0;
+    return &dummyCursor;
+}
+
+// =============================================================
+// GlobalContext - Settings Block I/O Stubs
+// =============================================================
+
+api_bool GlobalContext::ReadSettingsBlock(api_handle hModule, void** data,
+                                          size_type* size,
+                                          const char* key, uint32 global)
+{
+    logf("[Mock] GlobalContext::ReadSettingsBlock (key=%s, global=%s)",
+         key ? key : "null", global ? "true" : "false");
+    
+    // Mock implementation: setting not found
+    if (data) *data = nullptr;
+    if (size) *size = 0;
+    
+    return api_false;
+}
+
+api_bool GlobalContext::WriteSettingsBlock(api_handle hModule,
+                                           const void* data, size_type size,
+                                           const char* key, uint32 global)
+{
+    logf("[Mock] GlobalContext::WriteSettingsBlock (key=%s, size=%zu, global=%s)",
+         key ? key : "null", (size_t)size, global ? "true" : "false");
+    
+    // Mock implementation: accept write
+    return api_true;
+}
+
+// =============================================================
+// ControlContext - Window Title Stub
+// =============================================================
+
+api_bool ControlContext::GetWindowTitle(const_control_handle control,
+                                       char16_type* title, size_type* length)
+{
+    logf("[Mock] ControlContext::GetWindowTitle");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    if (!w)
+        return api_false;
+    
+    QString windowTitle = w->windowTitle();
+    
+    if (title && length)
+    {
+        // Convert to UTF-16 and copy
+        std::u16string u16str = windowTitle.toStdU16String();
+        size_type copyLen = std::min(*length - 1, u16str.length());
+        std::memcpy(title, u16str.c_str(), copyLen * sizeof(char16_type));
+        title[copyLen] = 0;
+        *length = copyLen;
+    }
+    else if (length)
+    {
+        // Just return the required length
+        *length = windowTitle.length() + 1;
+    }
+    
+    return api_true;
+}
+
+// =============================================================
+// GraphicsContext - Background Brush Stub
+// =============================================================
+
+brush_handle GraphicsContext::GetGraphicsBackgroundBrush(const_graphics_handle handle)
+{
+    logf("[Mock] GraphicsContext::GetGraphicsBackgroundBrush");
+    
+    // Mock implementation: return a dummy brush handle
+    static int dummyBrush = 0;
+    return &dummyBrush;
+}
+
+// =============================================================
+// END OF MORPHOLOGY STUBS
+// =============================================================
+
+// =============================================================
+// EditContext - Password Mode Stub
+// =============================================================
+
+void EditContext::SetEditPasswordEnabled(control_handle control, uint32 enabled)
+{
+    logf("[Mock] EditContext::SetEditPasswordEnabled (%s)",
+         enabled ? "enabled" : "disabled");
+    
+    QWidget* w = widgetFromHandle(control);
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(w);
+    if (lineEdit)
+    {
+        lineEdit->setEchoMode(enabled ? QLineEdit::Password : QLineEdit::Normal);
+    }
+}
+
+// =============================================================
+// NetworkTransferContext - SSL and POST Stubs
+// =============================================================
+
+api_bool NetworkTransferContext::SetNetworkTransferSSL(network_transfer_handle handle,
+                                                       uint32 useSSL,
+                                                       uint32 forceSSL,
+                                                       uint32 verifyPeer,
+                                                       uint32 verifyHost)
+{
+    logf("[Mock] NetworkTransferContext::SetNetworkTransferSSL (useSSL=%s, forceSSL=%s, verifyPeer=%s, verifyHost=%s)",
+         useSSL ? "true" : "false",
+         forceSSL ? "true" : "false",
+         verifyPeer ? "true" : "false",
+         verifyHost ? "true" : "false");
+    
+    // Mock implementation: accept SSL settings
+    return api_true;
+}
+
+api_bool NetworkTransferContext::PerformNetworkTransferPOST(network_transfer_handle handle,
+                                                            const char16_type* postFields)
+{
+    logf("[Mock] NetworkTransferContext::PerformNetworkTransferPOST");
+    
+    // Mock implementation: pretend to perform POST request
+    return api_true;
+}
+
+// =============================================================
+// END OF NETWORKSERVICE STUBS
+// =============================================================
+
+// =============================================================
+// TabBoxContext - Additional TabBox Stubs
+// =============================================================
+
+void TabBoxContext::SetTabBoxPageIcon(control_handle control, int32 index,
+                                     const_bitmap_handle icon)
+{
+    logf("[Mock] TabBoxContext::SetTabBoxPageIcon (index=%d)", index);
+    
+    QWidget* w = widgetFromHandle(control);
+    QTabWidget* tabWidget = qobject_cast<QTabWidget*>(w);
+    if (tabWidget && index >= 0 && index < tabWidget->count())
+    {
+        // In a full implementation, would convert bitmap_handle to QIcon
+        // For now, just accept the icon
+        // tabWidget->setTabIcon(index, qicon);
+    }
+}
+
+void TabBoxContext::SetTabBoxPageLabel(control_handle control, int32 index,
+                                       const char16_type* label)
+{
+    logf("[Mock] TabBoxContext::SetTabBoxPageLabel (index=%d)", index);
+    
+    QWidget* w = widgetFromHandle(control);
+    QTabWidget* tabWidget = qobject_cast<QTabWidget*>(w);
+    if (tabWidget && index >= 0 && index < tabWidget->count() && label)
+    {
+        QString qtext = QString::fromUtf16(label);
+        tabWidget->setTabText(index, qtext);
+    }
+}
+
+void TabBoxContext::SetTabBoxPageEnabled(control_handle control, int32 index,
+                                        uint32 enabled)
+{
+    logf("[Mock] TabBoxContext::SetTabBoxPageEnabled (index=%d, enabled=%s)",
+         index, enabled ? "true" : "false");
+    
+    QWidget* w = widgetFromHandle(control);
+    QTabWidget* tabWidget = qobject_cast<QTabWidget*>(w);
+    if (tabWidget && index >= 0 && index < tabWidget->count())
+    {
+        tabWidget->setTabEnabled(index, enabled != 0);
+    }
+}
+
+int32 TabBoxContext::GetTabBoxCurrentPageIndex(const_control_handle control)
+{
+    logf("[Mock] TabBoxContext::GetTabBoxCurrentPageIndex");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QTabWidget* tabWidget = qobject_cast<QTabWidget*>(w);
+    if (tabWidget)
+    {
+        return tabWidget->currentIndex();
+    }
+    
+    return -1;
+}
+
+// =============================================================
+// CodeEditorContext - Additional Code Editor Stubs
+// =============================================================
+
+api_bool CodeEditorContext::GetEditorText(const_control_handle control,
+                                          char16_type* text, size_type* length)
+{
+    logf("[Mock] CodeEditorContext::GetEditorText");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QTextEdit* editor = qobject_cast<QTextEdit*>(w);
+    if (!editor)
+        return api_false;
+    
+    QString editorText = editor->toPlainText();
+    
+    if (text && length)
+    {
+        // Convert to UTF-16 and copy
+        std::u16string u16str = editorText.toStdU16String();
+        size_type copyLen = std::min(*length - 1, u16str.length());
+        std::memcpy(text, u16str.c_str(), copyLen * sizeof(char16_type));
+        text[copyLen] = 0;
+        *length = copyLen;
+    }
+    else if (length)
+    {
+        // Just return the required length
+        *length = editorText.length() + 1;
+    }
+    
+    return api_true;
+}
+
+void CodeEditorContext::InsertEditorText(control_handle control, const char16_type* text)
+{
+    logf("[Mock] CodeEditorContext::InsertEditorText");
+    
+    QWidget* w = widgetFromHandle(control);
+    QTextEdit* editor = qobject_cast<QTextEdit*>(w);
+    if (editor && text)
+    {
+        QString qtext = QString::fromUtf16(text);
+        editor->insertPlainText(qtext);
+    }
+}
+
+void CodeEditorContext::SetEditorFilePath(control_handle control, const char16_type* path)
+{
+    logf("[Mock] CodeEditorContext::SetEditorFilePath");
+    
+    // Mock implementation: accept file path
+    // In real implementation, this would track the file path for the editor
+}
+
+api_bool CodeEditorContext::GetEditorSelectedText(const_control_handle control,
+                                                  char16_type* text, size_type* length)
+{
+    logf("[Mock] CodeEditorContext::GetEditorSelectedText");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QTextEdit* editor = qobject_cast<QTextEdit*>(w);
+    if (!editor)
+        return api_false;
+    
+    QTextCursor cursor = editor->textCursor();
+    QString selectedText = cursor.selectedText();
+    
+    if (text && length)
+    {
+        // Convert to UTF-16 and copy
+        std::u16string u16str = selectedText.toStdU16String();
+        size_type copyLen = std::min(*length - 1, u16str.length());
+        std::memcpy(text, u16str.c_str(), copyLen * sizeof(char16_type));
+        text[copyLen] = 0;
+        *length = copyLen;
+    }
+    else if (length)
+    {
+        // Just return the required length
+        *length = selectedText.length() + 1;
+    }
+    
+    return api_true;
+}
+
+void CodeEditorContext::SetEditorCursorCoordinates(control_handle control,
+                                                   int32 line, int32 col)
+{
+    logf("[Mock] CodeEditorContext::SetEditorCursorCoordinates (line=%d, col=%d)",
+         line, col);
+    
+    QWidget* w = widgetFromHandle(control);
+    QTextEdit* editor = qobject_cast<QTextEdit*>(w);
+    if (editor)
+    {
+        // Move cursor to specified line and column
+        QTextCursor cursor = editor->textCursor();
+        cursor.movePosition(QTextCursor::Start);
+        
+        // Move to line
+        for (int32 i = 0; i < line; ++i)
+        {
+            cursor.movePosition(QTextCursor::Down);
+        }
+        
+        // Move to column
+        for (int32 i = 0; i < col; ++i)
+        {
+            cursor.movePosition(QTextCursor::Right);
+        }
+        
+        editor->setTextCursor(cursor);
+    }
+}
+
+void CodeEditorContext::SetEditorSelectionCoordinates(control_handle control,
+                                                      int32 fromLine, int32 fromCol,
+                                                      int32 toLine, int32 toCol)
+{
+    logf("[Mock] CodeEditorContext::SetEditorSelectionCoordinates (from: %d,%d to: %d,%d)",
+         fromLine, fromCol, toLine, toCol);
+    
+    QWidget* w = widgetFromHandle(control);
+    QTextEdit* editor = qobject_cast<QTextEdit*>(w);
+    if (editor)
+    {
+        // Create selection from fromLine:fromCol to toLine:toCol
+        QTextCursor cursor = editor->textCursor();
+        
+        // Move to start position
+        cursor.movePosition(QTextCursor::Start);
+        for (int32 i = 0; i < fromLine; ++i)
+            cursor.movePosition(QTextCursor::Down);
+        for (int32 i = 0; i < fromCol; ++i)
+            cursor.movePosition(QTextCursor::Right);
+        
+        // Select to end position
+        int32 lineDiff = toLine - fromLine;
+        for (int32 i = 0; i < lineDiff; ++i)
+            cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor);
+        
+        // Adjust column position
+        int32 currentCol = (lineDiff == 0) ? fromCol : 0;
+        int32 colDiff = toCol - currentCol;
+        if (colDiff > 0)
+        {
+            for (int32 i = 0; i < colDiff; ++i)
+                cursor.movePosition(QTextCursor::Right, QTextCursor::KeepAnchor);
+        }
+        else if (colDiff < 0)
+        {
+            for (int32 i = 0; i < -colDiff; ++i)
+                cursor.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor);
+        }
+        
+        editor->setTextCursor(cursor);
+    }
+}
+
+control_handle CodeEditorContext::CreateEditorLineNumbersControl(control_handle editor,
+                                                                 control_handle client,
+                                                                 control_handle parent,
+                                                                 uint32 flags)
+{
+    logf("[Mock] CodeEditorContext::CreateEditorLineNumbersControl");
+    
+    // Mock implementation: create a simple label widget for line numbers
+    QWidget* parentWidget = determineParentWidget(parent);
+    QLabel* lineNumbers = new QLabel(parentWidget);
+    lineNumbers->setAlignment(Qt::AlignRight | Qt::AlignTop);
+    lineNumbers->setText("1\n2\n3\n4\n5");
+    
+    QFont monoFont("Courier New", 10);
+    lineNumbers->setFont(monoFont);
+    
+    // Create mock wrapper
+    auto base = std::make_unique<MockBase>();
+    base->pcl_handle = client;
+    base->widget = lineNumbers;
+    
+    control_handle handle = client;
+    g_objects[handle] = std::move(base);
+    
+    return handle;
+}
+
+// =============================================================
+// ImageWindowContext - Celestial Coordinate Conversion Stub
+// =============================================================
+
+api_bool ImageWindowContext::ImageToCelestial(const_window_handle window_context,
+                                              double* ra, double* dec, uint32 rawRA)
+{
+    logf("[Mock] ImageWindowContext::ImageToCelestial (rawRA=%s)",
+         rawRA ? "true" : "false");
+    
+    // Mock implementation: no astrometric solution available
+    // In real implementation, this would convert image coordinates to RA/Dec
+    // using WCS (World Coordinate System) metadata
+    
+    return api_false;  // No astrometric solution
+}
+
+// =============================================================
+// END OF PIXELMATH STUBS
+// =============================================================
+
+
+// =============================================================
+// GlobalContext - Console Flush Stub
+// =============================================================
+
+api_bool GlobalContext::FlushConsole(console_handle console)
+{
+    logf("[Mock] GlobalContext::FlushConsole");
+    
+    // In real implementation, this would flush buffered console output
+    
+    return api_true;
+}
+
+// =============================================================
+// ProcessContext - Version Stub
+// =============================================================
+
+uint32 ProcessContext::GetProcessInstanceVersion(const_process_handle process)
+{
+    logf("[Mock] ProcessContext::GetProcessInstanceVersion");
+    
+    // Mock implementation: return a default version
+    // Format is typically 0xMMmmRRBB (Major.minor.Release.Beta)
+    return 0x01000000;  // Version 1.0.0.0
+}
+
+// =============================================================
+// WebViewContext - Content and Script Stubs
+// =============================================================
+
+api_bool WebViewContext::SetWebViewContent(control_handle control,
+                                           const void* data, size_type size,
+                                           const char* mimeType)
+{
+    logf("[Mock] WebViewContext::SetWebViewContent (size=%zu, mimeType=%s)",
+         (size_t)size, mimeType ? mimeType : "null");
+    
+    // Mock implementation: accept content
+    // In real implementation, this would load HTML/text content into the web view
+    return api_true;
+}
+
+api_bool WebViewContext::EvaluateWebViewScript(control_handle control,
+                                               const char16_type* sourceCode,
+                                               const char* language)
+{
+    logf("[Mock] WebViewContext::EvaluateWebViewScript (language=%s)",
+         language ? language : "null");
+    
+    // Mock implementation: pretend to evaluate JavaScript
+    return api_true;
+}
+
+api_bool WebViewContext::SetWebViewBackgroundColor(control_handle control,
+                                                   uint32 color)
+{
+    logf("[Mock] WebViewContext::SetWebViewBackgroundColor (0x%08X)", color);
+    
+    // Mock implementation: accept background color
+    // In real implementation, this would set the web view's background color
+    return api_true;
+}
+
+api_bool WebViewContext::SetWebViewScriptResultAvailableEventRoutine(
+    control_handle control,
+    api_handle receiver,
+    pcl::property_event_routine callback)
+{
+    logf("[Mock] WebViewContext::SetWebViewScriptResultAvailableEventRoutine");
+    
+    // Mock implementation: store callback
+    // In real implementation, this would be called when JavaScript evaluation completes
+    return api_true;
+}
+
+// =============================================================
+// CodeEditorContext - Text Updated Event Stub
+// =============================================================
+
+api_bool CodeEditorContext::SetEditorTextUpdatedEventRoutine(control_handle control,
+                                                             api_handle receiver,
+                                                             pcl::event_routine callback)
+{
+    logf("[Mock] CodeEditorContext::SetEditorTextUpdatedEventRoutine");
+    
+    QWidget* w = widgetFromHandle(control);
+    QTextEdit* editor = qobject_cast<QTextEdit*>(w);
+    if (editor)
+    {
+        MockBase* base = get(control);
+        if (base)
+        {
+            // Connect to textChanged signal
+            QObject::connect(editor, &QTextEdit::textChanged,
+                [base, callback]()
+                {
+                    if (callback)
+                    {
+                        callback(base->pcl_handle, base->pcl_handle);
+                    }
+                });
+            return api_true;
+        }
+    }
+    return api_false;
+}
+
+// =============================================================
+// END OF SUBFRAMESELECTOR STUBS
+// =============================================================
+
+// =============================================================
+// EditContext - Alignment and Event Stubs
+// =============================================================
+
+void EditContext::SetEditAlignment(control_handle control, int32 alignment)
+{
+    logf("[Mock] EditContext::SetEditAlignment (alignment=%d)", alignment);
+    
+    QWidget* w = widgetFromHandle(control);
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(w);
+    if (lineEdit)
+    {
+        // Convert PCL alignment to Qt alignment
+        // 0 = left, 1 = right, 2 = center
+        Qt::Alignment qtAlign = Qt::AlignLeft;
+        if (alignment == 1)
+            qtAlign = Qt::AlignRight;
+        else if (alignment == 2)
+            qtAlign = Qt::AlignCenter;
+        
+        lineEdit->setAlignment(qtAlign);
+    }
+}
+
+api_bool EditContext::SetTextUpdatedEventRoutine(control_handle control,
+                                                 api_handle receiver,
+                                                 pcl::unicode_event_routine callback)
+{
+    logf("[Mock] EditContext::SetTextUpdatedEventRoutine");
+    
+    QWidget* w = widgetFromHandle(control);
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(w);
+    if (lineEdit)
+    {
+        MockBase* base = get(control);
+        if (base)
+        {
+            // Connect to textChanged signal
+            QObject::connect(lineEdit, &QLineEdit::textChanged,
+                [base, callback](const QString& text)
+                {
+                    if (callback)
+                    {
+                        std::u16string u16str = text.toStdU16String();
+                        callback(base->pcl_handle, base->pcl_handle,
+                                reinterpret_cast<const char16_type*>(u16str.c_str()));
+                    }
+                });
+            return api_true;
+        }
+    }
+    return api_false;
+}
+
+// =============================================================
+// GlobalContext - Abort Control Stub
+// =============================================================
+
+api_bool GlobalContext::DisableAbort()
+{
+    logf("[Mock] GlobalContext::DisableAbort");
+    
+    // Mock implementation: disable abort capability
+    return api_true;
+}
+
+// =============================================================
+// FontContext - Font Style Stubs
+// =============================================================
+
+void FontContext::SetFontItalic(font_handle font, uint32 italic)
+{
+    logf("[Mock] FontContext::SetFontItalic (%s)", italic ? "true" : "false");
+    
+    // Mock implementation: accept italic setting
+    // In real implementation, this would modify the font handle
+}
+
+void FontContext::SetFontUnderline(font_handle font, uint32 underline)
+{
+    logf("[Mock] FontContext::SetFontUnderline (%s)", underline ? "true" : "false");
+    
+    // Mock implementation: accept underline setting
+    // In real implementation, this would modify the font handle
+}
+
+// =============================================================
+// GraphicsContext - Additional Bitmap Drawing Stubs
+// =============================================================
+
+void GraphicsContext::DrawBitmapD(graphics_handle handle, double x, double y,
+                                  const_bitmap_handle bitmap)
+{
+    logf("[Mock] GraphicsContext::DrawBitmapD (%.2f, %.2f)", x, y);
+    // No-op - graphics not rendered in mock
+}
+
+font_handle GraphicsContext::GetGraphicsFont(const_graphics_handle handle)
+{
+    logf("[Mock] GraphicsContext::GetGraphicsFont");
+    
+    // Mock implementation: return a dummy font handle
+    static int dummyFont = 0;
+    return &dummyFont;
+}
+
+void GraphicsContext::DrawScaledBitmapD(graphics_handle handle,
+                                        double x, double y,
+                                        double width, double height,
+                                        const_bitmap_handle bitmap)
+{
+    logf("[Mock] GraphicsContext::DrawScaledBitmapD (%.2f, %.2f, %.2f x %.2f)",
+         x, y, width, height);
+    // No-op - graphics not rendered in mock
+}
+
+// =============================================================
+// ControlContext - ToolTip Getter Stub
+// =============================================================
+
+api_bool ControlContext::GetWindowToolTip(const_control_handle control,
+                                         char16_type* tooltip, size_type* length)
+{
+    logf("[Mock] ControlContext::GetWindowToolTip");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    if (!w)
+        return api_false;
+    
+    QString qtTooltip = w->toolTip();
+    
+    if (tooltip && length)
+    {
+        // Convert to UTF-16 and copy
+        std::u16string u16str = qtTooltip.toStdU16String();
+        size_type copyLen = std::min(*length - 1, u16str.length());
+        std::memcpy(tooltip, u16str.c_str(), copyLen * sizeof(char16_type));
+        tooltip[copyLen] = 0;
+        *length = copyLen;
+    }
+    else if (length)
+    {
+        // Just return the required length
+        *length = qtTooltip.length() + 1;
+    }
+    
+    return api_true;
+}
+
+// =============================================================
+// END OF MISCELLANEOUS STUBS
+// =============================================================
+
+// =============================================================
 // END OF IMPLEMENTATION
 // =============================================================

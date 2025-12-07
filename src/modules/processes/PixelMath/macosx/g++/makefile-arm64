@@ -1,0 +1,105 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:58:02.031Z
+# Project id ...... PixelMath
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+DEVELOPER_ID=pleiades
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/PixelMath/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/PixelMath-pxm.mock
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../Data.cpp \
+../../Expression.cpp \
+../../ExpressionEditorDialog.cpp \
+../../Function.cpp \
+../../Functional.cpp \
+../../Generators.cpp \
+../../ImageCache.cpp \
+../../Operator.cpp \
+../../PixelMathInstance.cpp \
+../../PixelMathInterface.cpp \
+../../PixelMathModule.cpp \
+../../PixelMathParameters.cpp \
+../../PixelMathProcess.cpp \
+../../Symbol.cpp \
+../../Token.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/Data.o \
+./arm64/Release/Expression.o \
+./arm64/Release/ExpressionEditorDialog.o \
+./arm64/Release/Function.o \
+./arm64/Release/Functional.o \
+./arm64/Release/Generators.o \
+./arm64/Release/ImageCache.o \
+./arm64/Release/Operator.o \
+./arm64/Release/PixelMathInstance.o \
+./arm64/Release/PixelMathInterface.o \
+./arm64/Release/PixelMathModule.o \
+./arm64/Release/PixelMathParameters.o \
+./arm64/Release/PixelMathProcess.o \
+./arm64/Release/Symbol.o \
+./arm64/Release/Token.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/Data.d \
+./arm64/Release/Expression.d \
+./arm64/Release/ExpressionEditorDialog.d \
+./arm64/Release/Function.d \
+./arm64/Release/Functional.d \
+./arm64/Release/Generators.d \
+./arm64/Release/ImageCache.d \
+./arm64/Release/Operator.d \
+./arm64/Release/PixelMathInstance.d \
+./arm64/Release/PixelMathInterface.d \
+./arm64/Release/PixelMathModule.d \
+./arm64/Release/PixelMathParameters.d \
+./arm64/Release/PixelMathProcess.d \
+./arm64/Release/Symbol.d \
+./arm64/Release/Token.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/PixelMath-pxm.mock: $(OBJ_FILES)
+	clang++ -arch arm64 -fsanitize=address -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -stdlib=libc++ -Wl,-export_dynamic -Wl,-dead_strip -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/PixelMath-pxm.mock $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lMock-pxi -F/opt/homebrew/Cellar/qt@5/5.15.17_1/lib -framework QtCore -framework QtWidgets -framework QtGui -framework QtSvg
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/PixelMath-pxm.mock
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/PixelMath-pxm.mock $(PCLBINDIR64)
+	codesign --deep --options=runtime -s $(DEVELOPER_ID) -f -v --timestamp $(PCLBINDIR64)/PixelMath-pxm.mock
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

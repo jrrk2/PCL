@@ -1,0 +1,81 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:59.546Z
+# Project id ...... Morphology
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+######################################################################
+
+DEVELOPER_ID=pleiades
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/Morphology/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/Morphology-pxm.mock
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../MorphologicalTransformationInstance.cpp \
+../../MorphologicalTransformationInterface.cpp \
+../../MorphologicalTransformationParameters.cpp \
+../../MorphologicalTransformationProcess.cpp \
+../../MorphologyModule.cpp \
+../../Structure.cpp \
+../../StructureManagerDialog.cpp
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/MorphologicalTransformationInstance.o \
+./arm64/Release/MorphologicalTransformationInterface.o \
+./arm64/Release/MorphologicalTransformationParameters.o \
+./arm64/Release/MorphologicalTransformationProcess.o \
+./arm64/Release/MorphologyModule.o \
+./arm64/Release/Structure.o \
+./arm64/Release/StructureManagerDialog.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/MorphologicalTransformationInstance.d \
+./arm64/Release/MorphologicalTransformationInterface.d \
+./arm64/Release/MorphologicalTransformationParameters.d \
+./arm64/Release/MorphologicalTransformationProcess.d \
+./arm64/Release/MorphologyModule.d \
+./arm64/Release/Structure.d \
+./arm64/Release/StructureManagerDialog.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/Morphology-pxm.mock: $(OBJ_FILES)
+	clang++ -arch arm64 -fsanitize=address -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -stdlib=libc++ -Wl,-export_dynamic -Wl,-dead_strip -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/Morphology-pxm.mock $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lMock-pxi -F/opt/homebrew/Cellar/qt@5/5.15.17_1/lib -framework QtCore -framework QtWidgets -framework QtGui -framework QtSvg
+	$(MAKE) -f ./makefile-arm64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/Morphology-pxm.mock
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/Morphology-pxm.mock $(PCLBINDIR64)
+	codesign --deep --options=runtime -s $(DEVELOPER_ID) -f -v --timestamp $(PCLBINDIR64)/Morphology-pxm.mock
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

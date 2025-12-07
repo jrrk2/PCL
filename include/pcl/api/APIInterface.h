@@ -2751,7 +2751,7 @@ struct api_context CodeEditorContext
 {
    control_handle (CreateCodeEditor)( api_handle hModule, control_handle hClient, control_handle hParent, uint32 flags );
 
-   control_handle (CreateEditorLineNumbersControl)( control_handle, api_handle hClient, control_handle hParent, uint32 flags );
+   control_handle (CreateEditorLineNumbersControl)( control_handle, control_handle hClient, control_handle hParent, uint32 flags );
 
    api_bool       (GetEditorFilePath)( const_control_handle, char16_type*, size_type* );
    void           (SetEditorFilePath)( control_handle, const char16_type* );
