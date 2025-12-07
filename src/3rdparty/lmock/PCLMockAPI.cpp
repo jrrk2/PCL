@@ -6647,6 +6647,938 @@ api_bool ExternalProcessContext::SetExternalProcessStandardErrorDataAvailableEve
 // END OF VIEW, BRUSH, TIMER, CONTROL, SPINBOX, TREEBOX, GRAPHICS, AND EXTERNALPROCESS STUBS
 // =============================================================
 
+// =============================================================
+// ViewContext - Additional Stubs
+// =============================================================
+
+api_bool ViewContext::DeleteViewProperty(api_handle hModule, view_handle view,
+                                         const char* id, uint32 notify)
+{
+    logf("[Mock] ViewContext::DeleteViewProperty (id=%s, notify=%s)",
+         id ? id : "null", notify ? "true" : "false");
+    
+    // Mock implementation: property doesn't exist
+    return api_false;
+}
+
+// =============================================================
+// GlobalContext - Settings Stubs (Unsigned Integer)
+// =============================================================
+
+api_bool GlobalContext::ReadSettingsUnsignedInteger(api_handle hModule,
+                                                    uint32* value,
+                                                    const char* key,
+                                                    uint32 global)
+{
+    logf("[Mock] GlobalContext::ReadSettingsUnsignedInteger (key=%s, global=%s)",
+         key ? key : "null", global ? "true" : "false");
+    
+    // Mock implementation: setting not found
+    if (value)
+        *value = 0;
+    
+    return api_false;
+}
+
+api_bool GlobalContext::WriteSettingsUnsignedInteger(api_handle hModule,
+                                                     uint32 value,
+                                                     const char* key,
+                                                     uint32 global)
+{
+    logf("[Mock] GlobalContext::WriteSettingsUnsignedInteger (key=%s, value=%u, global=%s)",
+         key ? key : "null", value, global ? "true" : "false");
+    
+    // Mock implementation: accept write
+    return api_true;
+}
+
+// =============================================================
+// ModuleContext - Resource Loading Stub
+// =============================================================
+
+api_bool ModuleContext::LoadResource(api_handle hModule,
+                                     const char16_type* resourceType,
+                                     const char16_type* resourceName)
+{
+    logf("[Mock] ModuleContext::LoadResource");
+    
+    // Mock implementation: resource not found
+    return api_false;
+}
+
+// =============================================================
+// SliderContext - Additional Stub
+// =============================================================
+
+void SliderContext::SetSliderStepSize(control_handle control, int32 step)
+{
+    logf("[Mock] SliderContext::SetSliderStepSize (step=%d)", step);
+    
+    QWidget* w = widgetFromHandle(control);
+    QSlider* slider = qobject_cast<QSlider*>(w);
+    if (slider)
+    {
+        slider->setSingleStep(step);
+    }
+}
+
+// =============================================================
+// GraphicsContext - Additional Drawing Stub
+// =============================================================
+
+void GraphicsContext::DrawPolygonD(graphics_handle handle, const double* points,
+                                   size_type count, int32 fillRule)
+{
+    logf("[Mock] GraphicsContext::DrawPolygonD (count=%zu, fillRule=%d)",
+         (size_t)count, fillRule);
+    // No-op - graphics not rendered in mock
+}
+
+// =============================================================
+// ImageWindowContext - Additional Stubs
+// =============================================================
+
+void ImageWindowContext::SetDynamicCursor(window_handle window_context,
+                                          const_bitmap_handle bitmap,
+                                          int32 hx, int32 hy)
+{
+    logf("[Mock] ImageWindowContext::SetDynamicCursor (hotspot: %d, %d)", hx, hy);
+    
+    // Mock implementation: set cursor bitmap
+    // In real implementation, this would set the cursor for dynamic interface
+}
+
+int32 ImageWindowContext::GetCursorTolerance()
+{
+    logf("[Mock] ImageWindowContext::GetCursorTolerance");
+    
+    // Mock implementation: return default cursor tolerance in pixels
+    return 4;  // Typical tolerance for cursor hit-testing
+}
+
+void ImageWindowContext::ClearImageWindowAstrometricSolution(window_handle window_context,
+                                                             uint32 notify)
+{
+    logf("[Mock] ImageWindowContext::ClearImageWindowAstrometricSolution (notify=%s)",
+         notify ? "true" : "false");
+    
+    // Mock implementation: clear astrometric solution
+    // In real implementation, this would remove WCS metadata
+}
+
+// =============================================================
+// END OF GEOMETRY PROJECT STUBS
+// =============================================================
+
+// =============================================================
+// FontContext - Font Enumeration Stub
+// =============================================================
+
+api_bool FontContext::EnumerateFonts(font_enumeration_callback callback,
+                                     char16_type* fontFace, size_type* len,
+                                     void* data, const char* writingSystem)
+{
+    logf("[Mock] FontContext::EnumerateFonts (writingSystem=%s)",
+         writingSystem ? writingSystem : "null");
+    
+    // Mock implementation: enumerate a few common fonts
+    if (callback && fontFace && len)
+    {
+        const char16_t* fonts[] = {
+            u"Arial",
+            u"Courier New",
+            u"Helvetica",
+            u"Times New Roman",
+            u"Verdana"
+        };
+        
+        for (size_t i = 0; i < 5; ++i)
+        {
+            size_t fontLen = std::char_traits<char16_t>::length(fonts[i]);
+            if (*len > fontLen)
+            {
+                std::memcpy(fontFace, fonts[i], (fontLen + 1) * sizeof(char16_type));
+                if (!callback(fontFace, data))
+                    break;  // Callback returned false, stop enumeration
+            }
+        }
+    }
+    
+    return api_true;
+}
+
+// =============================================================
+// GlobalContext - Global Settings Stubs (Real, Flag, Color, String, Integer)
+// =============================================================
+
+api_bool GlobalContext::GetGlobalReal(const char* key, double* value)
+{
+    logf("[Mock] GlobalContext::GetGlobalReal (key=%s)", key ? key : "null");
+    
+    // Mock implementation: return default value
+    if (value)
+        *value = 0.0;
+    
+    return api_false;  // Setting not found
+}
+
+api_bool GlobalContext::SetGlobalFlag(const char* key, uint32 value)
+{
+    logf("[Mock] GlobalContext::SetGlobalFlag (key=%s, value=%s)",
+         key ? key : "null", value ? "true" : "false");
+    
+    // Mock implementation: accept write
+    return api_true;
+}
+
+api_bool GlobalContext::SetGlobalReal(const char* key, double value)
+{
+    logf("[Mock] GlobalContext::SetGlobalReal (key=%s, value=%.6f)",
+         key ? key : "null", value);
+    
+    // Mock implementation: accept write
+    return api_true;
+}
+
+api_bool GlobalContext::GetGlobalColor(const char* key, uint32* value)
+{
+    logf("[Mock] GlobalContext::GetGlobalColor (key=%s)", key ? key : "null");
+    
+    // Mock implementation: return default color (white)
+    if (value)
+        *value = 0xFFFFFFFF;
+    
+    return api_false;  // Setting not found
+}
+
+api_bool GlobalContext::SetGlobalColor(const char* key, uint32 value)
+{
+    logf("[Mock] GlobalContext::SetGlobalColor (key=%s, value=0x%08X)",
+         key ? key : "null", value);
+    
+    // Mock implementation: accept write
+    return api_true;
+}
+
+api_bool GlobalContext::SetGlobalString(const char* key, const char16_type* value)
+{
+    logf("[Mock] GlobalContext::SetGlobalString (key=%s)", key ? key : "null");
+    
+    // Mock implementation: accept write
+    return api_true;
+}
+
+api_bool GlobalContext::SetGlobalInteger(const char* key, uint32 value, uint32 isSigned)
+{
+    logf("[Mock] GlobalContext::SetGlobalInteger (key=%s, value=%u, signed=%s)",
+         key ? key : "null", value, isSigned ? "true" : "false");
+    
+    // Mock implementation: accept write
+    return api_true;
+}
+
+// =============================================================
+// GlobalContext - Readout Options Stubs
+// =============================================================
+
+void GlobalContext::GetReadoutOptions(api_readout_options* options)
+{
+    logf("[Mock] GlobalContext::GetReadoutOptions");
+    
+    if (options)
+    {
+        // Mock implementation: return default readout options
+        std::memset(options, 0, sizeof(api_readout_options));
+        // Set some reasonable defaults
+        options->precision = 6;
+        options->range = 0;  // Normalized range [0,1]
+    }
+}
+
+void GlobalContext::SetReadoutOptions(const api_readout_options* options)
+{
+    logf("[Mock] GlobalContext::SetReadoutOptions");
+    
+    // Mock implementation: accept options
+}
+
+// =============================================================
+// GlobalContext - Global Settings Update Context Stubs
+// =============================================================
+
+api_bool GlobalContext::EnterGlobalSettingsUpdateContext()
+{
+    logf("[Mock] GlobalContext::EnterGlobalSettingsUpdateContext");
+    
+    // Mock implementation: enter update context
+    return api_true;
+}
+
+api_bool GlobalContext::IsGlobalSettingsUpdateContextActive()
+{
+    logf("[Mock] GlobalContext::IsGlobalSettingsUpdateContextActive");
+    
+    // Mock implementation: no update context active
+    return api_false;
+}
+
+api_bool GlobalContext::ExitGlobalSettingsUpdateContext()
+{
+    logf("[Mock] GlobalContext::ExitGlobalSettingsUpdateContext");
+    
+    // Mock implementation: exit update context
+    return api_true;
+}
+
+api_bool GlobalContext::CancelGlobalSettingsUpdate(api_handle hModule, uint32 reserved)
+{
+    logf("[Mock] GlobalContext::CancelGlobalSettingsUpdate");
+    
+    // Mock implementation: cancel update
+    return api_true;
+}
+
+void GlobalContext::BroadcastGlobalFiltersUpdated(const void* reserved)
+{
+    logf("[Mock] GlobalContext::BroadcastGlobalFiltersUpdated");
+    
+    // Mock implementation: broadcast notification
+}
+
+// =============================================================
+// ControlContext - Additional Control Property Stubs
+// =============================================================
+
+void ControlContext::SetControlFont(control_handle control, const_font_handle font)
+{
+    logf("[Mock] ControlContext::SetControlFont");
+    
+    QWidget* w = widgetFromHandle(control);
+    if (w && font)
+    {
+        // In a full implementation, we'd convert the font_handle to QFont
+        // For now, just set a default monospace font
+        QFont qfont("Courier New", 10);
+        w->setFont(qfont);
+    }
+}
+
+void ControlContext::SetControlButtonColor(control_handle control, uint32 color)
+{
+    logf("[Mock] ControlContext::SetControlButtonColor (0x%08X)", color);
+    
+    QWidget* w = widgetFromHandle(control);
+    if (w)
+    {
+        // Extract RGB from RGBA color
+        int r = (color >> 16) & 0xFF;
+        int g = (color >> 8) & 0xFF;
+        int b = color & 0xFF;
+        
+        QPalette palette = w->palette();
+        palette.setColor(QPalette::Button, QColor(r, g, b));
+        w->setPalette(palette);
+    }
+}
+
+uint32 ControlContext::GetControlBackgroundColor(const_control_handle control)
+{
+    logf("[Mock] ControlContext::GetControlBackgroundColor");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    if (w)
+    {
+        QColor color = w->palette().color(QPalette::Window);
+        // Convert to RGBA format
+        return (color.red() << 16) | (color.green() << 8) | color.blue() | 0xFF000000;
+    }
+    
+    return 0xFFFFFFFF;  // Default white
+}
+
+void ControlContext::SetControlMouseTrackingEnabled(control_handle control, uint32 enabled)
+{
+    logf("[Mock] ControlContext::SetControlMouseTrackingEnabled (%s)",
+         enabled ? "enabled" : "disabled");
+    
+    QWidget* w = widgetFromHandle(control);
+    if (w)
+    {
+        w->setMouseTracking(enabled != 0);
+    }
+}
+
+// =============================================================
+// SpinBoxContext - Additional Stubs
+// =============================================================
+
+void SpinBoxContext::SetSpinBoxStepSize(control_handle control, int32 step)
+{
+    logf("[Mock] SpinBoxContext::SetSpinBoxStepSize (step=%d)", step);
+    
+    QWidget* w = widgetFromHandle(control);
+    QSpinBox* spinBox = qobject_cast<QSpinBox*>(w);
+    if (spinBox)
+    {
+        spinBox->setSingleStep(step);
+    }
+}
+
+void SpinBoxContext::SetSpinBoxMinimumValueText(control_handle control,
+                                                const char16_type* text)
+{
+    logf("[Mock] SpinBoxContext::SetSpinBoxMinimumValueText");
+    
+    QWidget* w = widgetFromHandle(control);
+    QSpinBox* spinBox = qobject_cast<QSpinBox*>(w);
+    if (spinBox && text)
+    {
+        QString qtext = QString::fromUtf16(text);
+        spinBox->setSpecialValueText(qtext);
+    }
+}
+
+// =============================================================
+// WebViewContext - WebView Operation Stubs
+// =============================================================
+
+api_bool WebViewContext::SaveWebViewAsPDF(control_handle control,
+                                          const char16_type* filePath,
+                                          const double* pageWidth,
+                                          const double* pageHeight,
+                                          const double* marginLeft,
+                                          const double* marginTop,
+                                          const double* marginRight,
+                                          const double* marginBottom,
+                                          int32 orientation)
+{
+    logf("[Mock] WebViewContext::SaveWebViewAsPDF (orientation=%d)", orientation);
+    
+    // Mock implementation: pretend to save PDF
+    return api_true;
+}
+
+api_bool WebViewContext::LoadWebViewContent(control_handle control,
+                                            const char16_type* URI)
+{
+    logf("[Mock] WebViewContext::LoadWebViewContent");
+    
+    // Mock implementation: pretend to load content
+    return api_true;
+}
+
+api_bool WebViewContext::SetWebViewZoomFactor(control_handle control,
+                                              const double* zoomFactor)
+{
+    logf("[Mock] WebViewContext::SetWebViewZoomFactor (zoom=%.2f)",
+         zoomFactor ? *zoomFactor : 1.0);
+    
+    // Mock implementation: accept zoom factor
+    return api_true;
+}
+
+api_bool WebViewContext::SetWebViewLoadFinishedEventRoutine(control_handle control,
+                                                            api_handle receiver,
+                                                            pcl::state_event_routine callback)
+{
+    logf("[Mock] WebViewContext::SetWebViewLoadFinishedEventRoutine");
+    
+    // Mock implementation: store callback
+    return api_true;
+}
+
+// =============================================================
+// ImageWindowContext - Swap Directory Stubs
+// =============================================================
+
+api_bool ImageWindowContext::GetSwapDirectory(int32 index, char16_type* dir,
+                                              size_type* length)
+{
+    logf("[Mock] ImageWindowContext::GetSwapDirectory (index=%d)", index);
+    
+    if (index == 0 && dir && length)
+    {
+        // Mock implementation: return a default swap directory
+        const char16_t* defaultDir = u"/tmp/pixinsight_swap";
+        size_t len = std::char_traits<char16_t>::length(defaultDir);
+        
+        if (*length > len)
+        {
+            std::memcpy(dir, defaultDir, (len + 1) * sizeof(char16_type));
+            *length = len + 1;
+            return api_true;
+        }
+        else
+        {
+            *length = len + 1;
+            return api_false;
+        }
+    }
+    
+    return api_false;  // No more swap directories
+}
+
+api_bool ImageWindowContext::SetSwapDirectories(const char16_type** dirs, int32 count)
+{
+    logf("[Mock] ImageWindowContext::SetSwapDirectories (count=%d)", count);
+    
+    // Mock implementation: accept swap directories
+    return api_true;
+}
+
+// =============================================================
+// END OF GLOBAL PROJECT STUBS
+// =============================================================
+
+// =============================================================
+// PenContext - Additional Stub
+// =============================================================
+
+uint32 PenContext::GetPenColor(const_pen_handle pen)
+{
+    logf("[Mock] PenContext::GetPenColor");
+    
+    // Mock implementation: return black color
+    return 0xFF000000;  // RGBA: opaque black
+}
+
+// =============================================================
+// FontContext - Additional Stub
+// =============================================================
+
+void FontContext::SetFontPixelSize(font_handle font, int32 size)
+{
+    logf("[Mock] FontContext::SetFontPixelSize (size=%d)", size);
+    
+    // Mock implementation: accept pixel size
+    // In real implementation, this would modify the font handle
+}
+
+// =============================================================
+// ViewContext - Additional Stub
+// =============================================================
+
+api_bool ViewContext::IsStoredPreview(const_view_handle view)
+{
+    logf("[Mock] ViewContext::IsStoredPreview");
+    
+    // Mock implementation: not a stored preview
+    return api_false;
+}
+
+// =============================================================
+// ActionContext - Additional Stub
+// =============================================================
+
+void ActionContext::SetActionIcon(action_handle action, const_bitmap_handle icon)
+{
+    logf("[Mock] ActionContext::SetActionIcon");
+    
+    // Mock implementation: accept icon
+    // In real implementation, this would set the action's icon
+}
+
+// =============================================================
+// GlobalContext - Additional Settings and Utility Stubs
+// =============================================================
+
+api_bool GlobalContext::ReadSettingsReal(api_handle hModule, double* value,
+                                         const char* key, uint32 global)
+{
+    logf("[Mock] GlobalContext::ReadSettingsReal (key=%s, global=%s)",
+         key ? key : "null", global ? "true" : "false");
+    
+    // Mock implementation: setting not found
+    if (value)
+        *value = 0.0;
+    
+    return api_false;
+}
+
+api_bool GlobalContext::WriteSettingsReal(api_handle hModule, double value,
+                                          const char* key, uint32 global)
+{
+    logf("[Mock] GlobalContext::WriteSettingsReal (key=%s, value=%.6f, global=%s)",
+         key ? key : "null", value, global ? "true" : "false");
+    
+    // Mock implementation: accept write
+    return api_true;
+}
+
+void GlobalContext::GetCursorPosition(int32* x, int32* y)
+{
+    logf("[Mock] GlobalContext::GetCursorPosition");
+    
+    // Mock implementation: return cursor position
+    QPoint pos = QCursor::pos();
+    if (x) *x = pos.x();
+    if (y) *y = pos.y();
+}
+
+void GlobalContext::HideToolTipWindow()
+{
+    logf("[Mock] GlobalContext::HideToolTipWindow");
+    
+    // Mock implementation: hide tooltip
+    QToolTip::hideText();
+}
+
+void GlobalContext::ShowToolTipWindow(int32 x, int32 y, const char16_type* text,
+                                      const_control_handle control,
+                                      int32 rectX, int32 rectY,
+                                      int32 rectW, int32 rectH)
+{
+    logf("[Mock] GlobalContext::ShowToolTipWindow (%d, %d)", x, y);
+    
+    // Mock implementation: show tooltip
+    if (text)
+    {
+        QString qtext = QString::fromUtf16(text);
+        QToolTip::showText(QPoint(x, y), qtext);
+    }
+}
+
+api_bool GlobalContext::LaunchProcessInterface(meta_interface_handle interface, uint32 flags)
+{
+    logf("[Mock] GlobalContext::LaunchProcessInterface (flags=0x%08X)", flags);
+    
+    // Mock implementation: pretend to launch interface
+    return api_true;
+}
+
+// =============================================================
+// ControlContext - Additional Event Stubs
+// =============================================================
+
+void ControlContext::UpdateControlRect(control_handle control,
+                                       int32 x, int32 y, int32 w, int32 h)
+{
+    logf("[Mock] ControlContext::UpdateControlRect (%d, %d, %d x %d)", x, y, w, h);
+    
+    QWidget* widget = widgetFromHandle(control);
+    if (widget)
+    {
+        widget->update(x, y, w, h);
+    }
+}
+
+api_bool ControlContext::SetEnterEventRoutine(control_handle control,
+                                              api_handle receiver,
+                                              pcl::control_event_routine callback)
+{
+    logf("[Mock] ControlContext::SetEnterEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        // Store callback
+        base->onEnter = callback;
+        return api_true;
+    }
+    return api_false;
+}
+
+api_bool ControlContext::SetLeaveEventRoutine(control_handle control,
+                                              api_handle receiver,
+                                              pcl::control_event_routine callback)
+{
+    logf("[Mock] ControlContext::SetLeaveEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        // Store callback
+        base->onLeave = callback;
+        return api_true;
+    }
+    return api_false;
+}
+
+api_bool ControlContext::SetResizeEventRoutine(control_handle control,
+                                               api_handle receiver,
+                                               pcl::resize_event_routine callback)
+{
+    logf("[Mock] ControlContext::SetResizeEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        // Store callback
+        base->onResize = callback;
+        return api_true;
+    }
+    return api_false;
+}
+
+api_bool ControlContext::SetKeyReleaseEventRoutine(control_handle control,
+                                                   api_handle receiver,
+                                                   pcl::keyboard_event_routine callback)
+{
+    logf("[Mock] ControlContext::SetKeyReleaseEventRoutine");
+    
+    MockBase* base = get(control);
+    if (base && base->widget)
+    {
+        // Store callback
+        base->onKeyRelease = callback;
+        return api_true;
+    }
+    return api_false;
+}
+
+// =============================================================
+// GraphicsContext - Additional Drawing Stubs
+// =============================================================
+
+void GraphicsContext::DrawBitmap(graphics_handle handle, int32 x, int32 y,
+                                const_bitmap_handle bitmap)
+{
+    logf("[Mock] GraphicsContext::DrawBitmap (%d, %d)", x, y);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawPolygon(graphics_handle handle, const int32* points,
+                                 size_type count, int32 fillRule)
+{
+    logf("[Mock] GraphicsContext::DrawPolygon (count=%zu, fillRule=%d)",
+         (size_t)count, fillRule);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawPolyline(graphics_handle handle, const int32* points,
+                                  size_type count)
+{
+    logf("[Mock] GraphicsContext::DrawPolyline (count=%zu)", (size_t)count);
+    // No-op - graphics not rendered in mock
+}
+
+pen_handle GraphicsContext::GetGraphicsPen(const_graphics_handle handle)
+{
+    logf("[Mock] GraphicsContext::GetGraphicsPen");
+    
+    // Mock implementation: return a dummy pen handle
+    static int dummyPen = 0;
+    return &dummyPen;
+}
+
+void GraphicsContext::SetGraphicsFont(graphics_handle handle, const_font_handle font)
+{
+    logf("[Mock] GraphicsContext::SetGraphicsFont");
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::SetGraphicsOpacity(graphics_handle handle, double opacity)
+{
+    logf("[Mock] GraphicsContext::SetGraphicsOpacity (opacity=%.2f)", opacity);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawText(graphics_handle handle, int32 x, int32 y,
+                              const char16_type* text)
+{
+    logf("[Mock] GraphicsContext::DrawText (%d, %d)", x, y);
+    // No-op - graphics not rendered in mock
+}
+
+void GraphicsContext::DrawPoint(graphics_handle handle, int32 x, int32 y)
+{
+    logf("[Mock] GraphicsContext::DrawPoint (%d, %d)", x, y);
+    // No-op - graphics not rendered in mock
+}
+
+// =============================================================
+// ScrollBoxContext - Comprehensive ScrollBox Stubs
+// =============================================================
+
+void ScrollBoxContext::GetScrollBoxPageSize(const_control_handle control,
+                                           int32* width, int32* height)
+{
+    logf("[Mock] ScrollBoxContext::GetScrollBoxPageSize");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea)
+    {
+        QSize pageSize = scrollArea->viewport()->size();
+        if (width) *width = pageSize.width();
+        if (height) *height = pageSize.height();
+    }
+    else
+    {
+        if (width) *width = 0;
+        if (height) *height = 0;
+    }
+}
+
+void ScrollBoxContext::GetScrollBoxPosition(const_control_handle control,
+                                           int32* x, int32* y)
+{
+    logf("[Mock] ScrollBoxContext::GetScrollBoxPosition");
+    
+    QWidget* w = widgetFromHandle(const_cast<control_handle>(control));
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea)
+    {
+        if (x) *x = scrollArea->horizontalScrollBar()->value();
+        if (y) *y = scrollArea->verticalScrollBar()->value();
+    }
+    else
+    {
+        if (x) *x = 0;
+        if (y) *y = 0;
+    }
+}
+
+void ScrollBoxContext::SetScrollBarsVisible(control_handle control,
+                                           uint32 horizontal, uint32 vertical)
+{
+    logf("[Mock] ScrollBoxContext::SetScrollBarsVisible (h=%s, v=%s)",
+         horizontal ? "visible" : "hidden", vertical ? "visible" : "hidden");
+    
+    QWidget* w = widgetFromHandle(control);
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea)
+    {
+        scrollArea->setHorizontalScrollBarPolicy(
+            horizontal ? Qt::ScrollBarAsNeeded : Qt::ScrollBarAlwaysOff);
+        scrollArea->setVerticalScrollBarPolicy(
+            vertical ? Qt::ScrollBarAsNeeded : Qt::ScrollBarAlwaysOff);
+    }
+}
+
+void ScrollBoxContext::SetScrollBoxPageSize(control_handle control,
+                                           int32 width, int32 height)
+{
+    logf("[Mock] ScrollBoxContext::SetScrollBoxPageSize (%d x %d)", width, height);
+    
+    QWidget* w = widgetFromHandle(control);
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea && scrollArea->widget())
+    {
+        scrollArea->widget()->resize(width, height);
+    }
+}
+
+void ScrollBoxContext::SetScrollBoxPosition(control_handle control, int32 x, int32 y)
+{
+    logf("[Mock] ScrollBoxContext::SetScrollBoxPosition (%d, %d)", x, y);
+    
+    QWidget* w = widgetFromHandle(control);
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea)
+    {
+        scrollArea->horizontalScrollBar()->setValue(x);
+        scrollArea->verticalScrollBar()->setValue(y);
+    }
+}
+
+void ScrollBoxContext::SetScrollBoxVerticalRange(control_handle control,
+                                                 int32 min, int32 max)
+{
+    logf("[Mock] ScrollBoxContext::SetScrollBoxVerticalRange (%d, %d)", min, max);
+    
+    QWidget* w = widgetFromHandle(control);
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea)
+    {
+        scrollArea->verticalScrollBar()->setRange(min, max);
+    }
+}
+
+void ScrollBoxContext::SetScrollBoxHorizontalRange(control_handle control,
+                                                   int32 min, int32 max)
+{
+    logf("[Mock] ScrollBoxContext::SetScrollBoxHorizontalRange (%d, %d)", min, max);
+    
+    QWidget* w = widgetFromHandle(control);
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea)
+    {
+        scrollArea->horizontalScrollBar()->setRange(min, max);
+    }
+}
+
+void ScrollBoxContext::SetScrollBoxAutoScrollEnabled(control_handle control,
+                                                    uint32 horizontal, uint32 vertical)
+{
+    logf("[Mock] ScrollBoxContext::SetScrollBoxAutoScrollEnabled (h=%s, v=%s)",
+         horizontal ? "enabled" : "disabled", vertical ? "enabled" : "disabled");
+    
+    // Mock implementation: accept auto-scroll settings
+    // QScrollArea doesn't have a direct auto-scroll property
+}
+
+api_bool ScrollBoxContext::SetScrollBoxVerticalPosUpdatedEventRoutine(
+    control_handle control,
+    api_handle receiver,
+    pcl::value_event_routine callback)
+{
+    logf("[Mock] ScrollBoxContext::SetScrollBoxVerticalPosUpdatedEventRoutine");
+    
+    QWidget* w = widgetFromHandle(control);
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea)
+    {
+        MockBase* base = get(control);
+        if (base)
+        {
+            QObject::connect(scrollArea->verticalScrollBar(), &QScrollBar::valueChanged,
+                [base, callback](int value)
+                {
+                    if (callback)
+                    {
+                        callback(base->pcl_handle, base->pcl_handle, value);
+                    }
+                });
+            return api_true;
+        }
+    }
+    return api_false;
+}
+
+api_bool ScrollBoxContext::SetScrollBoxHorizontalPosUpdatedEventRoutine(
+    control_handle control,
+    api_handle receiver,
+    pcl::value_event_routine callback)
+{
+    logf("[Mock] ScrollBoxContext::SetScrollBoxHorizontalPosUpdatedEventRoutine");
+    
+    QWidget* w = widgetFromHandle(control);
+    QScrollArea* scrollArea = qobject_cast<QScrollArea*>(w);
+    if (scrollArea)
+    {
+        MockBase* base = get(control);
+        if (base)
+        {
+            QObject::connect(scrollArea->horizontalScrollBar(), &QScrollBar::valueChanged,
+                [base, callback](int value)
+                {
+                    if (callback)
+                    {
+                        callback(base->pcl_handle, base->pcl_handle, value);
+                    }
+                });
+            return api_true;
+        }
+    }
+    return api_false;
+}
+
+// =============================================================
+// RealTimePreviewContext - Additional Stub
+// =============================================================
+
+api_bool RealTimePreviewContext::IsRealTimePreviewUpdating()
+{
+    logf("[Mock] RealTimePreviewContext::IsRealTimePreviewUpdating");
+    
+    // Mock implementation: not updating
+    return api_false;
+}
+
+// =============================================================
+// END OF INTENSITY TRANSFORMATIONS STUBS
+// =============================================================
 
 // =============================================================
 // END OF IMPLEMENTATION

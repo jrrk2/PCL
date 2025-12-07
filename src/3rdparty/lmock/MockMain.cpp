@@ -555,7 +555,7 @@ int main(int argc, char** argv)
 
     qDebug() << "\nConstructing interface...";
     pcl::ProcessInterface* IF = reinterpret_cast<pcl::ProcessInterface*>(
-        dynamicNew(ifaceCtorAddr, 1024)  // Conservative size for interface
+        dynamicNew(ifaceCtorAddr, 65536)  // Conservative size for interface
     );
     
     if (!IF)
