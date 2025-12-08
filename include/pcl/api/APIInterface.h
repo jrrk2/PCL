@@ -1053,30 +1053,30 @@ struct api_context ControlContext
    api_bool       (GetControlResourcePixelRatio)( const_control_handle, double* );
    api_bool       (GetControlDevicePixelRatio)( const_control_handle, double* );
 
-   api_bool       (SetDestroyEventRoutine)( control_handle, api_handle, pcl::control_event_routine );
-   api_bool       (SetShowEventRoutine)( control_handle, api_handle, pcl::control_event_routine );
-   api_bool       (SetHideEventRoutine)( control_handle, api_handle, pcl::control_event_routine );
-   api_bool       (SetCloseEventRoutine)( control_handle, api_handle, pcl::control_event_routine );
-   api_bool       (SetGetFocusEventRoutine)( control_handle, api_handle, pcl::control_event_routine );
-   api_bool       (SetLoseFocusEventRoutine)( control_handle, api_handle, pcl::control_event_routine );
-   api_bool       (SetEnterEventRoutine)( control_handle, api_handle, pcl::control_event_routine );
-   api_bool       (SetLeaveEventRoutine)( control_handle, api_handle, pcl::control_event_routine );
-   api_bool       (SetMoveEventRoutine)( control_handle, api_handle, pcl::move_event_routine );
-   api_bool       (SetResizeEventRoutine)( control_handle, api_handle, pcl::resize_event_routine );
-   api_bool       (SetPaintEventRoutine)( control_handle, api_handle, pcl::paint_event_routine );
+   api_bool       (SetDestroyEventRoutine)( control_handle, control_handle, pcl::control_event_routine );
+   api_bool       (SetShowEventRoutine)( control_handle, control_handle, pcl::control_event_routine );
+   api_bool       (SetHideEventRoutine)( control_handle, control_handle, pcl::control_event_routine );
+   api_bool       (SetCloseEventRoutine)( control_handle, control_handle, pcl::control_event_routine );
+   api_bool       (SetGetFocusEventRoutine)( control_handle, control_handle, pcl::control_event_routine );
+   api_bool       (SetLoseFocusEventRoutine)( control_handle, control_handle, pcl::control_event_routine );
+   api_bool       (SetEnterEventRoutine)( control_handle, control_handle, pcl::control_event_routine );
+   api_bool       (SetLeaveEventRoutine)( control_handle, control_handle, pcl::control_event_routine );
+   api_bool       (SetMoveEventRoutine)( control_handle, control_handle, pcl::move_event_routine );
+   api_bool       (SetResizeEventRoutine)( control_handle, control_handle, pcl::resize_event_routine );
+   api_bool       (SetPaintEventRoutine)( control_handle, control_handle, pcl::paint_event_routine );
    api_bool       (SetKeyPressEventRoutine)( control_handle, control_handle, pcl::keyboard_event_routine );
-   api_bool       (SetKeyReleaseEventRoutine)( control_handle, api_handle, pcl::keyboard_event_routine );
-   api_bool       (SetMouseMoveEventRoutine)( control_handle, api_handle, pcl::mouse_event_routine );
-   api_bool       (SetMouseDoubleClickEventRoutine)( control_handle, api_handle, pcl::mouse_event_routine );
+   api_bool       (SetKeyReleaseEventRoutine)( control_handle, control_handle, pcl::keyboard_event_routine );
+   api_bool       (SetMouseMoveEventRoutine)( control_handle, control_handle, pcl::mouse_event_routine );
+   api_bool       (SetMouseDoubleClickEventRoutine)( control_handle, control_handle, pcl::mouse_event_routine );
    api_bool       (SetMousePressEventRoutine)( control_handle, control_handle, pcl::mouse_button_event_routine );
-   api_bool       (SetMouseReleaseEventRoutine)( control_handle, api_handle, pcl::mouse_button_event_routine );
-   api_bool       (SetWheelEventRoutine)( control_handle, api_handle, pcl::wheel_event_routine );
-   api_bool       (SetFileDragEventRoutine)( control_handle, api_handle, pcl::file_drag_event_handler );
-   api_bool       (SetFileDropEventRoutine)( control_handle, api_handle, pcl::file_drag_event_handler );
-   api_bool       (SetViewDragEventRoutine)( control_handle, api_handle, pcl::view_drag_event_handler );
-   api_bool       (SetViewDropEventRoutine)( control_handle, api_handle, pcl::view_drag_event_handler );
-   api_bool       (SetChildCreateEventRoutine)( control_handle, api_handle, pcl::child_event_routine );
-   api_bool       (SetChildDestroyEventRoutine)( control_handle, api_handle, pcl::child_event_routine );
+   api_bool       (SetMouseReleaseEventRoutine)( control_handle, control_handle, pcl::mouse_button_event_routine );
+   api_bool       (SetWheelEventRoutine)( control_handle, control_handle, pcl::wheel_event_routine );
+   api_bool       (SetFileDragEventRoutine)( control_handle, control_handle, pcl::file_drag_event_handler );
+   api_bool       (SetFileDropEventRoutine)( control_handle, control_handle, pcl::file_drag_event_handler );
+   api_bool       (SetViewDragEventRoutine)( control_handle, control_handle, pcl::view_drag_event_handler );
+   api_bool       (SetViewDropEventRoutine)( control_handle, control_handle, pcl::view_drag_event_handler );
+   api_bool       (SetChildCreateEventRoutine)( control_handle, control_handle, pcl::child_event_routine );
+   api_bool       (SetChildDestroyEventRoutine)( control_handle, control_handle, pcl::child_event_routine );
 };
 
 // ----------------------------------------------------------------------------
@@ -1093,8 +1093,8 @@ struct api_context DialogContext
    api_bool       (GetDialogResizable)( const_control_handle );
    void           (SetDialogResizable)( control_handle, api_bool );
 
-   api_bool       (SetExecuteDialogEventRoutine)( control_handle, api_handle, pcl::event_routine );
-   api_bool       (SetReturnDialogEventRoutine)( control_handle, api_handle, pcl::value_event_routine );
+   api_bool       (SetExecuteDialogEventRoutine)( control_handle, control_handle, pcl::event_routine );
+   api_bool       (SetReturnDialogEventRoutine)( control_handle, control_handle, pcl::value_event_routine );
 
    api_bool       (ExecuteOpenFileDialog)( char16_type* fileName,
                                  const char16_type* caption, const char16_type* initialPath,
@@ -1266,11 +1266,11 @@ struct api_context EditContext
 
    api_bool       (GetEditSelectedText)( const_control_handle, char16_type*, size_type* );
 
-   api_bool       (SetEditCompletedEventRoutine)( control_handle, api_handle, pcl::event_routine );
-   api_bool       (SetReturnPressedEventRoutine)( control_handle, api_handle, pcl::event_routine );
-   api_bool       (SetTextUpdatedEventRoutine)( control_handle, api_handle, pcl::unicode_event_routine );
-   api_bool       (SetCaretPositionUpdatedEventRoutine)( control_handle, api_handle, pcl::range_event_routine );
-   api_bool       (SetSelectionUpdatedEventRoutine)( control_handle, api_handle, pcl::range_event_routine );
+   api_bool       (SetEditCompletedEventRoutine)( control_handle, control_handle, pcl::event_routine );
+   api_bool       (SetReturnPressedEventRoutine)( control_handle, control_handle, pcl::event_routine );
+   api_bool       (SetTextUpdatedEventRoutine)( control_handle, control_handle, pcl::unicode_event_routine );
+   api_bool       (SetCaretPositionUpdatedEventRoutine)( control_handle, control_handle, pcl::range_event_routine );
+   api_bool       (SetSelectionUpdatedEventRoutine)( control_handle, control_handle, pcl::range_event_routine );
 };
 
 // ----------------------------------------------------------------------------
@@ -1298,9 +1298,9 @@ struct api_context TextBoxContext
    void           (InsertTextBoxText)( control_handle, const char16_type* );
    void           (DeleteTextBoxText)( control_handle );
 
-   api_bool       (SetTextBoxUpdatedEventRoutine)( control_handle, api_handle, pcl::unicode_event_routine );
-   api_bool       (SetTextBoxCaretPositionUpdatedEventRoutine)( control_handle, api_handle, pcl::range_event_routine );
-   api_bool       (SetTextBoxSelectionUpdatedEventRoutine)( control_handle, api_handle, pcl::range_event_routine );
+   api_bool       (SetTextBoxUpdatedEventRoutine)( control_handle, control_handle, pcl::unicode_event_routine );
+   api_bool       (SetTextBoxCaretPositionUpdatedEventRoutine)( control_handle, control_handle, pcl::range_event_routine );
+   api_bool       (SetTextBoxSelectionUpdatedEventRoutine)( control_handle, control_handle, pcl::range_event_routine );
 };
 
 // ----------------------------------------------------------------------------
@@ -1417,8 +1417,8 @@ struct api_context SpinBoxContext
    int32          (GetSpinBoxAlignment)( const_control_handle );  // only left and right alignments
    void           (SetSpinBoxAlignment)( control_handle, int32 ); //    idem.
 
-   api_bool       (SetSpinBoxValueUpdatedEventRoutine)( control_handle, api_handle, pcl::value_event_routine );
-   api_bool       (SetSpinBoxRangeUpdatedEventRoutine)( control_handle, api_handle, pcl::range_event_routine );
+   api_bool       (SetSpinBoxValueUpdatedEventRoutine)( control_handle, control_handle, pcl::value_event_routine );
+   api_bool       (SetSpinBoxRangeUpdatedEventRoutine)( control_handle, control_handle, pcl::range_event_routine );
 };
 
 // ----------------------------------------------------------------------------
@@ -1753,8 +1753,8 @@ struct api_context ViewListContext
 
    void           (RemoveViewListView)( control_handle, const_view_handle );
 
-   api_bool       (SetViewListViewSelectedEventRoutine)( control_handle, api_handle, pcl::view_event_routine );
-   api_bool       (SetViewListCurrentViewUpdatedEventRoutine)( control_handle, api_handle, pcl::view_event_routine );
+   api_bool       (SetViewListViewSelectedEventRoutine)( control_handle, control_handle, pcl::view_event_routine );
+   api_bool       (SetViewListCurrentViewUpdatedEventRoutine)( control_handle, control_handle, pcl::view_event_routine );
 };
 
 // ----------------------------------------------------------------------------

@@ -13,11 +13,13 @@
 #include <unordered_map>
 #include <memory>
 #include <cstdio>
+#include <fftw3.h>
 #include <QSvgRenderer>
 #include <QScrollArea>
 #include <QFontMetrics>
 #include <QFont>
 #include <QTreeWidget>
+#include <pcl/XISF.h>
 #include <pcl/api/APIInterface.h>
 
 static bool g_enableDebugLogging = false;
@@ -478,7 +480,7 @@ api_bool ControlContext::SetMousePressEventRoutine(
 
 api_bool ControlContext::SetMouseReleaseEventRoutine(
     control_handle h,
-    api_handle /*client*/,
+    control_handle /*client*/,
     pcl::mouse_button_event_routine r)
 {
     MockBase* b = get(h);
@@ -488,7 +490,7 @@ api_bool ControlContext::SetMouseReleaseEventRoutine(
 
 api_bool ControlContext::SetMouseMoveEventRoutine(
     control_handle h,
-    api_handle /*client*/,
+    control_handle /*client*/,
     pcl::mouse_event_routine r)
 {
     MockBase* b = get(h);
@@ -498,7 +500,7 @@ api_bool ControlContext::SetMouseMoveEventRoutine(
 
 api_bool ControlContext::SetShowEventRoutine(
     control_handle h,
-    api_handle /*client*/,
+    control_handle /*client*/,
     pcl::control_event_routine r)
 {
     MockBase* b = get(h);
@@ -508,7 +510,7 @@ api_bool ControlContext::SetShowEventRoutine(
 
 api_bool ControlContext::SetHideEventRoutine(
     control_handle h,
-    api_handle /*client*/,
+    control_handle /*client*/,
     pcl::control_event_routine r)
 {
     MockBase* b = get(h);
@@ -517,49 +519,6 @@ api_bool ControlContext::SetHideEventRoutine(
 }
 
 // ... Continue with rest of the implementation (sizers, labels, buttons, etc.) ...
-// =============================================================
-// Control Context - Stubs and Additional Functions
-// =============================================================
-
-void ControlContext::SetChildControlToFocus(control_handle, control_handle) {}
-void ControlContext::SetControlFocusStyle(control_handle, int32) {}
-void ControlContext::GetControlPosition(const_control_handle, int32*x, int32*y) { *x = 0; *y = 0; }
-void ControlContext::SetControlPosition(control_handle, int32, int32) {}
-void ControlContext::SetControlSize(control_handle, int32, int32) {}
-void ControlContext::SetControlEnabled(control_handle, api_bool) {}
-void ControlContext::SetRealTimePreviewActive(control_handle, api_bool) {}
-api_bool ControlContext::GetControlEnabled(const_control_handle) { return api_true; }
-api_bool ControlContext::GetControlVisible(const_control_handle) { return api_true; }
-font_handle ControlContext::GetControlFont(const_control_handle) { return new QFont; }
-void ControlContext::GetControlMaxSize(const_control_handle, int32*x, int32*y) { *x = 100; *y = 100; }
-void ControlContext::GetControlMinSize(const_control_handle, int32*x, int32*y) { *x = 100; *y = 100; }
-void ControlContext::SetControlFocus(control_handle, api_bool) {}
-void ControlContext::SetControlMaxSize(control_handle, int32, int32) {}
-void ControlContext::SetControlUpdatesEnabled(control_handle, api_bool) {}
-void ControlContext::AdjustControlToContents(control_handle) {}
-api_bool ControlContext::SetGetFocusEventRoutine(control_handle, api_handle, pcl::control_event_routine) { return api_true; }
-api_bool ControlContext::SetLoseFocusEventRoutine(control_handle, api_handle, pcl::control_event_routine) { return api_true; }
-api_bool ControlContext::SetFileDragEventRoutine(control_handle, api_handle, pcl::file_drag_event_handler) { return api_true; }
-api_bool ControlContext::SetFileDropEventRoutine(control_handle, api_handle, pcl::file_drag_event_handler) { return api_true; }
-control_handle ControlContext::GetControlParent(const_control_handle) { return nullptr; }
-api_bool ControlContext::GetControlDisplayPixelRatio(const_control_handle, double* ratio) { *ratio = 1.0; return api_true; }
-api_bool ControlContext::GetControlResourcePixelRatio(const_control_handle, double* ratio) { *ratio = 1.0; return api_true; }
-void ControlContext::GetControlExpansionEnabled(const_control_handle, api_bool*, api_bool*) {}
-void ControlContext::SetControlExpansionEnabled(control_handle, api_bool, api_bool) {}
-api_bool ControlContext::GetControlUnderMouseStatus(const_control_handle) { return api_false; }
-void ControlContext::BringControlToFront(control_handle) {}
-void ControlContext::SendControlToBack(control_handle) {}
-void ControlContext::StackControls(control_handle, control_handle) {}
-sizer_handle ControlContext::GetControlSizer(const_control_handle) { return nullptr; }
-void ControlContext::GlobalToLocal(const_control_handle, int32*, int32*) {}
-void ControlContext::LocalToGlobal(const_control_handle, int32*, int32*) {}
-void ControlContext::ParentToLocal(const_control_handle, int32*, int32*) {}
-void ControlContext::LocalToParent(const_control_handle, int32*, int32*) {}
-void ControlContext::ControlToLocal(const_control_handle, const_control_handle, int32*, int32*) {}
-void ControlContext::LocalToControl(const_control_handle, const_control_handle, int32*, int32*) {}
-control_handle ControlContext::GetChildByPos(const_control_handle, int32, int32) { return nullptr; }
-void ControlContext::GetChildrenRect(const_control_handle, int32*, int32*, int32*, int32*) {}
-api_bool ControlContext::GetControlAncestry(const_control_handle, const_control_handle) { return api_false; }
 
 // =============================================================
 // Sizer Creation
@@ -793,12 +752,6 @@ api_bool EditContext::SetEditValidatingRegExp(
     return api_true;
 }
 
-api_bool EditContext::GetEditReadOnly(const_control_handle) { return api_false; }
-api_bool EditContext::GetEditText(const_control_handle, char16_type*, size_type*) { return api_false; }
-void EditContext::SetEditSelected(control_handle, api_bool) {}
-api_bool EditContext::SetEditCompletedEventRoutine(control_handle, api_handle, pcl::event_routine) { return api_true; }
-api_bool EditContext::SetReturnPressedEventRoutine(control_handle, api_handle, pcl::event_routine) { return api_true; }
-
 // =============================================================
 // Slider Context
 // =============================================================
@@ -881,8 +834,6 @@ void SpinBoxContext::SetSpinBoxValue(control_handle h, int value)
         spin->setValue(value);
 }
 
-api_bool SpinBoxContext::SetSpinBoxValueUpdatedEventRoutine(control_handle, api_handle, pcl::value_event_routine) { return api_true; }
-
 // =============================================================
 // Button Context
 // =============================================================
@@ -901,13 +852,27 @@ control_handle ButtonContext::CreatePushButton(
     uint32 flags)
 {
     control_handle h = createControl<QPushButton>(m, c, parent);
-    
+    QPushButton* btn = qobject_cast<QPushButton*>(widgetFromHandle(h));
+	
     if (text) {
-        QPushButton* btn = qobject_cast<QPushButton*>(widgetFromHandle(h));
         if (btn)
             btn->setText(QString::fromUtf16(text));
     }
     
+    // Set icon if provided
+    if (icon) {
+        QPixmap* pixmap = reinterpret_cast<QPixmap*>(const_cast<void*>(icon));
+        if (pixmap) {
+            btn->setIcon(QIcon(*pixmap));
+        }
+    }
+    
+    // Set parent if provided
+    if (parent) {
+        QWidget* parentWidget = reinterpret_cast<QWidget*>(parent);
+        btn->setParent(parentWidget);
+    }
+
     logf("[Mock] CreatePushButton handle=%p", h);
     return h;
 }
@@ -2879,17 +2844,7 @@ console_handle GlobalContext::GetConsole()
     return reinterpret_cast<console_handle>(new MockBase());
 }
 
-api_bool GlobalContext::GetGlobalInteger(const char*, void*, api_bool)
-{
-    return api_false;
-}
-
 api_bool GlobalContext::GetGlobalString(const char*, char16_type*, size_type*)
-{
-    return api_false;
-}
-
-api_bool GlobalContext::GetGlobalFlag(const char*, uint32*)
 {
     return api_false;
 }
@@ -2897,16 +2852,6 @@ api_bool GlobalContext::GetGlobalFlag(const char*, uint32*)
 uint32 GlobalContext::GetKeyboardModifiers()
 {
     return QApplication::keyboardModifiers();
-}
-
-uint32 GlobalContext::GetProcessStatus()
-{
-    return 0;
-}
-
-uint32 GlobalContext::LastError()
-{
-    return 0;
 }
 
 void GlobalContext::LaunchProcessInstance(meta_process_handle, const_process_handle, int32, uint32) {}
@@ -2931,12 +2876,6 @@ uint32 GlobalContext::MessageBox(const char16_type* text,
     return msgBox.exec();
 }
 
-api_bool GlobalContext::ReadSettingsInteger(api_handle, int32* result, const char*, api_bool)
-{
-    if (result) *result = 0;
-    return api_true;
-}
-
 api_bool GlobalContext::ShowConsole(console_handle, api_bool)
 {
     return api_true;
@@ -2951,8 +2890,6 @@ api_bool GlobalContext::WriteSettingsInteger(api_handle, int32, const char*, api
 {
     return api_true;
 }
-
-void GlobalContext::ProcessEvents(uint32) {}
 
 int32 GlobalContext::MaxProcessorsAllowedForModule(void*, uint32)
 {
@@ -3206,6 +3143,177 @@ api_bool ViewList_SetViewListCurrentViewUpdatedEventRoutine(control_handle, api_
 // Numerical Context - Stubs
 // =============================================================
 
+
+void LogDebug(const std::string& message) {
+  qDebug() << "[PCLMockAPI] " << message.c_str() << "\n";    
+}
+
+static inline void LogDbg(const std::string& msg) {
+    LogDebug(msg.c_str());
+}
+/*
+static inline void LogDbg(const pcl::String& msg) {
+    LogDebug(msg.ToUTF8().c_str());
+}
+*/
+static inline void LogDbg(const QString& msg) {
+  //    LogDebug(msg);
+}
+
+inline void LogDbg(const char* msg) {
+    LogDebug(msg);
+}
+
+struct FFTTransform {
+    int size;
+    bool isReal;
+    bool isDouble;
+    void* buffer;  // To simulate memory allocation
+    
+    FFTTransform(int n, bool real, bool dbl) : 
+        size(n), isReal(real), isDouble(dbl) {
+        // Allocate some memory to simulate FFT buffer
+        size_t bufferSize = n * (isReal ? 1 : 2) * (isDouble ? sizeof(double) : sizeof(float));
+        buffer = malloc(bufferSize);
+    }
+    
+    ~FFTTransform() {
+        if (buffer) {
+            free(buffer);
+            buffer = nullptr;
+        }
+    }
+};
+
+// Map to keep track of created FFT transforms
+static std::map<void*, FFTTransform*> g_fft_transforms;
+static std::mutex g_fft_mutex;
+
+// Typedef for the FFT transform function signature
+typedef api_bool (*fft_real_transform_d_func)(void* handle, dcomplex* y, const double* x);
+
+// Structure to store FFTW plan information
+struct FFTWPlanWrapper {
+    int size;
+    bool isReal;
+    bool forward;
+    
+    // FFTW plans
+    fftw_plan forwardPlan;
+    fftw_plan inversePlan;
+    
+    // Buffers for real transforms
+    double* realIn;
+    double* realOut;
+    fftw_complex* complexIn;
+    fftw_complex* complexOut;
+    
+    FFTWPlanWrapper(int n, bool real) : 
+        size(n), isReal(real), forward(true) {
+        
+        if (isReal) {
+            // Real-to-complex and complex-to-real transforms
+            realIn = (double*)fftw_malloc(sizeof(double) * n);
+            realOut = (double*)fftw_malloc(sizeof(double) * n);
+            complexOut = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (n/2 + 1));
+            complexIn = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * (n/2 + 1));
+            
+            // Create plans
+            forwardPlan = fftw_plan_dft_r2c_1d(n, realIn, complexOut, FFTW_MEASURE);
+            inversePlan = fftw_plan_dft_c2r_1d(n, complexIn, realOut, FFTW_MEASURE);
+        } else {
+            // Complex-to-complex transforms
+            complexIn = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * n);
+            complexOut = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * n);
+            realIn = nullptr;
+            realOut = nullptr;
+            
+            // Create plans
+            forwardPlan = fftw_plan_dft_1d(n, complexIn, complexOut, FFTW_FORWARD, FFTW_MEASURE);
+            inversePlan = fftw_plan_dft_1d(n, complexIn, complexOut, FFTW_BACKWARD, FFTW_MEASURE);
+        }
+    }
+    ~FFTWPlanWrapper() {
+        // Destroy plans
+        fftw_destroy_plan(forwardPlan);
+        fftw_destroy_plan(inversePlan);
+        
+        // Free buffers
+        if (realIn) fftw_free(realIn);
+        if (realOut) fftw_free(realOut);
+        if (complexIn) fftw_free(complexIn);
+        if (complexOut) fftw_free(complexOut);
+    }
+};
+
+// Map to keep track of created FFT transforms
+static std::map<void*, FFTWPlanWrapper*> g_fftw_plans;
+static std::mutex g_fftw_mutex;
+
+// Initialize FFTW library
+void InitializeFFTW() {
+    static bool initialized = false;
+    if (!initialized) {
+        fftw_init_threads();
+        fftw_plan_with_nthreads(4); // Use multiple threads for better performance
+        initialized = true;
+    }
+}
+
+// Clean up FFTW resources
+void CleanupFFTW() {
+    std::lock_guard<std::mutex> lock(g_fftw_mutex);
+    for (auto& pair : g_fftw_plans) {
+        delete pair.second;
+    }
+    g_fftw_plans.clear();
+    fftw_cleanup_threads();
+    fftw_cleanup();
+}
+
+//======================= PCL API FUNCTIONS =======================
+
+// Returns the next power of 2 greater than or equal to n
+size_type NumericalContext::FFTRealOptimizedLengthF(size_type n) {
+    LogDebug("FFTRealOptimizedLengthF called with n=" + std::to_string(n));
+    
+    // Ensure we never return a value smaller than the input
+    if (n <= 0) return 1;
+    
+    // FFTW works best with sizes that are products of small primes
+    // For simplicity, we'll use powers of 2, but FFTW actually works well with many sizes
+    int result = 1;
+    while (result < n) {
+        result *= 2;
+    }
+    
+    LogDebug("FFTRealOptimizedLengthF returning " + std::to_string(result));
+    return result;
+}
+
+// Complex FFT optimized length (similar implementation)
+size_type NumericalContext::FFTComplexOptimizedLengthF(size_type n) {
+  return NumericalContext::FFTRealOptimizedLengthF(n);
+}
+
+// Create a real transform
+void* NumericalContext::FFTCreateRealTransformD(size_type n) {
+    LogDebug("FFTCreateRealTransformD called with n=" + std::to_string(n));
+    
+    InitializeFFTW();
+    
+    // Create a new transform wrapper
+    FFTWPlanWrapper* wrapper = new FFTWPlanWrapper(n, true);
+    void* handle = wrapper;  // Use the pointer as the handle
+    
+    // Store in our map
+    std::lock_guard<std::mutex> lock(g_fftw_mutex);
+    g_fftw_plans[handle] = wrapper;
+    
+    LogDebug("FFTCreateRealTransformD returning handle " + std::to_string((uintptr_t)handle));
+    return handle;
+}
+
 api_bool NumericalContext::GaussJordanInPlaceF(float**, float**, int32, int32) { return api_false; }
 api_bool NumericalContext::GaussJordanInPlaceD(double**, double**, int32, int32) { return api_false; }
 api_bool NumericalContext::SVDInPlaceF(float**, float*, float**, int32, int32) { return api_false; }
@@ -3213,12 +3321,8 @@ api_bool NumericalContext::SVDInPlaceD(double**, double*, double**, int32, int32
 api_enum NumericalContext::LinearFitF(double*, double*, double*, const float*, const float*, size_type, api_bool(*)(void*), void*) { return 0; }
 api_enum NumericalContext::LinearFitD(double*, double*, double*, const double*, const double*, size_type, api_bool(*)(void*), void*) { return 0; }
 api_bool NumericalContext::FFTDestroyTransform(fft_handle) { return api_false; }
-size_type NumericalContext::FFTRealOptimizedLengthF(size_type) { return 0; }
 fft_handle NumericalContext::FFTCreateComplexTransformD(size_type) { return nullptr; }
 api_bool NumericalContext::FFTRealTransformD(fft_handle, void*, const double*) { return api_false; }
-api_bool NumericalContext::FFTComplexTransformD(fft_handle, void*, const void*) { return api_false; }
-fft_handle NumericalContext::FFTCreateRealTransformD(size_type) { return nullptr; }
-api_bool NumericalContext::FFTComplexInverseTransformD(fft_handle, void*, const void*) { return api_false; }
 fft_handle NumericalContext::FFTCreateComplexInverseTransformD(size_type) { return nullptr; }
 
 // =============================================================
@@ -3499,7 +3603,6 @@ api_bool ImageWindowContext::TerminateDynamicSession(uint32 flags)
 }
 
 static std::map<std::string, void*> g_function_map;
-static std::mutex g_function_map_mutex;
 
 static void* unimplemented_function(void) {
         logf("Called unimplemented function");
@@ -3513,7 +3616,6 @@ void* mock_function_resolver(const char* name) {
     std::string func_name = name;
     logf("Resolving function: %s", name);
     
-    std::lock_guard<std::mutex> lock(g_function_map_mutex);
     auto it = g_function_map.find(func_name);
     if (it != g_function_map.end()) {
       logf("Found implementation for: %s", name);
@@ -3557,13 +3659,6 @@ void* CursorContext::CloneCursor(void* handle, const void* cursor)
     return const_cast<void*>(cursor);
 }
 
-void* CursorContext::CreateCursor(void* handle, int cursorShape)
-{
-    // Return a dummy cursor handle
-    static int dummyCursor = 0;
-    return &dummyCursor;
-}
-
 // =============================================================
 // DialogContext
 // =============================================================
@@ -3596,14 +3691,14 @@ void ControlContext::SetControlCursor(control_handle control, const void* cursor
     // No-op in mock
 }
 
-api_bool ControlContext::SetViewDragEventRoutine(control_handle control, void* receiver,
+api_bool ControlContext::SetViewDragEventRoutine(control_handle control, control_handle receiver,
                                                  pcl::view_drag_event_handler handler)
 {
     // No-op in mock - drag/drop not supported
     return api_true;
 }
 
-api_bool ControlContext::SetViewDropEventRoutine(control_handle control, void* receiver,
+api_bool ControlContext::SetViewDropEventRoutine(control_handle control, control_handle receiver,
                                                  pcl::view_drag_event_handler handler)
 {
     // No-op in mock - drag/drop not supported
@@ -3637,7 +3732,7 @@ void ViewListContext::SetViewListCurrentView(control_handle control, void* view)
 
 api_bool ViewListContext::SetViewListViewSelectedEventRoutine(
     control_handle control, 
-    void* receiver,
+    control_handle receiver,
     pcl::view_event_routine handler)
 {
     // No-op in mock
@@ -3672,15 +3767,6 @@ api_bool NumericalContext::FFTComplexInverseTransformF(void* handle, void* out, 
 {
     // No-op in mock - inverse FFT not actually performed
     return api_true;
-}
-
-size_t NumericalContext::FFTComplexOptimizedLengthF(size_t length)
-{
-    // Return next power of 2
-    size_t n = 1;
-    while (n < length)
-        n <<= 1;
-    return n;
 }
 
 size_t NumericalContext::FFTComplexOptimizedLengthD(size_t length)
@@ -3754,7 +3840,7 @@ api_bool DialogContext::ExecuteSaveFileDialog(
 
 api_bool DialogContext::SetReturnDialogEventRoutine(
     control_handle control,
-    void* receiver,
+    control_handle receiver,
     void (*handler)(control_handle, control_handle, int))
 {
     // No-op in mock
@@ -4011,12 +4097,6 @@ void FontContext::SetFontWeight(void* handle, int weight)
     // No-op
 }
 
-void* FontContext::CreateFontByFace(void* handle, const char16_type* face, double size)
-{
-    static int dummyFont = 0;
-    return &dummyFont;
-}
-
 // =============================================================
 // ViewContext - Views and Images
 // =============================================================
@@ -4158,7 +4238,7 @@ api_bool ActionContext::SetActionStateQueryRoutine(void* handle,
 // DialogContext - Additional
 // =============================================================
 
-api_bool DialogContext::SetExecuteDialogEventRoutine(control_handle control, void* receiver,
+api_bool DialogContext::SetExecuteDialogEventRoutine(control_handle control, control_handle receiver,
                                                      void (*handler)(control_handle, control_handle))
 {
     // No-op
@@ -4227,7 +4307,7 @@ void ControlContext::SetTrackViewActive(control_handle control, uint32 active)
     // No-op
 }
 
-api_bool ControlContext::SetPaintEventRoutine(control_handle control, void* receiver,
+api_bool ControlContext::SetPaintEventRoutine(control_handle control, control_handle receiver,
                                               uint32 (*handler)(control_handle, control_handle,
                                                                int, int, int, int))
 {
@@ -5432,7 +5512,7 @@ api_bool TextBoxContext::GetTextBoxText(const_control_handle control,
 
 api_bool TextBoxContext::SetTextBoxCaretPositionUpdatedEventRoutine(
     control_handle control,
-    api_handle receiver,
+    control_handle receiver,
     pcl::range_event_routine callback)
 {
     logf("[Mock] TextBoxContext::SetTextBoxCaretPositionUpdatedEventRoutine");
@@ -5623,7 +5703,7 @@ char16_type* GlobalContext::GetPixInsightCodename(api_handle hModule)
 // =============================================================
 
 api_bool TextBoxContext::SetTextBoxUpdatedEventRoutine(control_handle control,
-                                                       api_handle receiver,
+                                                       control_handle receiver,
                                                        pcl::unicode_event_routine callback)
 {
     logf("[Mock] TextBoxContext::SetTextBoxUpdatedEventRoutine");
@@ -5836,7 +5916,7 @@ api_bool GlobalContext::ResetProcessStatus()
 // ControlContext - Additional Stubs
 // =============================================================
 
-api_bool ControlContext::SetCloseEventRoutine(control_handle control, api_handle receiver,
+api_bool ControlContext::SetCloseEventRoutine(control_handle control, control_handle receiver,
                                               pcl::control_event_routine callback)
 {
     logf("[Mock] ControlContext::SetCloseEventRoutine");
@@ -5954,13 +6034,6 @@ api_bool FileFormatContext::AddKeyword(file_format_handle handle,
     return api_true;
 }
 
-api_bool FileFormatContext::WriteImage(file_format_handle handle, const_image_handle image)
-{
-    logf("[Mock] FileFormatContext::WriteImage");
-    // Mock implementation: pretend to write image
-    return api_true;
-}
-
 const void* FileFormatContext::GetICCProfile(file_format_handle handle)
 {
     logf("[Mock] FileFormatContext::GetICCProfile");
@@ -6020,16 +6093,6 @@ api_bool FileFormatContext::SetImageProperty(file_format_handle handle,
 {
     logf("[Mock] FileFormatContext::SetImageProperty (id=%s)", id ? id : "null");
     // Mock implementation: accept property
-    return api_true;
-}
-
-api_bool FileFormatContext::CreateImageFileEx(file_format_handle handle,
-                                              const char16_type* filePath,
-                                              uint32 imageCount,
-                                              const char* hints, uint32 flags)
-{
-    logf("[Mock] FileFormatContext::CreateImageFileEx");
-    // Mock implementation: pretend to create file
     return api_true;
 }
 
@@ -6283,7 +6346,7 @@ void TimerContext::StopTimer(timer_handle handle)
 // ControlContext - Additional Event Stubs
 // =============================================================
 
-api_bool ControlContext::SetWheelEventRoutine(control_handle control, api_handle receiver,
+api_bool ControlContext::SetWheelEventRoutine(control_handle control, control_handle receiver,
                                               pcl::wheel_event_routine callback)
 {
     logf("[Mock] ControlContext::SetWheelEventRoutine");
@@ -6303,7 +6366,7 @@ api_bool ControlContext::SetWheelEventRoutine(control_handle control, api_handle
 }
 
 api_bool ControlContext::SetMouseDoubleClickEventRoutine(control_handle control,
-                                                         api_handle receiver,
+                                                         control_handle receiver,
                                                          pcl::mouse_event_routine callback)
 {
     logf("[Mock] ControlContext::SetMouseDoubleClickEventRoutine");
@@ -6996,7 +7059,7 @@ uint32 ControlContext::GetControlBackgroundColor(const_control_handle control)
     return 0xFFFFFFFF;  // Default white
 }
 
-void ControlContext::SetControlMouseTrackingEnabled(control_handle control, uint32 enabled)
+void ControlContext::SetControlMouseTrackingEnabled(control_handle control, api_bool enabled)
 {
     logf("[Mock] ControlContext::SetControlMouseTrackingEnabled (%s)",
          enabled ? "enabled" : "disabled");
@@ -7263,7 +7326,7 @@ void ControlContext::UpdateControlRect(control_handle control,
 }
 
 api_bool ControlContext::SetEnterEventRoutine(control_handle control,
-                                              api_handle receiver,
+                                              control_handle receiver,
                                               pcl::control_event_routine callback)
 {
     logf("[Mock] ControlContext::SetEnterEventRoutine");
@@ -7279,7 +7342,7 @@ api_bool ControlContext::SetEnterEventRoutine(control_handle control,
 }
 
 api_bool ControlContext::SetLeaveEventRoutine(control_handle control,
-                                              api_handle receiver,
+                                              control_handle receiver,
                                               pcl::control_event_routine callback)
 {
     logf("[Mock] ControlContext::SetLeaveEventRoutine");
@@ -7295,7 +7358,7 @@ api_bool ControlContext::SetLeaveEventRoutine(control_handle control,
 }
 
 api_bool ControlContext::SetResizeEventRoutine(control_handle control,
-                                               api_handle receiver,
+                                               control_handle receiver,
                                                pcl::resize_event_routine callback)
 {
     logf("[Mock] ControlContext::SetResizeEventRoutine");
@@ -7311,7 +7374,7 @@ api_bool ControlContext::SetResizeEventRoutine(control_handle control,
 }
 
 api_bool ControlContext::SetKeyReleaseEventRoutine(control_handle control,
-                                                   api_handle receiver,
+                                                   control_handle receiver,
                                                    pcl::keyboard_event_routine callback)
 {
     logf("[Mock] ControlContext::SetKeyReleaseEventRoutine");
@@ -8130,7 +8193,7 @@ void EditContext::SetEditAlignment(control_handle control, int32 alignment)
 }
 
 api_bool EditContext::SetTextUpdatedEventRoutine(control_handle control,
-                                                 api_handle receiver,
+                                                 control_handle receiver,
                                                  pcl::unicode_event_routine callback)
 {
     logf("[Mock] EditContext::SetTextUpdatedEventRoutine");
@@ -8257,6 +8320,3499 @@ api_bool ControlContext::GetWindowToolTip(const_control_handle control,
 // =============================================================
 // END OF MISCELLANEOUS STUBS
 // =============================================================
+
+struct MockTreeBox ;
+
+struct MockControl {
+    QWidget* widget;
+    api_handle clientHandle;
+    QLayout* layout;
+    
+    // Event handlers - add these to your existing structure
+    pcl::paint_event_routine paintHandler;
+    control_handle paintReceiver;
+    
+    pcl::resize_event_routine resizeHandler;
+    control_handle resizeReceiver;
+    
+    pcl::move_event_routine moveHandler;
+    control_handle moveReceiver;
+    
+    pcl::control_event_routine enterHandler;
+    control_handle enterReceiver;
+    
+    pcl::control_event_routine leaveHandler;
+    control_handle leaveReceiver;
+    
+    pcl::mouse_event_routine mouseMoveHandler;
+    control_handle mouseMoveReceiver;
+    
+    pcl::mouse_button_event_routine mousePressHandler;
+    control_handle mousePressReceiver;
+    
+    pcl::mouse_button_event_routine mouseReleaseHandler;
+    control_handle mouseReleaseReceiver;
+    
+    pcl::keyboard_event_routine keyPressHandler;
+    control_handle keyPressReceiver;
+    
+    pcl::keyboard_event_routine keyReleaseHandler;
+    control_handle keyReleaseReceiver;
+    
+    pcl::wheel_event_routine wheelHandler;
+    control_handle wheelReceiver;
+    
+    pcl::control_event_routine destroyHandler;
+    control_handle destroyReceiver;
+    
+    pcl::control_event_routine showHandler;
+    control_handle showReceiver;
+    
+    pcl::control_event_routine hideHandler;
+    control_handle hideReceiver;
+    
+    pcl::control_event_routine closeHandler;
+    control_handle closeReceiver;
+    
+    pcl::control_event_routine getFocusHandler;
+    control_handle getFocusReceiver;
+    
+    pcl::control_event_routine loseFocusHandler;
+    control_handle loseFocusReceiver;
+
+    pcl::event_routine editCompletedHandler;
+    control_handle editCompletedReceiver;
+
+    MockTreeBox *parent;
+    int flags;
+  
+    MockControl(QWidget* w = nullptr) 
+        : widget(w ? w : new QWidget()),
+          clientHandle(nullptr),
+          layout(nullptr),
+          paintHandler(nullptr), paintReceiver(nullptr),
+          resizeHandler(nullptr), resizeReceiver(nullptr),
+          moveHandler(nullptr), moveReceiver(nullptr),
+          enterHandler(nullptr), enterReceiver(nullptr),
+          leaveHandler(nullptr), leaveReceiver(nullptr),
+          mouseMoveHandler(nullptr), mouseMoveReceiver(nullptr),
+          mousePressHandler(nullptr), mousePressReceiver(nullptr),
+          mouseReleaseHandler(nullptr), mouseReleaseReceiver(nullptr),
+          keyPressHandler(nullptr), keyPressReceiver(nullptr),
+          keyReleaseHandler(nullptr), keyReleaseReceiver(nullptr),
+          wheelHandler(nullptr), wheelReceiver(nullptr),
+          destroyHandler(nullptr), destroyReceiver(nullptr),
+          showHandler(nullptr), showReceiver(nullptr),
+          hideHandler(nullptr), hideReceiver(nullptr),
+          closeHandler(nullptr), closeReceiver(nullptr),
+          getFocusHandler(nullptr), getFocusReceiver(nullptr),
+          loseFocusHandler(nullptr), loseFocusReceiver(nullptr),
+          editCompletedHandler(nullptr), editCompletedReceiver(nullptr)
+    {
+    }
+    
+    ~MockControl() {
+        // Qt handles widget cleanup
+    }
+};
+
+struct MockEdit {
+    QLineEdit* edit;
+
+    // PCL objects:
+    void* pclEdit;               // pcl::Edit* (used as hSender)
+    void* editCompletedReceiver; // pcl::Control* (NumericControl etc.)
+
+    pcl::event_routine editCompletedHandler;
+    pcl::range_event_routine caretPositionUpdatedHandler;
+    control_handle caretPositionUpdatedReceiver;
+    pcl::range_event_routine selectionUpdatedHandler;
+    control_handle selectionUpdatedReceiver;
+
+};
+
+struct MockImage {
+    uint32_t width;
+    uint32_t height;
+    uint32_t channels;
+    uint32_t bitsPerSample;
+    bool isFloat;
+    uint32_t colorSpace;
+    void** pixelData;    // Array of channel pointers
+    double* stats;       // Min/max values per channel
+};
+
+struct MockFileInstance {
+    std::string path;
+    std::string extension;
+    uint32_t selectedImage; // index of selected image
+    std::vector<MockImage*> images; // images in the file
+};
+
+struct MockGroupBox {
+    QGroupBox* box;
+    api_handle clientHandle;
+
+    MockGroupBox() :
+        box(new QGroupBox()),
+        clientHandle(nullptr)
+    {
+    }
+
+    ~MockGroupBox() {
+        // QGroupBox is cleaned up by Qt parent ownership
+    }
+};
+
+struct MockTreeNode
+{
+    std::vector<String>          text;
+    std::vector<control_handle>  icon;
+    std::vector<String>          tooltip;
+
+    bool selected = false;
+
+    explicit MockTreeNode( int columns )
+    {
+        text.resize( columns );
+        icon.resize( columns, nullptr );
+        tooltip.resize( columns );
+    }
+};
+
+struct MockTreeBox : MockControl
+{
+    int columns = 1;
+    std::vector<MockTreeNode*> nodes;
+
+    control_handle viewport = nullptr;
+    QTreeWidget* tree = nullptr;
+
+    // Behavior flags we care about
+    bool multipleSelection = false;
+    bool uniformRowHeight = false;
+
+    bool multipleSelections = false;
+    bool rootDecoration     = false;
+    bool alternateRowColor  = false;
+
+    MockTreeBox() = default;
+
+    ~MockTreeBox()
+    {
+        for ( MockTreeNode* n : nodes )
+            delete n;
+    }
+};
+
+struct MockLabel {
+    QLabel* label;
+    api_handle clientHandle;
+    
+    MockLabel(const char16_type* text = nullptr) 
+        : label(new QLabel()),
+          clientHandle(nullptr)
+    {
+        if (text && *text) {
+            label->setText(QString::fromUtf16(reinterpret_cast<const ushort*>(text)));
+        }
+    }
+    
+    ~MockLabel() {
+        // Qt parent ownership handles deletion
+    }
+};
+
+static std::map<control_handle, MockLabel*> g_label_map;
+static std::map<control_handle, MockTreeBox*> g_treebox_map;
+static std::map<control_handle, MockGroupBox*> g_groupbox_map;
+static std::map<const_control_handle, MockControl*> g_control_map;
+static std::map<control_handle, MockEdit*> g_edit_map;
+static std::map<file_format_handle, MockFileInstance*> g_file_instances;
+static std::map<image_handle, MockImage*> g_image_map;
+static void* g_module_handle = nullptr;
+
+std::string GetFileExtension(const std::string& path) {
+    size_t pos = path.find_last_of('.');
+    if (pos != std::string::npos) {
+        std::string ext = path.substr(pos);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        return ext;
+    }
+    return "";
+}
+
+MockControl* GetControlBox(const_control_handle h)
+{
+    if (!h)
+        return nullptr;
+
+    auto it = g_control_map.find(h);
+    if (it == g_control_map.end())
+        return nullptr;
+
+    return it->second;
+}
+
+// ============================================================================
+// ControlContext (3 functions)
+// ============================================================================
+
+class ControlEventFilter : public QObject {
+    Q_OBJECT
+    
+public:
+    control_handle controlHandle;
+    MockControl* mockControl;
+    
+    ControlEventFilter(control_handle handle, MockControl* ctrl, QObject* parent = nullptr)
+        : QObject(parent), controlHandle(handle), mockControl(ctrl)
+    {
+    }
+    
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override {
+        if (!mockControl) {
+            // No mock control, just pass through
+            return QObject::eventFilter(obj, event);
+        }
+
+        switch (event->type()) {
+            case QEvent::Paint:
+                if (mockControl->paintHandler && mockControl->paintReceiver) {
+                    QPaintEvent* pe = static_cast<QPaintEvent*>(event);
+                    mockControl->paintHandler(mockControl->paintReceiver, controlHandle,
+                        pe->rect().x(), pe->rect().y(), 
+                        pe->rect().width(), pe->rect().height());
+                    return false; // Let Qt handle default painting too
+                }
+                break;
+                
+            case QEvent::Resize:
+                if (mockControl->resizeHandler && mockControl->resizeReceiver) {
+                    QResizeEvent* re = static_cast<QResizeEvent*>(event);
+                    mockControl->resizeHandler(mockControl->resizeReceiver, controlHandle,
+                        re->size().width(), re->size().height(),
+                        re->oldSize().width(), re->oldSize().height());
+                }
+                break;
+                
+            case QEvent::Enter:
+                if (mockControl->enterHandler && mockControl->enterReceiver) {
+                    mockControl->enterHandler(mockControl->enterReceiver, controlHandle);
+                }
+                break;
+                
+            case QEvent::Leave:
+                if (mockControl->leaveHandler && mockControl->leaveReceiver) {
+                    mockControl->leaveHandler(mockControl->leaveReceiver, controlHandle);
+                }
+                break;
+                
+            case QEvent::MouseMove:
+                if (mockControl->mouseMoveHandler && mockControl->mouseMoveReceiver) {
+                    QMouseEvent* me = static_cast<QMouseEvent*>(event);
+                    mockControl->mouseMoveHandler(mockControl->mouseMoveReceiver, controlHandle,
+                        me->x(), me->y(),
+                        static_cast<uint32>(me->buttons()),
+                        static_cast<uint32>(me->modifiers()));
+                }
+                break;
+                
+            case QEvent::MouseButtonPress:
+                if (mockControl->mousePressHandler && mockControl->mousePressReceiver) {
+                    QMouseEvent* me = static_cast<QMouseEvent*>(event);
+                    mockControl->mousePressHandler(mockControl->mousePressReceiver, controlHandle,
+                        me->x(), me->y(),
+                        static_cast<uint32>(me->button()),
+                        static_cast<uint32>(me->buttons()),
+                        static_cast<uint32>(me->modifiers()));
+                }
+                break;
+                
+            case QEvent::MouseButtonRelease:
+                if (mockControl->mouseReleaseHandler && mockControl->mouseReleaseReceiver) {
+                    QMouseEvent* me = static_cast<QMouseEvent*>(event);
+                    mockControl->mouseReleaseHandler(mockControl->mouseReleaseReceiver, controlHandle,
+                        me->x(), me->y(),
+                        static_cast<uint32>(me->button()),
+                        static_cast<uint32>(me->buttons()),
+                        static_cast<uint32>(me->modifiers()));
+                }
+                break;
+                
+            case QEvent::KeyPress:
+                if (mockControl->keyPressHandler && mockControl->keyPressReceiver) {
+                    QKeyEvent* ke = static_cast<QKeyEvent*>(event);
+                    mockControl->keyPressHandler(mockControl->keyPressReceiver, controlHandle,
+                        ke->key(),
+                        static_cast<uint32>(ke->modifiers()));
+                }
+                break;
+                
+            case QEvent::KeyRelease:
+                if (mockControl->keyReleaseHandler && mockControl->keyReleaseReceiver) {
+                    QKeyEvent* ke = static_cast<QKeyEvent*>(event);
+                    mockControl->keyReleaseHandler(mockControl->keyReleaseReceiver, controlHandle,
+                        ke->key(),
+                        static_cast<uint32>(ke->modifiers()));
+                }
+                break;
+                
+            case QEvent::Wheel:
+                if (mockControl->wheelHandler && mockControl->wheelReceiver) {
+                    QWheelEvent* we = static_cast<QWheelEvent*>(event);
+                    mockControl->wheelHandler(mockControl->wheelReceiver, controlHandle,
+                        we->position().x(), we->position().y(),
+                        we->angleDelta().y(),
+                        static_cast<uint32>(we->buttons()),
+                        static_cast<uint32>(we->modifiers()));
+                }
+                break;
+                
+            default:
+                break;
+        }
+        
+        return QObject::eventFilter(obj, event);
+    }
+};
+
+static void EnableEvents(control_handle handle, MockControl* ctrl) {
+    if (!ctrl) {
+        LogDebug("EnableEvents: null ctrl");
+        return;
+    }
+    
+    if (!ctrl->widget) {
+        LogDebug("EnableEvents: null widget - this shouldn't happen");
+        return;
+    }
+    
+    // Check if we already have an event filter installed
+    QObjectList children = ctrl->widget->children();
+    for (QObject* child : children) {
+        if (ControlEventFilter* existingFilter = dynamic_cast<ControlEventFilter*>(child)) {
+            LogDebug("EnableEvents: event filter already exists, updating");
+            existingFilter->mockControl = ctrl;
+            existingFilter->controlHandle = handle;
+            return;
+        }
+    }
+    
+    LogDebug("EnableEvents: installing new event filter on widget");
+    
+    // Create and install an event filter
+    // Set the widget as parent so it gets cleaned up automatically
+    ControlEventFilter* filter = new ControlEventFilter(handle, ctrl, ctrl->widget);
+    ctrl->widget->installEventFilter(filter);
+    
+    LogDebug("EnableEvents: event filter installed successfully");
+}
+
+// ControlContext::GetControlCursor
+// From: ControlContext::GetControlCursor (old.cpp lines 3167-3180)
+cursor_handle ControlContext::GetControlCursor(const_control_handle handle)
+{
+    if (!handle) return api_false;
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return api_false;
+    QWidget* widget = wdg->widget;
+    
+    // Map Qt cursor to PCL cursor shape
+    Qt::CursorShape shape = widget->cursor().shape();
+    return reinterpret_cast<cursor_handle>(shape);
+}
+
+// ControlContext::SetDestroyEventRoutine
+// From: ControlContext::SetDestroyEventRoutine (old.cpp lines 740-762)
+api_bool ControlContext::SetDestroyEventRoutine(control_handle handle, control_handle receiver,
+                                            pcl::control_event_routine handler)
+{
+    LogDbg("SetDestroyEventRoutine called");
+    
+    auto it = g_control_map.find(handle);
+    if (it == g_control_map.end()) return api_false;
+    
+    MockControl* ctrl = it->second;
+    ctrl->destroyHandler = handler;
+    ctrl->destroyReceiver = receiver;
+    
+    if (handler) {
+        QObject::connect(ctrl->widget, &QObject::destroyed, [ctrl, handle]() {
+            if (ctrl->destroyHandler && ctrl->destroyReceiver) {
+                ctrl->destroyHandler(ctrl->destroyReceiver, handle);
+            }
+        });
+    }
+    
+    return api_true;
+}
+
+// ControlContext::SetMoveEventRoutine
+// From: ControlContext::SetMoveEventRoutine (old.cpp lines 900-915)
+api_bool ControlContext::SetMoveEventRoutine(control_handle handle, control_handle receiver,
+                                         pcl::move_event_routine handler)
+{
+    LogDbg("SetMoveEventRoutine called");
+    
+    auto it = g_control_map.find(handle);
+    if (it == g_control_map.end()) return api_false;
+    
+    MockControl* ctrl = it->second;
+    ctrl->moveHandler = handler;
+    ctrl->moveReceiver = receiver;
+    
+    EnableEvents(handle, ctrl);
+    return api_true;
+}
+
+
+// ============================================================================
+// EditContext (4 functions)
+// ============================================================================
+
+// EditContext::GetEditSelectedText
+// From: EditContext::GetEditSelectedText (old.cpp lines 11358-11390)
+api_bool EditContext::GetEditSelectedText(const_control_handle handle,
+                                      char16_type* text,
+                                      size_type* len)
+{
+    LogDbg("API_Edit_GetEditSelectedText called");
+
+    auto it = g_edit_map.find(const_cast<control_handle>(handle));
+    if (it == g_edit_map.end()) {
+        if (len) *len = 0;
+        return api_false;
+    }
+
+    MockEdit* edit = it->second;
+    QString qsel = edit->edit->selectedText();
+    std::u16string u16 = qsel.toStdU16String();
+
+    if (!text) {
+        if (len) *len = u16.length();
+        return api_true;
+    }
+
+    if (!len || *len == 0) {
+        return api_false;
+    }
+
+    size_type copyLen = std::min(*len - 1, (size_type)u16.length());
+    std::memcpy(text, u16.c_str(), copyLen * sizeof(char16_type));
+    text[copyLen] = 0;
+    *len = copyLen;
+
+    return api_true;
+}
+
+// EditContext::GetEditValid
+// From: EditContext::GetEditValid (old.cpp lines 11200-11216)
+api_bool EditContext::GetEditValid(const_control_handle handle)
+{
+    LogDbg("API_Edit_GetEditValid called");
+
+    auto it = g_edit_map.find(const_cast<control_handle>(handle));
+    if (it == g_edit_map.end())
+        return api_false;
+
+    MockEdit* edit = it->second;
+    QLineEdit* w = edit->edit;
+
+    if (!w->validator())
+        return api_true; // No validator → always valid
+
+    return w->hasAcceptableInput() ? api_true : api_false;
+}
+
+// EditContext::SetCaretPositionUpdatedEventRoutine
+// From: EditContext::SetCaretPositionUpdatedEventRoutine (old.cpp lines 11505-11535)
+api_bool EditContext::SetCaretPositionUpdatedEventRoutine(
+        control_handle handle,
+        control_handle receiver,
+        pcl::range_event_routine routine )
+{
+    LogDbg("API_Edit_SetCaretPositionUpdatedEventRoutine called");
+
+    auto it = g_edit_map.find(handle);
+    if (it == g_edit_map.end()) return api_false;
+
+    MockEdit* edit = it->second;
+    edit->caretPositionUpdatedHandler  = routine;
+    edit->caretPositionUpdatedReceiver = receiver;
+
+    QLineEdit* w = edit->edit;
+
+    if (routine)
+        QObject::connect(w, &QLineEdit::cursorPositionChanged,
+            [edit, w](int oldPos, int newPos) {
+                if (edit->caretPositionUpdatedHandler && edit->caretPositionUpdatedReceiver) {
+                    control_handle h = reinterpret_cast<control_handle>(w);
+                    edit->caretPositionUpdatedHandler(edit->caretPositionUpdatedReceiver,
+                                                      h,
+                                                      oldPos,
+                                                      newPos);
+                }
+            });
+
+    return api_true;
+}
+
+// EditContext::SetSelectionUpdatedEventRoutine
+// From: EditContext::SetSelectionUpdatedEventRoutine (old.cpp lines 11537-11569)
+api_bool EditContext::SetSelectionUpdatedEventRoutine(
+        control_handle handle,
+        control_handle receiver,
+        pcl::range_event_routine routine )
+{
+    LogDbg("API_Edit_SetSelectionUpdatedEventRoutine called");
+
+    auto it = g_edit_map.find(handle);
+    if (it == g_edit_map.end()) return api_false;
+
+    MockEdit* edit = it->second;
+    edit->selectionUpdatedHandler  = routine;
+    edit->selectionUpdatedReceiver = receiver;
+
+    QLineEdit* w = edit->edit;
+
+    if (routine)
+        QObject::connect(w, &QLineEdit::selectionChanged,
+            [edit, w]() {
+                if (edit->selectionUpdatedHandler && edit->selectionUpdatedReceiver) {
+                    control_handle h = reinterpret_cast<control_handle>(w);
+                    int start = w->selectionStart();
+                    int len   = w->selectedText().length();
+                    edit->selectionUpdatedHandler(edit->selectionUpdatedReceiver,
+                                                  h,
+                                                  start,
+                                                  start + len);
+                }
+            });
+
+    return api_true;
+}
+
+
+// ============================================================================
+// FileFormatContext (3 functions)
+// ============================================================================
+
+std::string Utf16ToUtf8(const char16_type* utf16Str) {
+    if (!utf16Str) return "";
+    
+    // Simple direct conversion
+    std::string result;
+    const char16_t* src = reinterpret_cast<const char16_t*>(utf16Str);
+    while (*src) {
+        char16_t ch = *src++;
+        if (ch < 128) {
+            result += static_cast<char>(ch);
+        } else if (ch < 0x800) {
+            result += static_cast<char>(0xC0 | (ch >> 6));
+            result += static_cast<char>(0x80 | (ch & 0x3F));
+        } else {
+            result += static_cast<char>(0xE0 | (ch >> 12));
+            result += static_cast<char>(0x80 | ((ch >> 6) & 0x3F));
+            result += static_cast<char>(0x80 | (ch & 0x3F));
+        }
+    }
+    return result;
+}
+
+// FileFormatContext::CreateImage
+// From: FileFormatContext::CreateImage (old.cpp lines 6598-6796)
+api_bool FileFormatContext::CreateImage(file_format_handle handle, const api_image_info* info)
+{
+    if (!handle || !info) {
+        return api_false;
+    }
+    
+    auto it = g_file_instances.find(handle);
+    if (it == g_file_instances.end()) {
+        return api_false;
+    }
+    
+    // Create a new image
+    MockImage* img = new MockImage();
+    img->width = info->width;
+    img->height = info->height;
+    img->channels = info->numberOfChannels;
+    img->bitsPerSample = 32; // Default to 32-bit float
+    img->isFloat = true;
+    img->colorSpace = info->colorSpace;
+    
+    // Allocate pixel data
+    img->pixelData = new void*[img->channels];
+    for (uint32_t i = 0; i < img->channels; i++) {
+        img->pixelData[i] = calloc(img->width * img->height, sizeof(float));
+    }
+    
+    // Create stats
+    img->stats = new double[img->channels * 2];
+    for (uint32_t i = 0; i < img->channels; i++) {
+        img->stats[i*2] = 0.0;     // min
+        img->stats[i*2+1] = 1.0;   // max
+    }
+    
+    // Add to the file's image list
+    it->second->images.push_back(img);
+    it->second->selectedImage = it->second->images.size() - 1;
+    
+    return api_true;
+}
+
+// Write image data to the file
+api_bool WriteImagePixelData(file_format_handle handle, const_image_handle image) {
+    if (!handle || !image) {
+        return api_false;
+    }
+    
+    auto it = g_file_instances.find(handle);
+    if (it == g_file_instances.end() || 
+        it->second->selectedImage >= it->second->images.size()) {
+        return api_false;
+    }
+    
+    // Get the target image in the file
+    MockImage* dstImg = it->second->images[it->second->selectedImage];
+    
+    // Get the source image
+    auto img_it = g_image_map.find((image_handle)image);
+    if (img_it == g_image_map.end()) {
+        return api_false;
+    }
+    
+    MockImage* srcImg = img_it->second;
+    
+    // Check compatibility
+    if (dstImg->width != srcImg->width || 
+        dstImg->height != srcImg->height || 
+        dstImg->channels != srcImg->channels) {
+        return api_false;
+    }
+    
+    // Copy pixel data
+    for (uint32_t i = 0; i < srcImg->channels; i++) {
+        size_t pixelCount = srcImg->width * srcImg->height;
+        size_t bytesPerSample = (srcImg->bitsPerSample <= 8) ? 1 : 
+                               ((srcImg->bitsPerSample <= 16) ? 2 : 
+                               ((srcImg->bitsPerSample <= 32) ? 4 : 8));
+        
+        memcpy(dstImg->pixelData[i], srcImg->pixelData[i], pixelCount * bytesPerSample);
+    }
+    
+    // Copy stats
+    for (uint32_t i = 0; i < srcImg->channels; i++) {
+        dstImg->stats[i*2] = srcImg->stats[i*2];        // min
+        dstImg->stats[i*2+1] = srcImg->stats[i*2+1];    // max
+    }
+    
+    return api_true;
+}
+
+api_bool FileFormatContext::WriteImage(file_format_handle handle, const_image_handle image) {
+    if (!handle || !image) {
+        return api_false;
+    }
+    
+    auto it = g_file_instances.find(handle);
+    if (it == g_file_instances.end()) {
+        return api_false;
+    }
+    
+    MockFileInstance* instance = it->second;
+    
+    std::string extension = GetFileExtension(instance->path);
+    bool isXISF = (extension == ".xisf");
+    
+    if (isXISF) {
+	LogDbg("WriteImage: Using XISF writer for: " + instance->path);
+
+	// Get the MockImage
+	auto img_it = g_image_map.find((image_handle)image);
+	if (img_it == g_image_map.end()) {
+	    LogDbg("WriteImage: Image not found in map");
+	    return api_false;
+	}
+
+	MockImage* mockImg = img_it->second;
+
+	LogDbg("WriteImage: MockImage is " + 
+		 std::to_string(mockImg->width) + "x" + 
+		 std::to_string(mockImg->height) + ", " +
+		 std::to_string(mockImg->channels) + " channels");
+
+	if (!mockImg->pixelData) {
+	    LogDbg("WriteImage: pixelData is NULL!");
+	    return api_false;
+	}
+
+	try {
+	    // Determine color space
+	    pcl::ColorSpace::value_type colorSpace;
+	    if (mockImg->channels == 1) {
+		colorSpace = pcl::ColorSpace::Gray;
+	    } else if (mockImg->channels == 3) {
+		colorSpace = pcl::ColorSpace::RGB;
+	    } else {
+		colorSpace = pcl::ColorSpace::RGB; // Default for other cases
+	    }
+
+	    // Create a PCL image with correct constructor
+	    pcl::FImage outputImage(mockImg->width, mockImg->height, colorSpace);
+
+	    // If we need more channels than the color space provides, allocate them
+	    if (mockImg->channels > outputImage.NumberOfChannels()) {
+		outputImage.AllocateData(mockImg->width, mockImg->height, mockImg->channels, colorSpace);
+	    }
+
+	    for (uint32_t c = 0; c < mockImg->channels; c++) {
+		if (!mockImg->pixelData[c]) {
+		    LogDbg("WriteImage: Channel " + std::to_string(c) + " is NULL!");
+		    return api_false;
+		}
+
+		memcpy(outputImage.PixelData(c), 
+		       mockImg->pixelData[c], 
+		       mockImg->width * mockImg->height * sizeof(float));
+	    }
+
+	    pcl::XISFWriter xisfWriter;
+	    pcl::XISFOptions xisfOptions;
+	    xisfOptions.verbosity = 2;
+	    xisfWriter.SetOptions(xisfOptions);
+
+	    xisfWriter.Create(pcl::String(instance->path.c_str()), 1);
+
+	    pcl::ImageOptions imgOptions;
+	    imgOptions.bitsPerSample = 32;
+	    imgOptions.ieeefpSampleFormat = true;
+	    xisfWriter.SetImageOptions(imgOptions);
+
+	    xisfWriter.WriteImage(outputImage);
+
+	    xisfWriter.Close();
+	    LogDbg("WriteImage: Successfully wrote XISF file");
+	    return api_true;
+
+	} catch (const std::exception& e) {
+	    LogDbg("WriteImage: Exception: " + std::string(e.what()));
+	    return api_false;
+	}
+    }    
+    return api_false;
+}  
+  
+// Set the RGB working space for an image in a file
+api_bool SetImageRGBWS(file_format_handle handle, const api_RGBWS* rgbws) {
+    if (!handle || !rgbws) {
+        LogDbg("SetImageRGBWS: Invalid handle or RGBWS data");
+        return api_false;
+    }
+    
+    LogDbg("SetImageRGBWS: Setting RGB working space");
+    
+    // In a real implementation, you would store the RGBWS data
+    // For the mock, we'll just return success
+    return api_true;
+}
+
+// FileFormatContext::CreateImageFile
+// From: FileFormatContext::CreateImageFile (old.cpp lines 6534-6553)
+api_bool FileFormatContext::CreateImageFile(file_format_handle handle, const char16_type* filePath, 
+                        uint32 hints)
+{
+    if (!handle || !filePath) {
+        return api_false;
+    }
+    
+    std::string path = Utf16ToUtf8(filePath);
+    LogDbg("CreateImageFile called for: " + path);
+    
+    auto it = g_file_instances.find(handle);
+    if (it == g_file_instances.end()) {
+        return api_false;
+    }
+    
+    // Store file path
+    it->second->path = path;
+    
+    return api_true;
+}
+
+// Create a new file with extended options
+api_bool FileFormatContext::CreateImageFileEx(file_format_handle handle, const char16_type* filePath, 
+                          uint32 count, const char* hints, uint32 flags) {
+    if (!handle || !filePath) {
+        return api_false;
+    }
+    
+    std::string path = Utf16ToUtf8(filePath);
+    LogDbg("CreateImageFileEx called for: " + path + " with count: " + std::to_string(count) +
+             " and flags: " + std::to_string(flags));
+    
+    auto it = g_file_instances.find(handle);
+    if (it == g_file_instances.end()) {
+        return api_false;
+    }
+    
+    // Store file path
+    it->second->path = path;
+    
+    // Clear any existing images
+    for (MockImage* img : it->second->images) {
+        // Free pixel data for each channel
+        for (uint32_t i = 0; i < img->channels; i++) {
+            free(img->pixelData[i]);
+        }
+        
+        delete[] img->pixelData;
+        delete[] img->stats;
+        delete img;
+    }
+    
+    it->second->images.clear();
+    it->second->selectedImage = 0;
+    
+    // Pre-allocate space for the requested number of images
+    // (we won't create them yet - they'll be created when FileCreateImage is called)
+    LogDbg("CreateImageFileEx: Prepared for " + std::to_string(count) + " images");
+    
+    return api_true;
+}
+
+// ============================================================================
+// GroupBoxContext (2 functions)
+// ============================================================================
+
+// GroupBoxContext::GetGroupBoxChecked
+// From: GroupBoxContext::GetGroupBoxChecked (old.cpp lines 10900-10911)
+api_bool GroupBoxContext::GetGroupBoxChecked(const_control_handle handle)
+{
+    LogDbg("API_GroupBox_GetGroupBoxChecked called");
+
+    auto it = g_groupbox_map.find(const_cast<control_handle>(handle));
+
+    if (it == g_groupbox_map.end())
+        return api_false;
+
+    return it->second->box->isChecked() ? api_true : api_false;
+}
+
+// GroupBoxContext::GetGroupBoxTitle
+// From: GroupBoxContext::GetGroupBoxTitle (old.cpp lines 10836-10868)
+api_bool GroupBoxContext::GetGroupBoxTitle(
+        const_control_handle handle,
+        char16_type* text,
+        size_type* len)
+{
+    LogDbg("API_GroupBox_GetGroupBoxTitle called");
+
+    auto it = g_groupbox_map.find(const_cast<control_handle>(handle));
+
+    if (it == g_groupbox_map.end()) {
+        if (len) *len = 0;
+        return api_false;
+    }
+
+    QString title = it->second->box->title();
+    std::u16string u16 = title.toStdU16String();
+
+    if (!text) {
+        if (len) *len = u16.length();
+        return api_true;
+    }
+
+    if (!len || *len == 0)
+        return api_false;
+
+    size_type copyLen = std::min(*len - 1, (size_type)u16.length());
+    memcpy(text, u16.c_str(), copyLen * sizeof(char16_type));
+    text[copyLen] = 0;
+    *len = copyLen;
+
+    return api_true;
+}
+
+
+// ============================================================================
+// LabelContext (1 functions)
+// ============================================================================
+
+// LabelContext::GetLabelWordWrapping
+// From: LabelContext::GetLabelWordWrapping (old.cpp lines 3354-3365)
+api_bool LabelContext::GetLabelWordWrappingEnabled(const_control_handle handle)
+{
+    LogDebug("GetLabelWordWrapping called");
+    
+    auto it = g_label_map.find(const_cast<control_handle>(handle));
+    if (it == g_label_map.end()) {
+        return api_false;
+    }
+    
+    return it->second->label->wordWrap() ? api_true : api_false;
+}
+
+
+// ============================================================================
+// NumericalContext (2 functions)
+// ============================================================================
+
+// NumericalContext::FFTInverseComplexTransformD
+// From: NumericalContext::FFTInverseComplexTransformD (old.cpp lines 1543-1573)
+api_bool NumericalContext::FFTComplexInverseTransformD(fft_handle handle, void* y0, const void* x0)
+{
+    if (!handle || !y0 || !x0) return api_false;
+
+    dcomplex *y = (dcomplex *)y0;
+    const dcomplex* x = (const dcomplex *) x0;
+    LogDebug("FFTInverseComplexTransformD called with handle " + std::to_string((uintptr_t)handle));
+    
+    auto it = g_fftw_plans.find(handle);
+    if (it == g_fftw_plans.end() || it->second->isReal) {
+        LogDebug("FFTInverseComplexTransformD: Invalid handle or not complex transform");
+        return api_false;
+    }
+    
+    FFTWPlanWrapper* wrapper = it->second;
+    int n = wrapper->size;
+    
+    // Copy input data to FFTW buffer
+    for (int i = 0; i < n; i++) {
+        wrapper->complexIn[i][0] = x[i].Real();
+        wrapper->complexIn[i][1] = x[i].Imag();
+    }
+    
+    // Execute inverse plan
+    fftw_execute(wrapper->inversePlan);
+    
+    // Copy results to output array and normalize
+    for (int i = 0; i < n; i++) {
+        y[i] = dcomplex(wrapper->complexOut[i][0] / n, wrapper->complexOut[i][1] / n);
+    }
+    
+    return api_true;
+}
+
+// NumericalContext::FFTInverseRealTransformD
+// From: NumericalContext::FFTInverseRealTransformD (old.cpp lines 1473-3563)
+api_bool NumericalContext::FFTRealInverseTransformD(fft_handle handle, double* x, const void* y0)
+{
+    const dcomplex *y = (const dcomplex *)y0;
+    if (!handle || !y || !x) return api_false;
+
+    LogDebug("FFTInverseRealTransformD called with handle " + std::to_string((uintptr_t)handle));
+    
+    auto it = g_fftw_plans.find(handle);
+    if (it == g_fftw_plans.end() || !it->second->isReal) {
+        LogDebug("FFTInverseRealTransformD: Invalid handle or not real transform");
+        return api_false;
+    }
+    
+    FFTWPlanWrapper* wrapper = it->second;
+    int n = wrapper->size;
+    
+    // Copy input data to FFTW buffer
+    for (int i = 0; i < n/2 + 1; i++) {
+        wrapper->complexIn[i][0] = y[i].Real();
+        wrapper->complexIn[i][1] = y[i].Imag();
+    }
+    
+    // Execute inverse plan
+    fftw_execute(wrapper->inversePlan);
+    
+    // Copy results to output array
+    // FFTW unnormalized results need to be divided by n
+    memcpy(x, wrapper->realOut, sizeof(double) * n);
+    
+    // Normalize (FFTW doesn't normalize automatically)
+    for (int i = 0; i < n; i++) {
+        x[i] /= n;
+    }
+    
+    return api_true;
+}
+
+// Forward complex transform (complex to complex)
+api_bool NumericalContext::FFTComplexTransformD(fft_handle handle, void* y0, const void *x0) {
+    const dcomplex *x = (const dcomplex *)x0;
+    dcomplex *y = (dcomplex *)y0;
+    if (!handle || !y || !x) return api_false;
+    LogDebug("FFTComplexTransformD called with handle " + std::to_string((uintptr_t)handle));
+    
+    auto it = g_fftw_plans.find(handle);
+    if (it == g_fftw_plans.end() || it->second->isReal) {
+        LogDebug("FFTComplexTransformD: Invalid handle or not complex transform");
+        return api_false;
+    }
+    
+    FFTWPlanWrapper* wrapper = it->second;
+    int n = wrapper->size;
+    
+    // Copy input data to FFTW buffer
+    for (int i = 0; i < n; i++) {
+        wrapper->complexIn[i][0] = x[i].Real();
+        wrapper->complexIn[i][1] = x[i].Imag();
+    }
+    
+    // Execute forward plan
+    fftw_execute(wrapper->forwardPlan);
+    
+    // Copy results to output array
+    for (int i = 0; i < n; i++) {
+        y[i] = dcomplex(wrapper->complexOut[i][0], wrapper->complexOut[i][1]);
+    }
+    
+    return api_true;
+}
+
+/*
+// Inverse complex transform (complex to complex)
+api_bool NumericalContext::FFTComplexInverseTransformD(fft_handle handle, void *y0, const void *x0) {
+    if (!handle || !y || !x) return api_false;
+
+    dcomplex *y = (dcomplex *)y0;
+    dcomplex *x = (dcomplex *)x0;
+    LogDebug("FFTInverseComplexTransformD called with handle " + std::to_string((uintptr_t)handle));
+    
+    auto it = g_fftw_plans.find(handle);
+    if (it == g_fftw_plans.end() || it->second->isReal) {
+        LogDebug("FFTInverseComplexTransformD: Invalid handle or not complex transform");
+        return api_false;
+    }
+    
+    FFTWPlanWrapper* wrapper = it->second;
+    int n = wrapper->size;
+    
+    // Copy input data to FFTW buffer
+    for (int i = 0; i < n; i++) {
+        wrapper->complexIn[i][0] = x[i].Real();
+        wrapper->complexIn[i][1] = x[i].Imag();
+    }
+    
+    // Execute inverse plan
+    fftw_execute(wrapper->inversePlan);
+    
+    // Copy results to output array and normalize
+    for (int i = 0; i < n; i++) {
+        y[i] = dcomplex(wrapper->complexOut[i][0] / n, wrapper->complexOut[i][1] / n);
+    }
+    
+    return api_true;
+}
+
+// Another naming convention for inverse complex transform (alias for FFTInverseComplexTransformD)
+api_bool NumericalContext::FFTComplexInverseTransformD(void* handle, dcomplex* y, const dcomplex* x) {
+    LogDebug("FFTComplexInverseTransformD called (alias for FFTInverseComplexTransformD)");
+    // Simply delegate to the existing implementation
+    return NumericalContext::FFTInverseComplexTransformD(handle, y, x);
+}  
+*/
+
+// Don't forget to call this at program exit
+void ShutdownFFTFunctions() {
+    CleanupFFTW();
+}
+
+// Call this in your InitializeMockAPI function
+void InitializeMockAPI() {
+    
+    LogDebug("Mock API initialized");
+}  
+
+// Set the module handle
+void SetModuleHandle(void* handle) {
+    g_module_handle = handle;
+    LogDebug("Module handle set to: " + std::to_string((uintptr_t)handle));
+}
+
+// Get the module handle
+void* GetModuleHandle() {
+    return g_module_handle;
+}
+
+// Set the log file
+void SetLogFile(const std::string& filename) {
+}
+
+// ----------------------------------------------------------------------------
+// Sizer Mock Implementation
+// ----------------------------------------------------------------------------
+/*
+// Helper to get or create MockControl for any widget
+static MockControl* GetOrCreateMockControl(control_handle handle) {
+    auto it = g_control_map.find(handle);
+    if (it != g_control_map.end()) {
+        return it->second;
+    }
+    
+    // Create new mock control for existing widget
+    QWidget* widget = reinterpret_cast<QWidget*>(handle);
+    MockControl* ctrl = new MockControl(widget);
+    g_control_map[handle] = ctrl;
+    return ctrl;
+}
+*/
+struct MockSizer {
+    QBoxLayout* layout;
+    bool vertical;
+    std::vector<QWidget*> widgets;
+    
+    MockSizer(bool vert) : vertical(vert) {
+        if (vert) {
+            layout = new QVBoxLayout();
+        } else {
+            layout = new QHBoxLayout();
+        }
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+    }
+    
+    ~MockSizer() {
+        // Don't delete layout - Qt parent ownership handles it
+        // Don't delete widgets - they're owned by their parents
+    }
+};
+
+// Global map to track sizers
+static std::map<sizer_handle, MockSizer*> g_sizer_map;
+
+// ----------------------------------------------------------------------------
+// SizerContext API
+// ----------------------------------------------------------------------------
+
+control_handle SizerContext::GetSizerParentControl(const_sizer_handle handle)
+{
+    LogDebug("GetSizerParentControl called");
+    
+    auto it = g_sizer_map.find(const_cast<sizer_handle>(handle));
+    if (it == g_sizer_map.end()) {
+        return nullptr;
+    }
+    
+    // Return the widget that owns this layout
+    QWidget* parent = it->second->layout->parentWidget();
+    return reinterpret_cast<control_handle>(parent);
+}
+
+api_bool SizerContext::GetSizerOrientation(const_sizer_handle handle)
+{
+    LogDebug("GetSizerOrientation called");
+    
+    auto it = g_sizer_map.find(const_cast<sizer_handle>(handle));
+    if (it == g_sizer_map.end()) {
+        return api_false;
+    }
+    
+    return it->second->vertical ? api_true : api_false;
+}
+
+int32 SizerContext::GetSizerCount(const_sizer_handle handle)
+{
+    LogDebug("GetSizerCount called");
+    
+    auto it = g_sizer_map.find(const_cast<sizer_handle>(handle));
+    if (it == g_sizer_map.end()) {
+        return 0;
+    }
+    
+    return it->second->layout->count();
+}
+
+void SizerContext::RemoveSizerControl(sizer_handle handle, control_handle control)
+{
+    LogDebug("RemoveSizerControl called");
+    
+    auto it = g_sizer_map.find(handle);
+    if (it == g_sizer_map.end()) {
+        return;
+    }
+    
+    QWidget* widget = reinterpret_cast<QWidget*>(control);
+    it->second->layout->removeWidget(widget);
+}
+
+int32 SizerContext::GetSizerMargin(const_sizer_handle handle)
+{
+    LogDebug("GetSizerMargin called");
+    
+    auto it = g_sizer_map.find(const_cast<sizer_handle>(handle));
+    if (it == g_sizer_map.end()) {
+        return 0;
+    }
+    
+    QMargins margins = it->second->layout->contentsMargins();
+    return margins.left(); // Return one margin value
+}
+
+int32 SizerContext::GetSizerSpacing(const_sizer_handle handle)
+{
+    LogDebug("GetSizerSpacing called");
+    
+    auto it = g_sizer_map.find(const_cast<sizer_handle>(handle));
+    if (it == g_sizer_map.end()) {
+        return 0;
+    }
+    
+    return it->second->layout->spacing();
+}
+
+// ----------------------------------------------------------------------------
+// Button Mock Implementation
+// ----------------------------------------------------------------------------
+
+struct MockButton {
+    QWidget* button;  // Could be QPushButton or QToolButton
+    bool isToolButton;
+    bool checkable;
+    bool checked;
+    
+    // Event handlers
+    api_handle clientHandle;
+    pcl::button_click_event_routine clickHandler;
+    void* clickReceiver;
+    
+    MockButton(bool toolBtn = false) 
+        : isToolButton(toolBtn), checkable(false), checked(false),
+          clientHandle(nullptr), clickHandler(nullptr), clickReceiver(nullptr)
+    {
+        if (toolBtn) {
+            button = new QToolButton();
+        } else {
+            button = new QPushButton();
+        }
+    }
+    
+    ~MockButton() {
+        // Qt parent ownership handles deletion
+    }
+};
+
+// Global map to track buttons
+static std::map<control_handle, MockButton*> g_button_map;
+
+// ----------------------------------------------------------------------------
+// SpinBox Mock Implementation
+// ----------------------------------------------------------------------------
+
+struct MockSpinBox {
+    QSpinBox* spinBox;
+    
+    // Event handlers
+    api_handle clientHandle;
+    pcl::value_event_routine valueHandler;
+    control_handle valueReceiver;
+    
+    // Range and value
+    int minValue;
+    int maxValue;
+    int currentValue;
+    
+    MockSpinBox() 
+        : spinBox(new QSpinBox()),
+          clientHandle(nullptr),
+          valueHandler(nullptr),
+          valueReceiver(nullptr),
+          minValue(0),
+          maxValue(100),
+          currentValue(0)
+    {
+        spinBox->setRange(minValue, maxValue);
+        spinBox->setValue(currentValue);
+    }
+    
+    ~MockSpinBox() {
+        // Qt parent ownership handles deletion
+    }
+};
+
+// Global map to track spinboxes
+static std::map<const_control_handle, MockSpinBox*> g_spinbox_map;
+
+// ----------------------------------------------------------------------------
+// SpinBoxContext API
+// ----------------------------------------------------------------------------
+
+int32 SpinBoxContext::GetSpinBoxStepSize(const_control_handle handle)
+{
+    LogDebug("GetSpinBoxStepSize called");
+    
+    auto it = g_spinbox_map.find(const_cast<control_handle>(handle));
+    if (it == g_spinbox_map.end()) {
+        return 1;
+    }
+    
+    return it->second->spinBox->singleStep();
+}
+
+api_bool SpinBoxContext::GetSpinBoxWrappingEnabled(const_control_handle handle)
+{
+    LogDebug("GetSpinBoxWrapping called");
+    
+    auto it = g_spinbox_map.find(const_cast<control_handle>(handle));
+    if (it == g_spinbox_map.end()) {
+        return api_false;
+    }
+    
+    return it->second->spinBox->wrapping() ? api_true : api_false;
+}
+
+void SpinBoxContext::SetSpinBoxWrappingEnabled(control_handle handle, api_bool wrapping)
+{
+    LogDebug("SetSpinBoxWrapping called, wrapping=" + std::to_string(wrapping));
+    
+    auto it = g_spinbox_map.find(handle);
+    if (it == g_spinbox_map.end()) {
+        return;
+    }
+    
+    it->second->spinBox->setWrapping(wrapping != 0);
+}
+
+api_bool SpinBoxContext::GetSpinBoxPrefix(const_control_handle handle, char16_type* prefix, size_type* len)
+{
+    LogDebug("GetSpinBoxPrefix called");
+    
+    auto it = g_spinbox_map.find(const_cast<control_handle>(handle));
+    if (it == g_spinbox_map.end()) {
+        if (len) *len = 0;
+        return api_false;
+    }
+    
+    QString qprefix = it->second->spinBox->prefix();
+    std::u16string u16prefix = qprefix.toStdU16String();
+    
+    if (prefix == nullptr) {
+        // Just return the length
+        if (len) *len = u16prefix.length();
+        return api_true;
+    }
+    
+    if (len && *len > 0) {
+        size_type copyLen = std::min(*len - 1, u16prefix.length());
+        std::memcpy(prefix, u16prefix.c_str(), copyLen * sizeof(char16_type));
+        prefix[copyLen] = 0;
+        *len = copyLen;
+    }
+    
+    return api_true;
+}
+
+void SpinBoxContext::SetSpinBoxPrefix(control_handle handle, const char16_type* prefix)
+{
+    LogDebug("SetSpinBoxPrefix called");
+    
+    auto it = g_spinbox_map.find(handle);
+    if (it == g_spinbox_map.end()) {
+        return;
+    }
+    
+    if (prefix) {
+        QString qprefix = QString::fromUtf16(reinterpret_cast<const ushort*>(prefix));
+        it->second->spinBox->setPrefix(qprefix);
+    } else {
+        it->second->spinBox->setPrefix(QString());
+    }
+}
+
+api_bool SpinBoxContext::GetSpinBoxSuffix(const_control_handle handle, char16_type* suffix, size_type* len)
+{
+    LogDebug("GetSpinBoxSuffix called");
+    
+    auto it = g_spinbox_map.find(const_cast<control_handle>(handle));
+    if (it == g_spinbox_map.end()) {
+        if (len) *len = 0;
+        return api_false;
+    }
+    
+    QString qsuffix = it->second->spinBox->suffix();
+    std::u16string u16suffix = qsuffix.toStdU16String();
+    
+    if (suffix == nullptr) {
+        // Just return the length
+        if (len) *len = u16suffix.length();
+        return api_true;
+    }
+    
+    if (len && *len > 0) {
+        size_type copyLen = std::min(*len - 1, u16suffix.length());
+        std::memcpy(suffix, u16suffix.c_str(), copyLen * sizeof(char16_type));
+        suffix[copyLen] = 0;
+        *len = copyLen;
+    }
+    
+    return api_true;
+}
+
+void SpinBoxContext::SetSpinBoxSuffix(control_handle handle, const char16_type* suffix)
+{
+    LogDebug("SetSpinBoxSuffix called");
+    
+    auto it = g_spinbox_map.find(handle);
+    if (it == g_spinbox_map.end()) {
+        return;
+    }
+    
+    if (suffix) {
+        QString qsuffix = QString::fromUtf16(reinterpret_cast<const ushort*>(suffix));
+        it->second->spinBox->setSuffix(qsuffix);
+    } else {
+        it->second->spinBox->setSuffix(QString());
+    }
+}
+
+api_bool SpinBoxContext::SetSpinBoxValueUpdatedEventRoutine(
+    control_handle handle,
+    control_handle receiver,
+    pcl::value_event_routine handler)
+{
+    LogDebug("SetSpinBoxValueUpdatedEventRoutine called");
+    /*
+    auto it = g_spinbox_map.find(handle);
+    if (it == g_spinbox_map.end())
+        return api_false;
+
+    MockSpinBox* mockSpin = it->second;
+    mockSpin->valueHandler  = handler;
+    mockSpin->valueReceiver = receiver;
+    
+    // Disconnect any existing connections
+    QObject::disconnect(mockSpin->spinBox, nullptr, nullptr, nullptr);
+
+    // Connect valueChanged signal
+    QObject::connect(
+        mockSpin->spinBox,
+        QOverload<int>::of(&QSpinBox::valueChanged),
+        [mockSpin](int value)
+        {
+            if (mockSpin->valueHandler && mockSpin->valueReceiver)
+            {
+                control_handle spinHandle =
+                    reinterpret_cast<control_handle>(mockSpin->spinBox);
+                mockSpin->valueHandler(mockSpin->valueReceiver, spinHandle, value);
+            }
+        });
+    */
+    return api_true;
+}
+
+/*
+int32 SpinBoxContext::GetSpinBoxMinEditWidth(const_control_handle handle)
+{
+    LogDebug("GetSpinBoxMinEditWidth called");
+    
+    auto it = g_spinbox_map.find(const_cast<control_handle>(handle));
+    if (it == g_spinbox_map.end()) {
+        return 0;
+    }
+    
+    return it->second->spinBox->minimumWidth();
+}
+
+void SpinBoxContext::SetSpinBoxMinEditWidth(control_handle handle, int32 width)
+{
+    LogDebug("SetSpinBoxMinEditWidth called, width=" + std::to_string(width));
+    
+    auto it = g_spinbox_map.find(handle);
+    if (it == g_spinbox_map.end()) {
+        return;
+    }
+    
+    it->second->spinBox->setMinimumWidth(width);
+}
+
+api_bool SpinBoxContext::IsSpinBoxReadOnly(const_control_handle handle)
+{
+    LogDebug("IsSpinBoxReadOnly called");
+    
+    auto it = g_spinbox_map.find(const_cast<control_handle>(handle));
+    if (it == g_spinbox_map.end()) {
+        return api_false;
+    }
+    
+    return it->second->spinBox->isReadOnly() ? api_true : api_false;
+}
+
+void SpinBoxContext::SetSpinBoxReadOnly(control_handle handle, api_bool readOnly)
+{
+    LogDebug("SetSpinBoxReadOnly called, readOnly=" + std::to_string(readOnly));
+    
+    auto it = g_spinbox_map.find(handle);
+    if (it == g_spinbox_map.end()) {
+        return;
+    }
+    
+    it->second->spinBox->setReadOnly(readOnly != 0);
+}
+*/
+
+// ----------------------------------------------------------------------------
+// ControlContext API
+// ----------------------------------------------------------------------------
+
+api_bool ControlContext::GetControlResourcePixelRatio(const_control_handle handle, double* ratio)
+{
+    LogDebug("GetControlResourcePixelRatio called");
+    
+    if (!handle) {
+        *ratio = 1.0;
+        return api_false;
+    }
+
+    MockControl* wdg = GetControlBox(handle);
+    
+    if (!ratio || !wdg) {
+        return api_false;
+    }
+    
+    QWidget* widget = wdg->widget;
+    
+    // Get the device pixel ratio from the widget's screen
+    QScreen* screen = widget->screen();
+    if (screen) {
+        *ratio = screen->devicePixelRatio();
+    } else {
+        // Fallback to primary screen
+        QScreen* primaryScreen = QGuiApplication::primaryScreen();
+        if (primaryScreen) {
+            *ratio = primaryScreen->devicePixelRatio();
+        } else {
+            *ratio = 1.0;
+        }
+    }
+
+    *ratio = 1.0;
+    return api_true;
+}
+/*
+static inline int SanitizeSize(int v)
+{
+    return (v < 0) ? 0 : v;   // or 1, but 0 is accepted and means "no min"
+}
+*/
+control_handle ControlContext::GetControlParent(const_control_handle handle)
+{
+    LogDebug("GetControlParent called");
+    
+    MockControl* wdg = GetControlBox(handle);
+    
+    if (!wdg) {
+        return api_false;
+    }
+    
+    QWidget* widget = wdg->widget;
+    QWidget* parent = widget->parentWidget();
+    
+    return reinterpret_cast<control_handle>(parent);
+}
+
+void ControlContext::SetControlParent(control_handle handle, control_handle parent)
+{
+    LogDebug("SetControlParent called");
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    QWidget* parentWidget = parent ? reinterpret_cast<QWidget*>(parent) : nullptr;
+    
+    widget->setParent(parentWidget);
+}
+
+void ControlContext::GetControlPosition(const_control_handle handle, int32* x, int32* y)
+{
+    if (!handle) {
+        if (x) *x = 0;
+        if (y) *y = 0;
+        return;
+    }
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    QPoint pos = widget->pos();
+    
+    if (x) *x = pos.x();
+    if (y) *y = pos.y();
+}
+
+void ControlContext::SetControlPosition(control_handle handle, int32 x, int32 y)
+{
+    LogDebug("SetControlPosition called, x=" + std::to_string(x) + ", y=" + std::to_string(y));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->move(x, y);
+}
+
+sizer_handle ControlContext::GetControlSizer(const_control_handle handle)
+{    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return nullptr;
+    QWidget* widget = wdg->widget;
+    QSize size = widget->size();
+    
+    int w = size.width();
+    int h = size.height();
+    return nullptr;
+}
+
+void ControlContext::SetControlSize(control_handle handle, int32 w, int32 h)
+{
+    LogDebug("SetControlSize called, w=" + std::to_string(w) + ", h=" + std::to_string(h));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->resize(w, h);
+}
+
+void ControlContext::GetControlMinSize(const_control_handle handle, int32* w, int32* h)
+{
+    if (!handle) {
+        if (w) *w = 0;
+        if (h) *h = 0;
+        return;
+    }
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    QSize size = widget->minimumSize();
+    
+    if (w) *w = size.width();
+    if (h) *h = size.height();
+}
+
+void ControlContext::GetControlMaxSize(const_control_handle handle, int32* w, int32* h)
+{
+    if (!handle) {
+        if (w) *w = 16777215; // Qt's default QWIDGETSIZE_MAX
+        if (h) *h = 16777215;
+        return;
+    }
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    QSize size = widget->maximumSize();
+    
+    if (w) *w = size.width();
+    if (h) *h = size.height();
+}
+
+void ControlContext::SetControlMaxSize(control_handle handle, int32 w, int32 h)
+{
+    LogDebug("SetControlMaxSize called, w=" + std::to_string(w) + ", h=" + std::to_string(h));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->setMaximumSize(w, h);
+}
+
+/*
+void ControlContext::SetControlScaledMinSize(control_handle handle, int32 w, int32 h)
+{
+    LogDebug("SetControlScaledMinSize called, w=" + std::to_string(w) + ", h=" + std::to_string(h));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    // In a real implementation, you'd scale by DPI
+    // For now, just set minimum size directly
+    int W = SanitizeSize(w);
+    int H = SanitizeSize(h);
+    
+    widget->setMinimumSize(W, H);
+}
+
+void ControlContext::SetControlScaledMaxSize(control_handle handle, int32 w, int32 h)
+{
+    LogDebug("SetControlScaledMaxSize called, w=" + std::to_string(w) + ", h=" + std::to_string(h));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->setMaximumSize(w, h);
+}
+
+void ControlContext::SetControlScaledFixedSize(control_handle handle, int32 w, int32 h)
+{
+    LogDebug("SetControlScaledFixedSize called, w=" + std::to_string(w) + ", h=" + std::to_string(h));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->setFixedSize(w, h);
+}
+
+void ControlContext::SetControlScaledMinWidth(control_handle handle, int32 w)
+{
+    LogDebug("SetControlScaledMinWidth called, w=" + std::to_string(w));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->setMinimumWidth(w);
+}
+
+void ControlContext::SetControlScaledMinHeight(control_handle handle, int32 h)
+{
+    LogDebug("SetControlScaledMinHeight called, h=" + std::to_string(h));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->setMinimumHeight(h);
+}
+*/
+api_bool ControlContext::GetControlVisible(const_control_handle handle)
+{
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return api_false;
+    QWidget* widget = wdg->widget;
+    return widget->isVisible() ? api_true : api_false;
+}
+/*
+void ControlContext::ShowControl(control_handle handle)
+{
+    LogDebug("ShowControl called");
+    
+    if (!handle && g_lastTopLevelControl) {
+        handle = g_lastTopLevelControl;
+    }
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    
+    QWidget* widget = wdg->widget;
+    widget->show();
+    widget->raise();
+    widget->activateWindow();
+}
+
+void ControlContext::HideControl(control_handle handle)
+{
+    LogDebug("HideControl called");
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->hide();
+}
+*/
+api_bool ControlContext::GetControlEnabled(const_control_handle handle)
+{
+    if (!handle) return api_false;
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return api_false;
+    QWidget* widget = wdg->widget;
+    return widget->isEnabled() ? api_true : api_false;
+}
+
+void ControlContext::SetControlEnabled(control_handle handle, api_bool enabled)
+{
+    LogDebug("SetControlEnabled called, enabled=" + std::to_string(enabled));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->setEnabled(enabled != 0);
+}
+/*
+void ControlContext::SetControlToolTip(control_handle handle, const char16_type* tooltip)
+{
+    if (!handle || !tooltip) return;
+    
+    std::string tipStr = Utf16ToUtf8(tooltip);
+    LogDebug("SetControlToolTip called");
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->setToolTip(QString::fromUtf16(reinterpret_cast<const ushort*>(tooltip)));
+}
+*/
+void ControlContext::SetControlFocusStyle(control_handle handle, int32 style)
+{
+    LogDebug("SetControlFocusStyle called, style=" + std::to_string(style));
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    
+    // Map PCL focus styles to Qt
+    // 0 = NoFocus, 1 = TabFocus, 2 = ClickFocus, 3 = StrongFocus
+    switch (style) {
+        case 0:
+            widget->setFocusPolicy(Qt::NoFocus);
+            break;
+        case 1:
+            widget->setFocusPolicy(Qt::TabFocus);
+            break;
+        case 2:
+            widget->setFocusPolicy(Qt::ClickFocus);
+            break;
+        case 3:
+            widget->setFocusPolicy(Qt::StrongFocus);
+            break;
+        default:
+            widget->setFocusPolicy(Qt::StrongFocus);
+    }
+}
+
+void ControlContext::RepaintControl(control_handle handle)
+{
+    LogDebug("RepaintControl called");
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->repaint();
+}
+/*
+void ControlContext::SetControlMouseTrackingEnabled(control_handle handle, api_bool status)
+{
+    LogDebug("EnableMouseTracking called");
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return;
+    QWidget* widget = wdg->widget;
+    widget->setMouseTracking(status);
+}
+
+cursor_handle ControlContext::GetControlCursor(const_control_handle handle)
+{
+    if (!handle || !cursorShape) return api_false;
+    
+    MockControl* wdg = GetControlBox(handle);
+    if (!wdg) return api_false;
+    QWidget* widget = wdg->widget;
+    
+    // Map Qt cursor to PCL cursor shape
+    Qt::CursorShape shape = widget->cursor().shape();
+    
+    return nullptr;
+}
+
+// ----------------------------------------------------------------------------
+// LabelContext API
+// ----------------------------------------------------------------------------
+
+control_handle LabelContext::CreateLabel(api_handle hModule, control_handle client, 
+                                     const char16_type* text, control_handle parent, uint32 flags)
+{
+    LogDebug("CreateLabel called");
+    
+    MockLabel* lbl = new MockLabel(text);
+    lbl->clientHandle = client;
+    
+    // Set parent if provided
+    if (parent) {
+        QWidget* parentWidget = reinterpret_cast<QWidget*>(parent);
+        lbl->label->setParent(parentWidget);
+    }
+    
+    control_handle handle = reinterpret_cast<control_handle>(lbl->label);
+    
+    g_label_map[handle] = lbl;
+    
+    return handle;
+}
+*/
+int32 LabelContext::GetLabelAlignment(const_control_handle handle)
+{
+    LogDebug("GetLabelTextAlignment called");
+    
+    auto it = g_label_map.find(const_cast<control_handle>(handle));
+    if (it == g_label_map.end()) {
+        return 0;
+    }
+    
+    Qt::Alignment align = it->second->label->alignment();
+    
+    // Convert Qt alignment to PCL alignment flags
+    int32 pclAlign = 0;
+    if (align & Qt::AlignLeft) pclAlign |= 0x01;
+    if (align & Qt::AlignRight) pclAlign |= 0x02;
+    if (align & Qt::AlignHCenter) pclAlign |= 0x04;
+    if (align & Qt::AlignTop) pclAlign |= 0x08;
+    if (align & Qt::AlignBottom) pclAlign |= 0x10;
+    if (align & Qt::AlignVCenter) pclAlign |= 0x20;
+    
+    return pclAlign;
+}
+/*
+void LabelContext::SetLabelAlignment(control_handle handle, int32 alignment)
+{
+    LogDebug("SetLabelTextAlignment called, alignment=" + std::to_string(alignment));
+    
+    auto it = g_label_map.find(handle);
+    if (it == g_label_map.end()) {
+        return;
+    }
+    
+    // Convert PCL alignment flags to Qt alignment
+    Qt::Alignment qtAlign = Qt::AlignLeft | Qt::AlignTop;
+    
+    if (alignment & 0x01) qtAlign |= Qt::AlignLeft;
+    if (alignment & 0x02) qtAlign |= Qt::AlignRight;
+    if (alignment & 0x04) qtAlign |= Qt::AlignHCenter;
+    if (alignment & 0x08) qtAlign |= Qt::AlignTop;
+    if (alignment & 0x10) qtAlign |= Qt::AlignBottom;
+    if (alignment & 0x20) qtAlign |= Qt::AlignVCenter;
+    
+    it->second->label->setAlignment(qtAlign);
+}
+
+api_bool LabelContext::GetLabelWordWrappingEnabled(const_control_handle handle)
+{
+    LogDebug("GetLabelWordWrapping called");
+    
+    auto it = g_label_map.find(const_cast<control_handle>(handle));
+    if (it == g_label_map.end()) {
+        return api_false;
+    }
+    
+    return it->second->label->wordWrap() ? api_true : api_false;
+}
+
+void LabelContext::SetLabelWordWrappingEnabled(control_handle handle, api_bool wordWrap)
+{
+    LogDebug("SetLabelWordWrapping called, wordWrap=" + std::to_string(wordWrap));
+    
+    auto it = g_label_map.find(handle);
+    if (it == g_label_map.end()) {
+        return;
+    }
+    
+    it->second->label->setWordWrap(wordWrap != 0);
+}
+*/
+int32 LabelContext::GetLabelMargin(const_control_handle handle)
+{
+    LogDebug("GetLabelMargin called");
+    
+    auto it = g_label_map.find(const_cast<control_handle>(handle));
+    if (it == g_label_map.end()) {
+        return 0;
+    }
+    
+    return it->second->label->margin();
+}
+
+void LabelContext::SetLabelMargin(control_handle handle, int32 margin)
+{
+    LogDebug("SetLabelMargin called, margin=" + std::to_string(margin));
+    
+    auto it = g_label_map.find(handle);
+    if (it == g_label_map.end()) {
+        return;
+    }
+    
+    it->second->label->setMargin(margin);
+}
+
+/*
+int32 LabelContext::GetLabelIndent(const_control_handle handle)
+{
+    LogDebug("GetLabelIndent called");
+    
+    auto it = g_label_map.find(const_cast<control_handle>(handle));
+    if (it == g_label_map.end()) {
+        return 0;
+    }
+    
+    return it->second->label->indent();
+}
+
+void LabelContext::SetLabelIndent(control_handle handle, int32 indent)
+{
+    LogDebug("SetLabelIndent called, indent=" + std::to_string(indent));
+    
+    auto it = g_label_map.find(handle);
+    if (it == g_label_map.end()) {
+        return;
+    }
+    
+    it->second->label->setIndent(indent);
+}
+
+int32 LabelContext::GetLabelFrameStyle(const_control_handle handle)
+{
+    LogDebug("GetLabelFrameStyle called");
+    
+    auto it = g_label_map.find(const_cast<control_handle>(handle));
+    if (it == g_label_map.end()) {
+        return 0;
+    }
+    
+    return it->second->label->frameStyle();
+}
+
+void LabelContext::SetLabelFrameStyle(control_handle handle, int32 style)
+{
+    LogDebug("SetLabelFrameStyle called, style=" + std::to_string(style));
+    
+    auto it = g_label_map.find(handle);
+    if (it == g_label_map.end()) {
+        return;
+    }
+    
+    it->second->label->setFrameStyle(style);
+}
+
+int32 LabelContext::GetLabelLineWidth(const_control_handle handle)
+{
+    LogDebug("GetLabelLineWidth called");
+    
+    auto it = g_label_map.find(const_cast<control_handle>(handle));
+    if (it == g_label_map.end()) {
+        return 0;
+    }
+    
+    return it->second->label->lineWidth();
+}
+
+void LabelContext::SetLabelLineWidth(control_handle handle, int32 width)
+{
+    LogDebug("SetLabelLineWidth called, width=" + std::to_string(width));
+    
+    auto it = g_label_map.find(handle);
+    if (it == g_label_map.end()) {
+        return;
+    }
+    
+    it->second->label->setLineWidth(width);
+}
+
+int32 LabelContext::GetLabelMinWidth(const_control_handle handle)
+{
+    LogDebug("GetLabelMinWidth called");
+    
+    auto it = g_label_map.find(const_cast<control_handle>(handle));
+    if (it == g_label_map.end()) {
+        return 0;
+    }
+    
+    return it->second->label->minimumWidth();
+}
+
+void LabelContext::SetLabelMinWidth(control_handle handle, int32 width)
+{
+    LogDebug("SetLabelMinWidth called, width=" + std::to_string(width));
+    
+    auto it = g_label_map.find(handle);
+    if (it == g_label_map.end()) {
+        return;
+    }
+    
+    it->second->label->setMinimumWidth(width);
+}
+*/
+
+// ----------------------------------------------------------------------------
+// UI Object ID Management
+// ----------------------------------------------------------------------------
+
+// Map to store object IDs
+static std::map<api_handle, std::u16string> g_object_id_map;
+
+// ----------------------------------------------------------------------------
+// UIContext API
+// ----------------------------------------------------------------------------
+/*
+// SpinBoxContext::GetSpinBoxWrapping
+// From: SpinBoxContext::GetSpinBoxWrapping (old.cpp lines 2418-2429)
+api_bool SpinBoxContext::GetSpinBoxWrappingEnabled(const_control_handle handle)
+{
+    LogDebug("GetSpinBoxWrapping called");
+    
+    auto it = g_spinbox_map.find(const_cast<control_handle>(handle));
+    if (it == g_spinbox_map.end()) {
+        return api_false;
+    }
+    
+    return it->second->spinBox->wrapping() ? api_true : api_false;
+}
+
+// ============================================================================
+// TreeBoxContext (21 functions)
+// ============================================================================
+
+// TreeBoxContext::Clear
+// From: TreeBoxContext::Clear (old.cpp lines 5061-5071)
+void TreeBoxContext::ClearTreeBox( control_handle h )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    for ( MockTreeNode* n : tb->nodes )
+        delete n;
+    tb->nodes.clear();
+    return api_true;
+}
+
+// TreeBoxContext::DisableRootDecoration
+// From: TreeBoxContext::DisableRootDecoration (old.cpp lines 5369-5377)
+void TreeBoxContext::SetTreeBoxRootDecorationEnabled( control_handle h, api_bool status)
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    tb->rootDecoration = status;
+}
+
+// TreeBoxContext::EnableAlternateRowColor
+// From: TreeBoxContext::EnableAlternateRowColor (old.cpp lines 5379-5387)
+void TreeBoxContext::SetTreeBoxAlternateRowColorEnabled( control_handle h, api_bool e )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    tb->alternateRowColor = (e != api_false);
+}
+
+// TreeBoxContext::EnableMultipleSelections
+// From: TreeBoxContext::EnableMultipleSelections (old.cpp lines 5359-5367)
+void TreeBoxContext::SetTreeBoxMultipleNodeSelectionEnabled( control_handle h, api_bool e )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    tb->multipleSelections = (e != api_false);
+}
+
+// TreeBoxContext::GetCurrentNode
+// From: TreeBoxContext::GetCurrentNode (old.cpp lines 5277-5292)
+api_handle TreeBoxContext::GetTreeBoxCurrentNode( const_control_handle h )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb || !node )
+        return api_false;
+
+    for ( MockTreeNode* n : tb->nodes )
+        if ( n->selected )
+        {
+            return reinterpret_cast<api_handle>( n );
+        }
+
+    return nullptr;
+}
+
+// TreeBoxContext::GetNodeIndex
+// From: TreeBoxContext::GetNodeIndex (old.cpp lines 5124-5142)
+api_bool TreeBoxContext::GetNodeIndex( control_handle h,
+                                   control_handle nodeHandle,
+                                   int32* index )
+{
+    MockTreeBox* tb      = GetTreeBox( h );
+    MockTreeNode* target = reinterpret_cast<MockTreeNode*>( nodeHandle );
+
+    if ( !tb || !index || !target )
+        return api_false;
+
+    for ( size_t i = 0; i < tb->nodes.size(); ++i )
+        if ( tb->nodes[i] == target )
+        {
+            *index = int32( i );
+            return api_true;
+        }
+
+    return api_false;
+}
+
+// TreeBoxContext::GetNodeText
+// From: TreeBoxContext::GetNodeText (old.cpp lines 5161-5182)
+api_bool TreeBoxContext::GetNodeText( control_handle hNode, int32 col,
+                                  char* buffer, size_type* len )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node || !len )
+        return api_false;
+
+    if ( col < 0 || col >= int32( node->text.size() ) )
+        return api_false;
+
+    const String& t = node->text[col];
+
+    if ( buffer == nullptr )
+    {
+        *len = t.Length();
+        return api_true;
+    }
+
+    // PCL strings are UTF-16 (char16_type). We just copy the raw data.
+    ::memcpy( buffer, t.c_str(), t.Length() * sizeof( char16_type ) );
+    return api_true;
+}
+
+// TreeBoxContext::GetNumberOfColumns
+// From: TreeBoxContext::GetNumberOfColumns (old.cpp lines 5041-5049)
+api_bool TreeBoxContext::GetNumberOfColumns( control_handle h, int32* n )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb || n == nullptr )
+        return api_false;
+
+    *n = tb->columns;
+    return api_true;
+}
+
+// TreeBoxContext::GetNumberOfNodes
+// From: TreeBoxContext::GetNumberOfNodes (old.cpp lines 5073-5081)
+api_bool TreeBoxContext::GetNumberOfNodes( control_handle h, int32* n )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb || n == nullptr )
+        return api_false;
+
+    *n = int32( tb->nodes.size() );
+    return api_true;
+}
+
+// TreeBoxContext::GetPrevNode
+// From: TreeBoxContext::GetPrevNode (old.cpp lines 5332-5353)
+api_bool TreeBoxContext::GetPrevNode( control_handle h,
+                                  control_handle hNode,
+                                  control_handle* prev )
+{
+    MockTreeBox*  tb   = GetTreeBox( h );
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+
+    if ( !tb || !node || !prev )
+        return api_false;
+
+    for ( size_t i = 0; i < tb->nodes.size(); ++i )
+        if ( tb->nodes[i] == node )
+        {
+            if ( i > 0 )
+                *prev = reinterpret_cast<control_handle>( tb->nodes[i-1] );
+            else
+                *prev = nullptr;
+            return api_true;
+        }
+
+    return api_false;
+}
+
+// TreeBoxContext::HasSelectedNodes
+// From: TreeBoxContext::HasSelectedNodes (old.cpp lines 5256-5271)
+api_bool TreeBoxContext::HasSelectedNodes( control_handle h, api_bool* r )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb || !r )
+        return api_false;
+
+    *r = api_false;
+    for ( MockTreeNode* n : tb->nodes )
+        if ( n->selected )
+        {
+            *r = api_true;
+            break;
+        }
+
+    return api_true;
+}
+
+// TreeBoxContext::IsNodeSelected
+// From: TreeBoxContext::IsNodeSelected (old.cpp lines 5232-5240)
+api_bool TreeBoxContext::IsNodeSelected( control_handle hNode, api_bool* result )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node || !result )
+        return api_false;
+
+    *result = node->selected ? api_true : api_false;
+    return api_true;
+}
+
+// TreeBoxContext::RemoveNode
+// From: TreeBoxContext::RemoveNode (old.cpp lines 5098-5110)
+api_bool TreeBoxContext::RemoveNode( control_handle h, int32 index )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    if ( index < 0 || index >= int32( tb->nodes.size() ) )
+        return api_false;
+
+    delete tb->nodes[index];
+    tb->nodes.erase( tb->nodes.begin() + index );
+    return api_true;
+}
+
+// TreeBoxContext::SelectAllNodes
+// From: TreeBoxContext::SelectAllNodes (old.cpp lines 5242-5254)
+api_bool TreeBoxContext::SelectAllNodes( control_handle h )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    if ( !tb->multipleSelections )
+        return api_false;
+
+    for ( MockTreeNode* n : tb->nodes )
+        n->selected = true;
+    return api_true;
+}
+
+// TreeBoxContext::SelectNode
+// From: TreeBoxContext::SelectNode (old.cpp lines 5214-5230)
+api_bool TreeBoxContext::SelectNode( control_handle h,
+                                 control_handle hNode,
+                                 api_bool selected )
+{
+    MockTreeBox*  tb   = GetTreeBox( h );
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+
+    if ( !tb || !node )
+        return api_false;
+
+    if ( !tb->multipleSelections )
+        for ( MockTreeNode* n : tb->nodes )
+            n->selected = false;
+
+    node->selected = (selected != api_false);
+    return api_true;
+}
+
+// TreeBoxContext::SetCurrentNode
+// From: TreeBoxContext::SetCurrentNode (old.cpp lines 5294-5307)
+api_bool TreeBoxContext::SetCurrentNode( control_handle h, control_handle hNode )
+{
+    MockTreeBox*  tb   = GetTreeBox( h );
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+
+    if ( !tb || !node )
+        return api_false;
+
+    for ( MockTreeNode* n : tb->nodes )
+        n->selected = false;
+
+    node->selected = true;
+    return api_true;
+}
+
+// TreeBoxContext::SetNodeIcon
+// From: TreeBoxContext::SetNodeIcon (old.cpp lines 5184-5195)
+api_bool TreeBoxContext::SetNodeIcon( control_handle hNode, int32 col, control_handle icon )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node )
+        return api_false;
+
+    if ( col < 0 || col >= int32( node->icon.size() ) )
+        return api_false;
+
+    node->icon[col] = icon;
+    return api_true;
+}
+
+// TreeBoxContext::SetNodeText
+// From: TreeBoxContext::SetNodeText (old.cpp lines 5148-5159)
+api_bool TreeBoxContext::SetNodeText( control_handle hNode, int32 col, const char* text )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node )
+        return api_false;
+
+    if ( col < 0 || col >= int32( node->text.size() ) )
+        return api_false;
+
+    node->text[col] = text ? String( text ) : String();
+    return api_true;
+}
+
+// TreeBoxContext::SetNodeToolTip
+// From: TreeBoxContext::SetNodeToolTip (old.cpp lines 5197-5208)
+api_bool TreeBoxContext::SetNodeToolTip( control_handle hNode, int32 col, const char* text )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node )
+        return api_false;
+
+    if ( col < 0 || col >= int32( node->tooltip.size() ) )
+        return api_false;
+
+    node->tooltip[col] = text ? String( text ) : String();
+    return api_true;
+}
+
+// TreeBoxContext::SetNumberOfColumns
+// From: TreeBoxContext::SetNumberOfColumns (old.cpp lines 5031-5039)
+api_bool TreeBoxContext::SetNumberOfColumns( control_handle h, int32 n )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    tb->columns = (n > 0) ? n : 1;
+    return api_true;
+}
+
+
+// ============================================================================
+// UIContext (1 functions)
+// ============================================================================
+
+// UIContext::IsUIObjectValid
+// From: UIContext::IsUIObjectValid (old.cpp lines 3619-5757)
+api_bool UIContext::IsUIObjectValid(api_handle handle)
+{
+    if (!handle) {
+        return api_false;
+    }
+    
+    // Check if it's a valid QWidget
+    QWidget* widget = reinterpret_cast<QWidget*>(handle);
+    
+    // Simple validation - in a real implementation you might want more checks
+    // For now, just check if the pointer seems reasonable and the widget isn't deleted
+    try {
+        // Try to access a Qt property to see if it's valid
+        widget->isVisible();
+        return api_true;
+    } catch (...) {
+        return api_false;
+    }
+}
+
+void UIContext::DeleteUIObject(api_handle handle)
+{
+    if (!handle) {
+        return;
+    }
+    
+    LogDebug("DeleteUIObject called");
+    
+    // Remove from ID map
+    {
+        g_object_id_map.erase(handle);
+    }
+    
+    // Try to delete the widget
+    QWidget* widget = reinterpret_cast<QWidget*>(handle);
+    if (widget) {
+        widget->deleteLater(); // Use deleteLater() for Qt safety
+    }
+}
+
+api_bool UIContext::GetUIObjectType(const_api_handle handle, char *ptr, size_type *sz)
+{
+    if (!handle) {
+        return "null";
+    }
+    
+    QWidget* widget = reinterpret_cast<QWidget*>(handle);
+    if (!widget) {
+        return "invalid";
+    }
+
+    if (ptr)
+      strcpy(ptr, widget->metaObject()->className());
+    // Return the Qt metaobject class name
+    return api_true;
+}
+*/
+// ----------------------------------------------------------------------------
+// Bitmap Mock Implementation
+// ----------------------------------------------------------------------------
+
+struct MockBitmap {
+    QPixmap pixmap;
+    api_handle moduleHandle;
+    double devicePixelRatio;
+    
+    MockBitmap(api_handle hModule) 
+        : moduleHandle(hModule),
+          devicePixelRatio(1.0)
+    {
+    }
+    
+    MockBitmap(api_handle hModule, int width, int height)
+        : pixmap(width, height),
+          moduleHandle(hModule),
+          devicePixelRatio(1.0)
+    {
+        pixmap.fill(Qt::transparent);
+    }
+    
+    MockBitmap(api_handle hModule, const QPixmap& pm)
+        : pixmap(pm),
+          moduleHandle(hModule),
+          devicePixelRatio(1.0)
+    {
+    }
+    
+    ~MockBitmap() {
+        // QPixmap handles its own memory
+    }
+};
+
+// Global map to track bitmaps
+static std::map<bitmap_handle, MockBitmap*> g_bitmap_map;
+/*
+// Helper to get bitmap from handle
+static MockBitmap* GetBitmap(bitmap_handle handle) {
+    if (!handle) return nullptr;
+    
+    auto it = g_bitmap_map.find(handle);
+    if (it != g_bitmap_map.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+*/
+// ----------------------------------------------------------------------------
+// ComboBox Context Implementation
+// ----------------------------------------------------------------------------
+
+struct MockComboBox {
+    QComboBox* comboBox;
+    api_handle clientHandle;
+    
+    MockComboBox() 
+        : comboBox(new QComboBox()),
+          clientHandle(nullptr)
+    {
+    }
+    
+    ~MockComboBox() {
+        // Qt parent ownership handles deletion
+    }
+};
+
+// Global map to track comboboxes
+static std::map<control_handle, MockComboBox*> g_combobox_map;
+/*
+control_handle ComboBoxContext::CreateComboBox(api_handle, control_handle client, 
+                                           control_handle parent, uint32 flags)
+{
+    LogDbg("CreateComboBox called");
+    
+    MockComboBox* combo = new MockComboBox();
+    combo->clientHandle = client;
+    
+    if (parent) {
+        QWidget* parentWidget = reinterpret_cast<QWidget*>(parent);
+        combo->comboBox->setParent(parentWidget);
+    }
+    
+    control_handle handle = reinterpret_cast<control_handle>(combo->comboBox);
+    
+    g_combobox_map[handle] = combo;
+    
+    return handle;
+}
+
+// ----------------------------------------------------------------------------
+// Edit Context Implementation
+// ----------------------------------------------------------------------------
+  
+control_handle EditContext::CreateEdit(api_handle module,
+                                   control_handle client,
+                                   const char16_type* text,
+                                   control_handle parent,
+                                   uint32 flags)
+{
+    LogDbg("CreateEdit called");
+
+    MockEdit* mock = new MockEdit(text);
+
+    // 1) store the PCL Edit* (sender for EditCompleted)
+    mock->pclEdit = client; // this is exactly 'this' from pcl::Edit ctor
+
+    // 2) parent the Qt widget if needed
+    if (parent) {
+        QWidget* parentWidget = reinterpret_cast<QWidget*>(parent);
+        mock->edit->setParent(parentWidget);
+    }
+
+    // 3) This is the handle PCL will use for this edit control
+    control_handle handle = reinterpret_cast<control_handle>(mock->edit);
+
+    {
+        g_edit_map[handle] = mock;
+    }
+
+    return handle;
+}
+*/  
+api_bool EditContext::GetEditText(const_control_handle handle, char16_type* text, size_type* len)
+{
+    LogDbg("GetEditText called");
+    
+    auto it = g_edit_map.find(const_cast<control_handle>(handle));
+    if (it == g_edit_map.end()) {
+        if (len) *len = 0;
+        return api_false;
+    }
+    
+    QString qtext = it->second->edit->text();
+    std::u16string u16text = qtext.toStdU16String();
+    
+    if (text == nullptr) {
+        if (len) *len = u16text.length();
+        return api_true;
+    }
+    
+    if (len && *len > 0) {
+        size_type copyLen = std::min(*len - 1, u16text.length());
+        std::memcpy(text, u16text.c_str(), copyLen * sizeof(char16_type));
+        text[copyLen] = 0;
+        *len = copyLen;
+    }
+    
+    return api_true;
+}
+
+api_bool EditContext::GetEditReadOnly(const_control_handle handle)
+{
+    auto it = g_edit_map.find(const_cast<control_handle>(handle));
+    if (it == g_edit_map.end()) {
+        return api_false;
+    }
+    
+    return it->second->edit->isReadOnly() ? api_true : api_false;
+}
+
+// ----------------------------------------------------------------------------
+// TextBox Context Implementation (QTextEdit)
+// ----------------------------------------------------------------------------
+
+struct MockTextBox {
+    QTextEdit* textEdit;
+    api_handle clientHandle;
+    
+    MockTextBox(const char16_type* text = nullptr) 
+        : textEdit(new QTextEdit()),
+          clientHandle(nullptr)
+    {
+        if (text && *text) {
+            textEdit->setText(QString::fromUtf16(reinterpret_cast<const ushort*>(text)));
+        }
+    }
+    
+    ~MockTextBox() {
+        // Qt parent ownership handles deletion
+    }
+};
+
+// Global map to track textboxes
+static std::map<control_handle, MockTextBox*> g_textbox_map;
+
+// ----------------------------------------------------------------------------
+// Slider Context Implementation
+// ----------------------------------------------------------------------------
+
+struct MockSlider {
+    QSlider* slider;
+    api_handle clientHandle;
+    
+    MockSlider(bool vertical) 
+        : slider(new QSlider(vertical ? Qt::Vertical : Qt::Horizontal)),
+          clientHandle(nullptr)
+    {
+    }
+    
+    ~MockSlider() {
+        // Qt parent ownership handles deletion
+    }
+};
+
+// Global map to track sliders
+static std::map<control_handle, MockSlider*> g_slider_map;
+
+struct MockTimer {
+    QTimer* timer;
+    api_handle clientHandle;
+    pcl::timer_event_routine timeoutHandler;
+
+    MockTimer()
+        : timer(new QTimer()),
+          clientHandle(nullptr),
+          timeoutHandler(nullptr)
+    {
+        timer->setSingleShot(false); // PixInsight timers are repeating by default
+    }
+
+    ~MockTimer() {
+        // QTimer deleted by Qt parent hierarchy if parented
+    }
+};
+
+static std::map<control_handle, MockTimer*> g_timer_map;
+
+struct MockFont {
+    QFont font;
+    api_handle clientHandle;
+
+    MockFont(const QFont& f, api_handle client)
+        : font(f)
+        , clientHandle(client)
+    {
+    }
+};
+
+static std::map<const_font_handle, MockFont*> g_font_map;
+
+font_handle FontContext::CreateFontByFamily(api_handle client, int32 weight, double sizePt)
+{
+    QString family = QFont().defaultFamily();  // default family
+    QFont f(family, sizePt);
+    f.setPointSizeF(sizePt);
+    f.setWeight(weight);
+
+    MockFont* mf = new MockFont(f, client);
+
+    font_handle handle = reinterpret_cast<font_handle>(mf);
+    {
+        g_font_map[handle] = mf;
+    }
+    return handle;
+}
+
+font_handle FontContext::CreateFontByFace(api_handle client, const char16_type* face, double ptSize)
+{
+    QString family = QString::fromUtf16(reinterpret_cast<const ushort*>(face));
+    QFont f(family, ptSize);
+    f.setPointSizeF(ptSize);
+
+    MockFont* mf = new MockFont(f, client);
+
+    font_handle h = reinterpret_cast<font_handle>(mf);
+    {
+        g_font_map[h] = mf;
+    }
+    return h;
+}
+
+font_handle ControlContext::GetControlFont(const_control_handle handle)
+{
+    LogDbg("API_Control_GetControlFont called");
+
+    const QWidget* w = widgetFromHandle(handle);
+    if (!w)
+        return nullptr;
+
+    QFont f = w->font();
+
+    MockFont* mf = new MockFont(f, nullptr);
+
+    font_handle h = reinterpret_cast<font_handle>(mf);
+    {
+        g_font_map[h] = mf;
+    }
+
+    return h;
+}
+
+struct MockCursor {
+    QCursor cursor;
+    api_handle clientHandle;
+
+    MockCursor(const QCursor& c, api_handle client)
+        : cursor(c)
+        , clientHandle(client)
+    {
+    }
+};
+
+static std::map<cursor_handle, MockCursor*> g_cursor_map;
+
+cursor_handle CursorContext::CreateCursor(api_handle client,
+                                      int32 hot)
+{
+    LogDbg("API_Cursor_CreateCursor called");
+
+    QString bitmapFile;
+    QString maskFile;
+    QCursor qc;
+
+    if (!bitmapFile.isEmpty())
+    {
+        QPixmap pm(bitmapFile);
+        if (!pm.isNull())
+        {
+            if (!maskFile.isEmpty()) {
+                QBitmap mask(maskFile);
+                if (!mask.isNull())
+                    pm.setMask(mask);
+            }
+            qc = QCursor(pm, hot, hot);
+        }
+        else {
+            LogDbg("[Cursor] Failed to load bitmap: " + bitmapFile);
+            qc = QCursor(Qt::ArrowCursor);
+        }
+    }
+    else {
+        // No-file case: default to Arrow cursor
+        qc = QCursor(Qt::ArrowCursor);
+    }
+
+    MockCursor* mc = new MockCursor(qc, client);
+
+    cursor_handle h = reinterpret_cast<cursor_handle>(mc);
+
+    {
+        g_cursor_map[h] = mc;
+    }
+
+    return h;
+}
+
+struct MockImageWindow {
+    QWidget* window;       // or QMainWindow / QDialog
+    api_handle clientHandle;
+    image_handle currentImage;
+    // plus whatever else you store for image data, views, etc.
+};
+
+static std::map<window_handle, MockImageWindow*> g_image_window_map;
+
+struct MockView {
+    MockImage* image;
+    QString identifier;
+    api_handle clientHandle;
+};
+
+// View handling
+static std::map<const_view_handle, MockView*> g_view_map;
+
+// -----------------------------------------------------------------------------
+// TreeBox Mock API
+// -----------------------------------------------------------------------------
+/*
+// Small helper – avoids dynamic_cast on non-polymorphic MockControl.
+static MockTreeBox* GetTreeBox( control_handle h )
+{
+    auto it = g_control_map.find( h );
+    if ( it == g_control_map.end() )
+        return nullptr;
+    return static_cast<MockTreeBox*>( it->second );
+}
+*/
+// -----------------------------------------------------------------------------
+// Column management
+// -----------------------------------------------------------------------------
+/*
+void TreeBoxContext::SetTreeBoxColumnCount( control_handle h, int32 n )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    tb->columns = (n > 0) ? n : 1;
+}
+
+int32 TreeBoxContext::GetTreeBoxColumnCount( const_control_handle h)
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return 0;
+
+    return tb->columns;
+}
+
+// -----------------------------------------------------------------------------
+// Node management
+// -----------------------------------------------------------------------------
+
+void TreeBoxContext::ClearTreeBox( control_handle h )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    for ( MockTreeNode* n : tb->nodes )
+        delete n;
+    tb->nodes.clear();
+    return api_true;
+}
+
+api_bool TreeBoxContext::GetNumberOfNodes( control_handle h, int32* n )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb || n == nullptr )
+        return api_false;
+
+    *n = int32( tb->nodes.size() );
+    return api_true;
+}
+
+void TreeBoxContext::InsertTreeBoxNode( control_handle h, int32 index, api_handle itm )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return nullptr;
+
+    if ( index < 0 || index > int32( tb->nodes.size() ) )
+        index = int32( tb->nodes.size() );
+
+    MockTreeNode* node = new MockTreeNode( tb->columns );
+    tb->nodes.insert( tb->nodes.begin() + index, node );
+
+    return reinterpret_cast<control_handle>( node );
+}
+
+api_handle TreeBoxContext::GetTreeBoxNodeByPos( const_control_handle h, int32 x, int32 y )
+{
+    const MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return nullptr;
+
+    if ( index < 0 || index >= int32( tb->nodes.size() ) )
+        return nullptr;
+
+    return reinterpret_cast<api_handle>( tb->nodes[index] );
+}
+
+api_bool TreeBoxContext::GetNodeIndex( control_handle h,
+                                   control_handle nodeHandle,
+                                   int32* index )
+{
+    MockTreeBox* tb      = GetTreeBox( h );
+    MockTreeNode* target = reinterpret_cast<MockTreeNode*>( nodeHandle );
+
+    if ( !tb || !index || !target )
+        return api_false;
+
+    for ( size_t i = 0; i < tb->nodes.size(); ++i )
+        if ( tb->nodes[i] == target )
+        {
+            *index = int32( i );
+            return api_true;
+        }
+
+    return api_false;
+}
+
+// -----------------------------------------------------------------------------
+// Node text & icon & tooltip
+// -----------------------------------------------------------------------------
+
+void TreeBoxContext::SetTreeBoxNodeColText( api_handle hNode, int32 col, const char16_type *text )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node )
+        return api_false;
+
+    if ( col < 0 || col >= int32( node->text.size() ) )
+        return api_false;
+
+    node->text[col] = text ? String( text ) : String();
+    return api_true;
+}
+
+api_bool TreeBoxContext::GetTreeBoxNodeColText( const_api_handle hNode, int32 col,
+                                  char16_type* buffer, size_type* len )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node || !len )
+        return api_false;
+
+    if ( col < 0 || col >= int32( node->text.size() ) )
+        return api_false;
+
+    const String& t = node->text[col];
+
+    if ( buffer == nullptr )
+    {
+        *len = t.Length();
+        return api_true;
+    }
+
+    // PCL strings are UTF-16 (char16_type). We just copy the raw data.
+    ::memcpy( buffer, t.c_str(), t.Length() * sizeof( char16_type ) );
+    return api_true;
+}
+
+void TreeBoxContext::SetTreeBoxNodeColIcon( api_handle hNode, int32 col, const_bitmap_handle icon )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node )
+        return api_false;
+
+    if ( col < 0 || col >= int32( node->icon.size() ) )
+        return api_false;
+
+    node->icon[col] = icon;
+    return api_true;
+}
+
+void TreeBoxContext::SetTreeBoxNodeColToolTip( api_handle hNode, int32 col, const char16_type *text )
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node )
+        return api_false;
+
+    if ( col < 0 || col >= int32( node->tooltip.size() ) )
+        return api_false;
+
+    node->tooltip[col] = text ? String( text ) : String();
+    return api_true;
+}
+
+// -----------------------------------------------------------------------------
+// Selection
+// -----------------------------------------------------------------------------
+
+void TreeBoxContext::SetTreeBoxNodeSelected( api_handle h,
+                                 api_bool selected )
+{
+    MockTreeBox*  tb   = GetTreeBox( h );
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+
+    if ( !tb || !node )
+        return api_false;
+
+    if ( !tb->multipleSelections )
+        for ( MockTreeNode* n : tb->nodes )
+            n->selected = false;
+
+    node->selected = (selected != api_false);
+    return api_true;
+}
+
+api_bool TreeBoxContext::GetTreeBoxNodeSelected( const_api_handle hNode)
+{
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+    if ( !node )
+        return api_false;
+
+    return node->selected ? api_true : api_false;
+}
+
+void TreeBoxContext::SelectAllTreeBoxNodes( control_handle h )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    if ( !tb->multipleSelections )
+        return api_false;
+
+    for ( MockTreeNode* n : tb->nodes )
+        n->selected = true;
+}
+
+api_bool TreeBoxContext::GetTreeBoxSelectedNodes( const_control_handle h, api_handle *a, size_type *sz )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb || !r )
+        return api_false;
+
+    *r = 0;
+    for ( MockTreeNode* n : tb->nodes )
+        if ( n->selected )
+        {
+	  (*r)++;
+        }
+
+    return api_true;
+}
+
+// -----------------------------------------------------------------------------
+// Navigation
+// -----------------------------------------------------------------------------
+
+api_handle TreeBoxContext::GetTreeBoxCurrentNode( const_control_handle h )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb || !node )
+        return api_false;
+
+    for ( MockTreeNode* n : tb->nodes )
+        if ( n->selected )
+        {
+            *node = reinterpret_cast<control_handle>( n );
+            return api_true;
+        }
+
+    *node = nullptr;
+    return api_true;
+}
+
+void TreeBoxContext::SetTreeBoxCurrentNode( control_handle h, api_handle hNode )
+{
+    MockTreeBox*  tb   = GetTreeBox( h );
+    MockTreeNode* node = reinterpret_cast<MockTreeNode*>( hNode );
+
+    if ( !tb || !node )
+        return api_false;
+
+    for ( MockTreeNode* n : tb->nodes )
+        n->selected = false;
+
+    node->selected = true;
+    return api_true;
+}
+
+// -----------------------------------------------------------------------------
+// Settings
+// -----------------------------------------------------------------------------
+
+void TreeBoxContext::SetTreeBoxMultipleNodeSelectionEnabled( control_handle h, api_bool e )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    tb->multipleSelections = (e != api_false);
+    return api_true;
+}
+
+void TreeBoxContext::SetTreeBoxAlternateRowColorEnabled( control_handle h, api_bool e )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    if ( !tb )
+        return api_false;
+
+    tb->alternateRowColor = (e != api_false);
+    return api_true;
+}
+*/
+
+// -----------------------------------------------------------------------------
+// Height management
+// -----------------------------------------------------------------------------
+
+void TreeBoxContext::SetTreeBoxUniformRowHeightEnabled( control_handle, api_bool )
+{
+
+}
+
+/*
+api_bool TreeBoxContext::SetMinHeight( control_handle, int32 )
+{
+    return api_true;
+}
+
+api_bool TreeBoxContext::SetMaxHeight( control_handle, int32 )
+{
+    return api_true;
+}
+
+// -----------------------------------------------------------------------------
+// Viewport
+// -----------------------------------------------------------------------------
+
+control_handle TreeBoxContext::GetViewportHandle( control_handle h )
+{
+    MockTreeBox* tb = GetTreeBox( h );
+    return tb ? tb->viewport : nullptr;
+}
+*/
+
+// -----------------------------------------------------------------------------
+// Event routines (stored but not auto-invoked in the mock)
+// -----------------------------------------------------------------------------
+
+typedef void *treebox_currentnodeupdated_event;
+typedef void * treebox_node_event ;
+typedef void * treebox_tree_event ;
+
+struct TreeBoxEventRoutines
+{
+    treebox_currentnodeupdated_event currentNodeUpdated = nullptr;
+    treebox_node_event               nodeActivated      = nullptr;
+    treebox_tree_event               selectionUpdated   = nullptr;
+};
+
+static std::map<control_handle, TreeBoxEventRoutines> g_tree_events;
+/*
+api_bool TreeBoxContext::SetTreeBoxCurrentNodeUpdatedEventRoutine( control_handle h,
+                                                        api_handle receiver,
+                                                        pcl::item_range_event_routine f )
+{
+    g_tree_events[h].currentNodeUpdated = f;
+    return api_true;
+}
+
+api_bool TreeBoxContext::SetTreeBoxNodeActivatedEventRoutine( control_handle h,
+                                                   api_handle receiver,
+                                                   item_value_event_routine f )
+{
+    g_tree_events[h].nodeActivated = f;
+    return api_true;
+}
+
+api_bool TreeBoxContext::SetTreeBoxNodeSelectionUpdatedEventRoutine( control_handle h,
+                                                          api_handle receiver,
+                                                          event_routine f )
+{
+    g_tree_events[h].selectionUpdated = f;
+    return api_true;
+}
+*/
+// Mock implementations for Global API functions
+
+// Simple error code storage
+static int g_last_error = 0;
+
+// Mock console handle
+static void* g_console_handle = (void*)0xDEADBEEF;
+
+// Mock pixel traits LUT - create a simple lookup table
+struct MockPixelTraitsLUT {
+    // These would normally be function pointers, but we'll make them simple values
+    int sample_format;
+    int bytes_per_sample;
+    int bits_per_sample;
+    double min_sample_value;
+    double max_sample_value;
+};
+
+// Create mock LUTs for different pixel formats
+static MockPixelTraitsLUT g_pixel_luts[16] = {
+    // Format 0: 8-bit unsigned integer
+    { 0, 1, 8, 0.0, 255.0 },
+    // Format 1: 16-bit unsigned integer  
+    { 1, 2, 16, 0.0, 65535.0 },
+    // Format 2: 32-bit unsigned integer
+    { 2, 4, 32, 0.0, 4294967295.0 },
+    // Format 3: 32-bit IEEE 754 floating point
+    { 3, 4, 32, 0.0, 1.0 },
+    // Format 4: 64-bit IEEE 754 floating point
+    { 4, 8, 64, 0.0, 1.0 },
+    // Add more formats as needed...
+};
+
+// ----------------------------------------------------------------------------
+// Global Settings mock
+// ----------------------------------------------------------------------------
+
+
+// settings[module][key] = int
+static std::map<api_handle, std::map<std::string, int32>> g_settings_local;
+static std::map<std::string, int32> g_settings_global;
+
+static void preload_default_global_settings()
+{
+
+    if (!g_settings_global.count("Workspace/PrimaryScreenCenterX"))
+        g_settings_global["Workspace/PrimaryScreenCenterX"] = 400;
+
+    if (!g_settings_global.count("Workspace/PrimaryScreenCenterY"))
+        g_settings_global["Workspace/PrimaryScreenCenterY"] = 300;
+}
+
+api_bool GlobalContext::ReadSettingsInteger( api_handle module,
+                                         int32*     outValue,
+                                         const char* key,
+                                         api_bool   global )
+{
+    LogDbg("API_Global_ReadSettingsInteger called");
+    preload_default_global_settings();
+ 
+    if (!outValue || !key)
+        return api_false;
+
+    std::string skey(key);
+
+
+    if (global)
+    {
+        auto it = g_settings_global.find(skey);
+        if (it == g_settings_global.end())
+	  {
+	    LogDbg("API_Global_ReadSettingsInteger missing: " + skey);
+            return api_false;
+	  }
+        *outValue = it->second;
+        return api_true;
+    }
+    else
+    {
+        auto modIt = g_settings_local.find(module);
+        if (modIt == g_settings_local.end())
+	  {
+	    LogDbg("API_Local_ReadSettingsInteger missing: " + skey);
+            return api_false;
+	  }
+	
+        auto& m = modIt->second;
+        auto it = m.find(skey);
+        if (it == m.end())
+            return api_false;
+
+        *outValue = it->second;
+        return api_true;
+    }
+}
+
+// Mock for GetPixelTraitsLUT
+void* GetPixelTraitsLUT(int format) {
+    LogDbg("GetPixelTraitsLUT called with format: " + std::to_string(format));
+    
+    if (format >= 0 && format < 16) {
+        return &g_pixel_luts[format];
+    }
+    return &g_pixel_luts[0]; // Default to format 0
+}
+
+// Mock for GetConsole
+void* GetConsole() {
+    LogDbg("GetConsole called");
+    return g_console_handle;
+}
+
+// Mock for LastError
+uint32 GlobalContext::LastError() {
+    LogDbg("LastError called, returning: " + std::to_string(g_last_error));
+    return g_last_error;
+}
+
+// Mock for setting error
+void SetLastError(int error_code) {
+    g_last_error = error_code;
+    LogDbg("SetLastError called with: " + std::to_string(error_code));
+}
+
+// Mock for ClearError
+void ClearError() {
+    g_last_error = 0;
+    LogDbg("ClearError called");
+}
+
+// Mock for ProcessEvents
+void GlobalContext::ProcessEvents(api_bool excludeUserInputEvents) {
+    LogDbg("ProcessEvents called");
+}
+
+// Mock for GetApplicationInstanceSlot
+int GetApplicationInstanceSlot() {
+    LogDbg("GetApplicationInstanceSlot called");
+    return 0; // Root slot
+}
+
+// Mock for GetProcessStatus
+uint32_t GlobalContext::GetProcessStatus() {
+    LogDbg("GetProcessStatus called");
+    // Return a status that indicates not aborted (bit 31 clear)
+    // PCL checks if bit 31 (0x80000000) is set to determine if process should abort
+    return 0x00000000; // Normal status, not aborted
+}
+
+  api_bool WriteConsole(console_handle handle, const char16_type *text16, api_bool appendNewline )
+  {
+    if (!text16) {
+      if (appendNewline) {
+        putchar('\n');
+	return api_true;
+      }
+      return api_false;
+    }
+    
+    // Just output to stdout for now
+    while (*text16)
+      {
+	uint16_t ch;
+	ch = *text16++;
+	putchar(ch);
+      }
+    if (appendNewline) {
+        putchar('\n');
+    }
+    
+    return api_true; // success
+}
+
+// Mock for EnableAbort
+int EnableAbort() {
+  LogDbg("EnableAbort called");
+  return 1; // api_true - success
+}
+
+// Mock for GetGlobalFlag
+api_bool GlobalContext::GetGlobalFlag(const char* flag_name, api_bool* value) {
+    LogDbg("GetGlobalFlag called with: " + std::string(flag_name ? flag_name : "(null)"));
+    
+    if (!value) {
+        return 0; // api_false
+    }
+    
+    // Return default values for common flags
+    if (flag_name) {
+        std::string name = flag_name;
+        if (name.find("Abort") != std::string::npos) {
+            *value = 0; // Not aborted
+        } else if (name.find("Debug") != std::string::npos) {
+            *value = 0; // Debug off
+        } else {
+            *value = 0; // Default to false/off
+        }
+    } else {
+        *value = 0;
+    }
+    
+    return 1; // api_true - success
+}
+
+// Mock for GetGlobalInteger
+api_bool GlobalContext::GetGlobalInteger(const char* int_name, void* value, api_bool isSigned) {
+    std::string skey(int_name ? int_name : "(null)");
+    LogDbg("GetGlobalInteger called with: " + skey);
+    preload_default_global_settings();
+    
+    if (!value) {
+        return 0; // api_false
+    }
+
+    auto it = g_settings_global.find(skey);
+    if (it == g_settings_global.end())
+	  {
+	    LogDbg("API_Global_GetGlobalInteger missing: " + skey);
+            return api_false;
+	  }
+    *(int *)value = it->second;
+    return api_true;
+}
+
+// =============================================================
+// Control Context - Stubs and Additional Functions
+// =============================================================
+
+void ControlContext::SetChildControlToFocus(control_handle, control_handle) {}
+void ControlContext::SetRealTimePreviewActive(control_handle, api_bool) {}
+void ControlContext::SetControlFocus(control_handle, api_bool) {}
+void ControlContext::SetControlUpdatesEnabled(control_handle, api_bool) {}
+void ControlContext::AdjustControlToContents(control_handle) {}
+api_bool ControlContext::SetGetFocusEventRoutine(control_handle, control_handle, pcl::control_event_routine) { return api_true; }
+api_bool ControlContext::SetLoseFocusEventRoutine(control_handle, control_handle, pcl::control_event_routine) { return api_true; }
+api_bool ControlContext::SetFileDragEventRoutine(control_handle, control_handle, pcl::file_drag_event_handler) { return api_true; }
+api_bool ControlContext::SetFileDropEventRoutine(control_handle, control_handle, pcl::file_drag_event_handler) { return api_true; }
+api_bool ControlContext::GetControlDisplayPixelRatio(const_control_handle, double* ratio) { *ratio = 1.0; return api_true; }
+void ControlContext::GetControlExpansionEnabled(const_control_handle, api_bool*, api_bool*) {}
+void ControlContext::SetControlExpansionEnabled(control_handle, api_bool, api_bool) {}
+api_bool ControlContext::GetControlUnderMouseStatus(const_control_handle) { return api_false; }
+void ControlContext::BringControlToFront(control_handle) {}
+void ControlContext::SendControlToBack(control_handle) {}
+void ControlContext::StackControls(control_handle, control_handle) {}
+void ControlContext::GlobalToLocal(const_control_handle, int32*, int32*) {}
+void ControlContext::LocalToGlobal(const_control_handle, int32*, int32*) {}
+void ControlContext::ParentToLocal(const_control_handle, int32*, int32*) {}
+void ControlContext::LocalToParent(const_control_handle, int32*, int32*) {}
+void ControlContext::ControlToLocal(const_control_handle, const_control_handle, int32*, int32*) {}
+void ControlContext::LocalToControl(const_control_handle, const_control_handle, int32*, int32*) {}
+control_handle ControlContext::GetChildByPos(const_control_handle, int32, int32) { return nullptr; }
+void ControlContext::GetChildrenRect(const_control_handle, int32*, int32*, int32*, int32*) {}
+api_bool ControlContext::GetControlAncestry(const_control_handle, const_control_handle) { return api_false; }
+void EditContext::SetEditSelected(control_handle, api_bool) {}
+api_bool EditContext::SetEditCompletedEventRoutine(control_handle, control_handle, pcl::event_routine) { return api_true; }
+api_bool EditContext::SetReturnPressedEventRoutine(control_handle, control_handle, pcl::event_routine) { return api_true; }
 
 // =============================================================
 // END OF IMPLEMENTATION
