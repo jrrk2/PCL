@@ -409,6 +409,7 @@ api_bool SharedImageContext::SetImagePixelData(image_handle handle, void** data)
     return api_true;
 }
 
+
 // ============================================================================
 // ViewContext Implementation
 // ============================================================================
@@ -817,7 +818,18 @@ window_handle ImageWindowContext::CreateImageWindow(int width, int height, int n
     // Link window → image
     mockWin->imageHandle = imgHandle;
     mockWin->imagePtr    = g_images[imgHandle];
-    
+    /*
+    // TEMPORARY HACK: Fill with gradient
+    MockImage* testImg = mockWin->imagePtr;
+    if (testImg && testImg->floatSample) {
+	float* data = (float*)testImg->channelData[0];
+	for (uint32_t y = 0; y < testImg->height; ++y) {
+	    for (uint32_t x = 0; x < testImg->width; ++x) {
+		data[y * testImg->width + x] = (float)x / 511.0f * (float)y / 511.0f;
+	    }
+	}
+    }
+    */
     window_handle handle = reinterpret_cast<window_handle>(mockWin->widget);
     g_mockWindows[handle] = mockWin;
     g_windowsByID[windowId] = handle;

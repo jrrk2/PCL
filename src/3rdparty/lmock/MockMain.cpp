@@ -1265,7 +1265,79 @@ private:
             
             // Get the image variant
             pcl::ImageVariant image = view.Image();
-            
+
+	    qDebug() << "\n=== DIAGNOSTIC: Testing pixel access ===";
+	    qDebug() << "ImageVariant obtained";
+	    qDebug() << "  IsComplexSample:" << image.IsComplexSample();
+	    qDebug() << "  IsFloatSample:" << image.IsFloatSample();
+	    qDebug() << "  BitsPerSample:" << image.BitsPerSample();
+
+	    try {
+		if (image.IsFloatSample())
+		{
+		    qDebug() << "Image IS float sample, proceeding...";
+
+		    pcl::Image& img = static_cast<pcl::Image&>(*image);
+
+		    qDebug() << "Cast successful";
+		    qDebug() << "  Width:" << img.Width();
+		    qDebug() << "  Height:" << img.Height();
+		    qDebug() << "  Channels:" << img.NumberOfChannels();
+
+		    // Method 1: Try Pixel() accessor
+		    qDebug() << "\nMethod 1: Pixel() accessor";
+		    try {
+			qDebug() << "  Reading pixel [0,0]:" << img.Pixel(0, 0, 0);
+
+			qDebug() << "  Writing 0.5 to pixel [10,10]...";
+			img.Pixel(10, 10, 0) = 0.5f;
+
+			qDebug() << "  Reading back pixel [10,10]:" << img.Pixel(10, 10, 0);
+		    } catch (const std::exception& e) {
+			qDebug() << "  Exception in Pixel() test:" << e.what();
+		    } catch (...) {
+			qDebug() << "  Unknown exception in Pixel() test";
+		    }
+
+		    // Method 2: Try PixelData()
+		    qDebug() << "\nMethod 2: PixelData()";
+		    try {
+			float* rawPtr = img.PixelData(0);
+			qDebug() << "  PixelData(0) returned:" << rawPtr;
+
+			if (rawPtr) {
+			    qDebug() << "  rawPtr[0]:" << rawPtr[0];
+			    qDebug() << "  rawPtr[100]:" << rawPtr[100];
+
+			    qDebug() << "  Writing 0.75 to rawPtr[100]...";
+			    rawPtr[100] = 0.75f;
+
+			    qDebug() << "  Reading back rawPtr[100]:" << rawPtr[100];
+			    qDebug() << "  Reading via Pixel(100, 0):" << img.Pixel(100, 0, 0);
+			} else {
+			    qDebug() << "  ERROR: PixelData() returned NULL!";
+			}
+		    } catch (const std::exception& e) {
+			qDebug() << "  Exception in PixelData() test:" << e.what();
+		    } catch (...) {
+			qDebug() << "  Unknown exception in PixelData() test";
+		    }
+		}
+		else
+		{
+		    qDebug() << "Image is NOT float sample!";
+		    qDebug() << "  This is why the if block doesn't run";
+		}
+	    } catch (const pcl::Exception& e) {
+		qDebug() << "PCL Exception:" << QString::fromUtf16(
+		    reinterpret_cast<const char16_t*>(e.Message().c_str()));
+	    } catch (const std::exception& e) {
+		qDebug() << "std::exception:" << e.what();
+	    } catch (...) {
+		qDebug() << "Unknown exception caught";
+	    }
+
+	    qDebug() << "=== END DIAGNOSTIC ===\n";
             if (image.IsFloatSample())
             {
                 // Cast to float image and fill with gradient pattern

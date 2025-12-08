@@ -229,20 +229,61 @@ struct MockImageWindow
         if (widget)
             delete widget;
     }
-    
+
     void updateDisplay()
     {
+	qDebug() << "*** updateDisplay() CALLED ***";
+	qDebug() << "  this:" << this;
+	qDebug() << "  widget:" << widget;
+	qDebug() << "  imageLabel:" << imageLabel;
+	qDebug() << "  imagePtr:" << imagePtr;
+
 	if (!widget || !imageLabel || !imagePtr)
+	{
+	    qDebug() << "  *** EARLY RETURN - Missing component! ***";
 	    return;
+	}
 
 	MockImage* img = imagePtr;
+	qDebug() << "  Image info:";
+	qDebug() << "    width:" << img->width << "height:" << img->height;
+	qDebug() << "    channels:" << img->numberOfChannels;
+	qDebug() << "    floatSample:" << img->floatSample;
+	qDebug() << "    channelData.size():" << img->channelData.size();
 
+	if (img->channelData.empty()) {
+	    qDebug() << "  *** ERROR: channelData is empty! ***";
+	    return;
+	}
+
+	qDebug() << "    channelData[0]:" << img->channelData[0];
+
+	if (!img->channelData[0]) {
+	    qDebug() << "  *** ERROR: channelData[0] is NULL! ***";
+	    return;
+	}
+
+	// Sample some pixel values
+	if (img->floatSample) {
+	    float* data = (float*)img->channelData[0];
+	    qDebug() << "  Sample pixels (float):";
+	    qDebug() << "    [0,0] (data[0]):" << data[0];
+	    qDebug() << "    [255,255] (data[255*512+255]):" << data[255 * img->width + 255];
+	    qDebug() << "    [511,511] (data[last]):" << data[(img->width * img->height) - 1];
+	}
+
+	qDebug() << "  Creating QImage...";
 	QImage qimg(img->width,
 		    img->height,
 		    img->numberOfChannels == 1
 			? QImage::Format_Grayscale8
 			: QImage::Format_RGB888);
 
+	qDebug() << "  QImage created:";
+	qDebug() << "    isNull:" << qimg.isNull();
+	qDebug() << "    size:" << qimg.size();
+
+	// Rest of conversion code...
 	for (uint32_t y = 0; y < img->height; ++y)
 	for (uint32_t x = 0; x < img->width;  ++x)
 	{
@@ -288,15 +329,45 @@ struct MockImageWindow
 	    }
 	}
 
+	qDebug() << "  Pixel conversion complete";
+
+	// Sample converted QImage pixels
+	qDebug() << "  QImage pixel samples:";
+	qDebug() << "    (0,0):" << qGray(qimg.pixel(0, 0));
+	qDebug() << "    (255,255):" << qGray(qimg.pixel(255, 255));
+	qDebug() << "    (511,511):" << qGray(qimg.pixel(511, 511));
+
+	qDebug() << "  Creating QPixmap...";
 	QPixmap pix = QPixmap::fromImage(qimg);
+	qDebug() << "  QPixmap created:";
+	qDebug() << "    isNull:" << pix.isNull();
+	qDebug() << "    size:" << pix.size();
+
 	if (zoomFactor != 1)
+	{
+	    qDebug() << "  Applying zoom factor:" << zoomFactor;
 	    pix = pix.scaled(img->width * zoomFactor,
 			     img->height * zoomFactor,
 			     Qt::KeepAspectRatio);
+	    qDebug() << "  Zoomed pixmap size:" << pix.size();
+	}
+
+	qDebug() << "  Setting pixmap on label...";
+	qDebug() << "    Label before:";
+	qDebug() << "      size:" << imageLabel->size();
+	qDebug() << "      hasPixmap:" << !imageLabel->pixmap(Qt::ReturnByValue).isNull();
 
 	imageLabel->setPixmap(pix);
 	imageLabel->resize(pix.size());
-    }    
+
+	qDebug() << "    Label after:";
+	qDebug() << "      size:" << imageLabel->size();
+	qDebug() << "      hasPixmap:" << !imageLabel->pixmap(Qt::ReturnByValue).isNull();
+	qDebug() << "      pixmap size:" << imageLabel->pixmap(Qt::ReturnByValue).size();
+
+	qDebug() << "  *** updateDisplay() COMPLETE ***\n";
+    }  
+
     void zoomToFit()
     {
         if (!widget || !scrollArea) return;
