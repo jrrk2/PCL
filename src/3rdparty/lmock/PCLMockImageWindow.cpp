@@ -94,44 +94,6 @@ static std::map<view_handle, MockViewExtended*> g_mockViewsExt;
 // Mock Image Storage (replaces previous MockImageWindow)
 // ============================================================================
 
-struct MockImage
-{
-    uint32_t width = 0;
-    uint32_t height = 0;
-    uint32_t numberOfChannels = 0;
-    uint32_t bitsPerSample = 32;
-    bool floatSample = true;
-    uint32_t colorSpace = 0;  // 0=Gray, 1=RGB
-    
-    void* owner = nullptr;
-    uint32_t refCount = 1;
-    
-    // Pixel data - one pointer per channel
-    std::vector<void*> channelData;
-    
-    MockImage(uint32_t w, uint32_t h, uint32_t n, uint32_t bits, bool flt, uint32_t cs, void* own)
-        : width(w), height(h), numberOfChannels(n), bitsPerSample(bits)
-        , floatSample(flt), colorSpace(cs), owner(own)
-    {
-        size_t pixelsPerChannel = width * height;
-        size_t bytesPerPixel = floatSample ? sizeof(float) : sizeof(uint16_t);
-        size_t bytesPerChannel = pixelsPerChannel * bytesPerPixel;
-        
-        channelData.resize(numberOfChannels);
-        for (uint32_t i = 0; i < numberOfChannels; ++i)
-        {
-            channelData[i] = malloc(bytesPerChannel);
-            memset(channelData[i], 0, bytesPerChannel);
-        }
-    }
-    
-    ~MockImage()
-    {
-        for (void* ptr : channelData)
-            free(ptr);
-    }
-};
-
 struct MockView
 {
     std::string viewId;
@@ -278,6 +240,7 @@ static std::map<window_handle, MockWindow*> g_windows;
 static std::map<std::string, window_handle> g_windowsByID;
 static std::vector<view_handle> g_dynamicTargets;
 static int g_nextWindowID = 1;
+static SharedImageContext SharedImage;
 
 // ============================================================================
 // SharedImageContext Implementation (CRITICAL for pixel access)
@@ -842,6 +805,18 @@ window_handle ImageWindowContext::CreateImageWindow(int width, int height, int n
     MockImageWindow* mockWin = new MockImageWindow(
         windowId, width, height, numberOfChannels, bitsPerSample, floatSample != 0
     );
+
+    // CREATE THE IMAGE IN SHARED CONTEXT
+    image_handle imgHandle = SharedImage.CreateImage(
+	width, height, numberOfChannels, bitsPerSample,
+	floatSample,              // float?
+	numberOfChannels == 1 ? 0u : 1u,   // colorspace: 0 gray, 1 RGB
+	mockWin                   // owner
+    );
+
+    // Link window → image
+    mockWin->imageHandle = imgHandle;
+    mockWin->imagePtr    = g_images[imgHandle];
     
     window_handle handle = reinterpret_cast<window_handle>(mockWin->widget);
     g_mockWindows[handle] = mockWin;
@@ -885,9 +860,14 @@ void ImageWindowContext::SetImageWindowVisible(window_handle handle, api_bool vi
     if (win->widget)
     {
         if (visible)
+	  {
+	    win->updateDisplay();
             win->widget->show();
+	  }
         else
+	  {
             win->widget->hide();
+	  }
         win->isVisible = (visible != 0);
     }
 }

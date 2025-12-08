@@ -146,6 +146,44 @@ extern QList<MockBase*> g_topLevelWidgets;
 // Mock Image Window Storage
 // ============================================================================
 
+struct MockImage
+{
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t numberOfChannels = 0;
+    uint32_t bitsPerSample = 32;
+    bool floatSample = true;
+    uint32_t colorSpace = 0;  // 0=Gray, 1=RGB
+    
+    void* owner = nullptr;
+    uint32_t refCount = 1;
+    
+    // Pixel data - one pointer per channel
+    std::vector<void*> channelData;
+    
+    MockImage(uint32_t w, uint32_t h, uint32_t n, uint32_t bits, bool flt, uint32_t cs, void* own)
+        : width(w), height(h), numberOfChannels(n), bitsPerSample(bits)
+        , floatSample(flt), colorSpace(cs), owner(own)
+    {
+        size_t pixelsPerChannel = width * height;
+        size_t bytesPerPixel = floatSample ? sizeof(float) : sizeof(uint16_t);
+        size_t bytesPerChannel = pixelsPerChannel * bytesPerPixel;
+        
+        channelData.resize(numberOfChannels);
+        for (uint32_t i = 0; i < numberOfChannels; ++i)
+        {
+            channelData[i] = malloc(bytesPerChannel);
+            memset(channelData[i], 0, bytesPerChannel);
+        }
+    }
+    
+    ~MockImage()
+    {
+        for (void* ptr : channelData)
+            free(ptr);
+    }
+};
+
 struct MockImageWindow
 {
     QWidget* widget = nullptr;
@@ -160,9 +198,9 @@ struct MockImageWindow
     bool floatSample = false;
     
     // Image data storage
-    std::vector<float> imageData;  // For float images
-    std::vector<uint16_t> imageData16;  // For 16-bit images
-    
+    image_handle imageHandle = nullptr;   // the real PCL image
+    MockImage*  imagePtr    = nullptr;    // cached pointer for convenience
+  
     view_handle mainView = nullptr;
     int zoomFactor = 1;
     bool isVisible = true;
@@ -170,13 +208,6 @@ struct MockImageWindow
     MockImageWindow(const std::string& windowId, int w, int h, int ch, int bits, bool isFloat)
         : id(windowId), width(w), height(h), channels(ch), bitsPerSample(bits), floatSample(isFloat)
     {
-        // Allocate image data
-        size_t pixelCount = width * height * channels;
-        if (floatSample)
-            imageData.resize(pixelCount, 0.0f);
-        else
-            imageData16.resize(pixelCount, 0);
-        
         // Create Qt widget for display
         widget = new QWidget();
         widget->setWindowTitle(QString::fromStdString(id));
@@ -201,67 +232,71 @@ struct MockImageWindow
     
     void updateDisplay()
     {
-        // Convert our image data to QImage for display
-        QImage qimg(width, height, channels == 1 ? QImage::Format_Grayscale8 : QImage::Format_RGB888);
-        
-        for (int y = 0; y < height; ++y)
-        {
-            for (int x = 0; x < width; ++x)
-            {
-                if (floatSample)
-                {
-                    // Convert float [0,1] to 8-bit [0,255]
-                    if (channels == 1)
-                    {
-                        float val = imageData[y * width + x];
-                        int gray = static_cast<int>(val * 255.0f);
-                        gray = std::max(0, std::min(255, gray));
-                        qimg.setPixel(x, y, qRgb(gray, gray, gray));
-                    }
-                    else if (channels == 3)
-                    {
-                        int idx = (y * width + x) * 3;
-                        int r = static_cast<int>(imageData[idx + 0] * 255.0f);
-                        int g = static_cast<int>(imageData[idx + 1] * 255.0f);
-                        int b = static_cast<int>(imageData[idx + 2] * 255.0f);
-                        r = std::max(0, std::min(255, r));
-                        g = std::max(0, std::min(255, g));
-                        b = std::max(0, std::min(255, b));
-                        qimg.setPixel(x, y, qRgb(r, g, b));
-                    }
-                }
-                else
-                {
-                    // Convert 16-bit to 8-bit for display
-                    if (channels == 1)
-                    {
-                        int gray = imageData16[y * width + x] >> 8;
-                        qimg.setPixel(x, y, qRgb(gray, gray, gray));
-                    }
-                    else if (channels == 3)
-                    {
-                        int idx = (y * width + x) * 3;
-                        int r = imageData16[idx + 0] >> 8;
-                        int g = imageData16[idx + 1] >> 8;
-                        int b = imageData16[idx + 2] >> 8;
-                        qimg.setPixel(x, y, qRgb(r, g, b));
-                    }
-                }
-            }
-        }
-        
-        QPixmap pixmap = QPixmap::fromImage(qimg);
-        if (zoomFactor != 1)
-        {
-            int scaledWidth = width * zoomFactor;
-            int scaledHeight = height * zoomFactor;
-            pixmap = pixmap.scaled(scaledWidth, scaledHeight, Qt::KeepAspectRatio, Qt::FastTransformation);
-        }
-        
-        imageLabel->setPixmap(pixmap);
-        imageLabel->resize(pixmap.size());
-    }
-    
+	if (!widget || !imageLabel || !imagePtr)
+	    return;
+
+	MockImage* img = imagePtr;
+
+	QImage qimg(img->width,
+		    img->height,
+		    img->numberOfChannels == 1
+			? QImage::Format_Grayscale8
+			: QImage::Format_RGB888);
+
+	for (uint32_t y = 0; y < img->height; ++y)
+	for (uint32_t x = 0; x < img->width;  ++x)
+	{
+	    if (img->floatSample)
+	    {
+		if (img->numberOfChannels == 1)
+		{
+		    float* data = (float*)img->channelData[0];
+		    float val = data[y * img->width + x];
+		    int gray = std::clamp(int(val * 255.0f), 0, 255);
+		    qimg.setPixel(x, y, qRgb(gray, gray, gray));
+		}
+		else
+		{
+		    float* r = (float*)img->channelData[0];
+		    float* g = (float*)img->channelData[1];
+		    float* b = (float*)img->channelData[2];
+		    size_t idx = y * img->width + x;
+
+		    int rr = std::clamp(int(r[idx] * 255.0f), 0, 255);
+		    int gg = std::clamp(int(g[idx] * 255.0f), 0, 255);
+		    int bb = std::clamp(int(b[idx] * 255.0f), 0, 255);
+
+		    qimg.setPixel(x, y, qRgb(rr, gg, bb));
+		}
+	    }
+	    else
+	    {
+		uint16_t* r = (uint16_t*)img->channelData[0];
+		uint16_t* g = (uint16_t*)img->channelData[1];
+		uint16_t* b = (uint16_t*)img->channelData[2];
+		size_t idx = y * img->width + x;
+
+		if (img->numberOfChannels == 1)
+		{
+		    int gray = r[idx] >> 8;
+		    qimg.setPixel(x, y, qRgb(gray, gray, gray));
+		}
+		else
+		{
+		    qimg.setPixel(x, y, qRgb(r[idx]>>8, g[idx]>>8, b[idx]>>8));
+		}
+	    }
+	}
+
+	QPixmap pix = QPixmap::fromImage(qimg);
+	if (zoomFactor != 1)
+	    pix = pix.scaled(img->width * zoomFactor,
+			     img->height * zoomFactor,
+			     Qt::KeepAspectRatio);
+
+	imageLabel->setPixmap(pix);
+	imageLabel->resize(pix.size());
+    }    
     void zoomToFit()
     {
         if (!widget || !scrollArea) return;

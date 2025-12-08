@@ -8188,7 +8188,7 @@ struct MockEdit {
 
 };
 
-struct MockImage {
+struct MockImageStruct {
     uint32_t width;
     uint32_t height;
     uint32_t channels;
@@ -8203,7 +8203,7 @@ struct MockFileInstance {
     std::string path;
     std::string extension;
     uint32_t selectedImage; // index of selected image
-    std::vector<MockImage*> images; // images in the file
+    std::vector<MockImageStruct*> images; // images in the file
 };
 
 struct MockGroupBox {
@@ -8286,7 +8286,7 @@ static std::map<control_handle, MockGroupBox*> g_groupbox_map;
 static std::map<const_control_handle, MockControl*> g_control_map;
 static std::map<control_handle, MockEdit*> g_edit_map;
 static std::map<file_format_handle, MockFileInstance*> g_file_instances;
-static std::map<image_handle, MockImage*> g_image_map;
+static std::map<image_handle, MockImageStruct*> g_image_map;
 static void* g_module_handle = nullptr;
 
 std::string GetFileExtension(const std::string& path) {
@@ -8693,7 +8693,7 @@ api_bool FileFormatContext::CreateImage(file_format_handle handle, const api_ima
     }
     
     // Create a new image
-    MockImage* img = new MockImage();
+    MockImageStruct* img = new MockImageStruct();
     img->width = info->width;
     img->height = info->height;
     img->channels = info->numberOfChannels;
@@ -8734,7 +8734,7 @@ api_bool WriteImagePixelData(file_format_handle handle, const_image_handle image
     }
     
     // Get the target image in the file
-    MockImage* dstImg = it->second->images[it->second->selectedImage];
+    MockImageStruct* dstImg = it->second->images[it->second->selectedImage];
     
     // Get the source image
     auto img_it = g_image_map.find((image_handle)image);
@@ -8742,7 +8742,7 @@ api_bool WriteImagePixelData(file_format_handle handle, const_image_handle image
         return api_false;
     }
     
-    MockImage* srcImg = img_it->second;
+    MockImageStruct* srcImg = img_it->second;
     
     // Check compatibility
     if (dstImg->width != srcImg->width || 
@@ -8788,16 +8788,16 @@ api_bool FileFormatContext::WriteImage(file_format_handle handle, const_image_ha
     if (isXISF) {
 	LogDbg("WriteImage: Using XISF writer for: " + instance->path);
 
-	// Get the MockImage
+	// Get the MockImageStruct
 	auto img_it = g_image_map.find((image_handle)image);
 	if (img_it == g_image_map.end()) {
 	    LogDbg("WriteImage: Image not found in map");
 	    return api_false;
 	}
 
-	MockImage* mockImg = img_it->second;
+	MockImageStruct* mockImg = img_it->second;
 
-	LogDbg("WriteImage: MockImage is " + 
+	LogDbg("WriteImage: MockImageStruct is " + 
 		 std::to_string(mockImg->width) + "x" + 
 		 std::to_string(mockImg->height) + ", " +
 		 std::to_string(mockImg->channels) + " channels");
@@ -8920,7 +8920,7 @@ api_bool FileFormatContext::CreateImageFileEx(file_format_handle handle, const c
     it->second->path = path;
     
     // Clear any existing images
-    for (MockImage* img : it->second->images) {
+    for (MockImageStruct* img : it->second->images) {
         // Free pixel data for each channel
         for (uint32_t i = 0; i < img->channels; i++) {
             free(img->pixelData[i]);
@@ -10933,7 +10933,7 @@ cursor_handle CursorContext::CreateCursor(api_handle client,
 static std::map<window_handle, MockImageWindow*> g_image_window_map;
 
 struct MockView {
-    MockImage* image;
+    MockImageStruct* image;
     QString identifier;
     api_handle clientHandle;
 };
