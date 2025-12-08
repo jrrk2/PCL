@@ -13,6 +13,8 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 #include <QLabel>
+#include <QTextEdit>
+#include <QDockWidget>
 #include <dlfcn.h>
 
 #ifdef __APPLE__
@@ -29,6 +31,8 @@
 #include <pcl/MetaProcess.h>
 #include <pcl/ProcessInterface.h>
 #include <pcl/ProcessImplementation.h>
+#include <pcl/FileFormat.h>
+// #include <pcl/Error.h>
 
 #include "PCLInterfaceScanner.h"
 #include "PCLMockAPI.h"
@@ -310,6 +314,63 @@ QList<ProcessInfo> findProcessClasses()
 }
 
 // ============================================================================
+// Console Widget - Captures PCL console output
+// ============================================================================
+
+class ConsoleWidget : public QWidget
+{
+public:
+    ConsoleWidget(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+        QVBoxLayout* layout = new QVBoxLayout(this);
+        layout->setContentsMargins(0, 0, 0, 0);
+        
+        m_textEdit = new QTextEdit(this);
+        m_textEdit->setReadOnly(true);
+        m_textEdit->setFont(QFont("Courier", 10));
+        m_textEdit->setLineWrapMode(QTextEdit::NoWrap);
+        
+        layout->addWidget(m_textEdit);
+        
+        // Store global instance for PCL callbacks
+        s_instance = this;
+    }
+    
+    void appendText(const QString& text)
+    {
+        m_textEdit->moveCursor(QTextCursor::End);
+        m_textEdit->insertPlainText(text);
+        m_textEdit->moveCursor(QTextCursor::End);
+    }
+    
+    void clear()
+    {
+        m_textEdit->clear();
+    }
+    
+    static ConsoleWidget* instance() { return s_instance; }
+    
+private:
+    QTextEdit* m_textEdit;
+    static ConsoleWidget* s_instance;
+};
+
+ConsoleWidget* ConsoleWidget::s_instance = nullptr;
+
+// Helper function for PCLMockAPI to write to console
+extern "C" void MockMainWriteConsole(const pcl::char16_type* text, bool appendNewline)
+{
+    if (ConsoleWidget::instance())
+    {
+        QString qtext = QString::fromUtf16(reinterpret_cast<const char16_t*>(text));
+        if (appendNewline)
+            qtext += "\n";
+        ConsoleWidget::instance()->appendText(qtext);
+    }
+}
+
+// ============================================================================
 // Selection Window - Main menu interface
 // ============================================================================
 
@@ -353,6 +414,16 @@ public:
         layout->addStretch();
         
         setCentralWidget(central);
+        
+        // Create console dock widget
+        m_consoleDock = new QDockWidget("PCL Console", this);
+        m_consoleWidget = new ConsoleWidget(m_consoleDock);
+        m_consoleDock->setWidget(m_consoleWidget);
+        m_consoleDock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::RightDockWidgetArea);
+        addDockWidget(Qt::BottomDockWidgetArea, m_consoleDock);
+        
+        // Console starts visible
+        m_consoleDock->setVisible(true);
         
         buildMenus();
     }
@@ -446,6 +517,79 @@ private:
         QObject::connect(exportAction, &QAction::triggered, 
                        this, &SelectionWindow::onExportInterface);
         m_exportMenu->addAction(exportAction);
+        
+        // Tools Menu
+        QMenu* toolsMenu = menuBar->addMenu("&Tools");
+        
+        // Global Execution submenu
+        QMenu* globalExecMenu = toolsMenu->addMenu("Global Execution");
+        
+        QAction* execGlobalAction = new QAction("ExecuteGlobal()", this);
+        QObject::connect(execGlobalAction, &QAction::triggered,
+                       this, &SelectionWindow::onExecuteGlobal);
+        globalExecMenu->addAction(execGlobalAction);
+        
+        QAction* execGlobalOnCurrentViewAction = new QAction("ExecuteGlobalOnCurrentView()", this);
+        QObject::connect(execGlobalOnCurrentViewAction, &QAction::triggered,
+                       this, &SelectionWindow::onExecuteGlobalOnCurrentView);
+        globalExecMenu->addAction(execGlobalOnCurrentViewAction);
+        
+        QAction* execGlobalOnCurrentWindowAction = new QAction("ExecuteGlobalOnCurrentWindow()", this);
+        QObject::connect(execGlobalOnCurrentWindowAction, &QAction::triggered,
+                       this, &SelectionWindow::onExecuteGlobalOnCurrentWindow);
+        globalExecMenu->addAction(execGlobalOnCurrentWindowAction);
+        
+        // File Format Loaders submenu
+        QMenu* fileFormatMenu = toolsMenu->addMenu("File Format Loaders");
+        
+        QAction* testFITSAction = new QAction("Test FITS Loader", this);
+        QObject::connect(testFITSAction, &QAction::triggered,
+                       this, &SelectionWindow::onTestFITSLoader);
+        fileFormatMenu->addAction(testFITSAction);
+        
+        QAction* testTIFFAction = new QAction("Test TIFF Loader", this);
+        QObject::connect(testTIFFAction, &QAction::triggered,
+                       this, &SelectionWindow::onTestTIFFLoader);
+        fileFormatMenu->addAction(testTIFFAction);
+        
+        QAction* testXISFAction = new QAction("Test XISF Loader", this);
+        QObject::connect(testXISFAction, &QAction::triggered,
+                       this, &SelectionWindow::onTestXISFLoader);
+        fileFormatMenu->addAction(testXISFAction);
+        
+        QAction* testAllFormatsAction = new QAction("Test All Loaders", this);
+        QObject::connect(testAllFormatsAction, &QAction::triggered,
+                       this, &SelectionWindow::onTestAllLoaders);
+        fileFormatMenu->addAction(testAllFormatsAction);
+        
+        toolsMenu->addSeparator();
+        
+        QAction* showProcessInfoAction = new QAction("Show Current Process Info", this);
+        QObject::connect(showProcessInfoAction, &QAction::triggered,
+                       this, &SelectionWindow::onShowProcessInfo);
+        toolsMenu->addAction(showProcessInfoAction);
+        
+        toolsMenu->addSeparator();
+        
+        QAction* testConsoleAction = new QAction("Test Console Output", this);
+        QObject::connect(testConsoleAction, &QAction::triggered,
+                       this, &SelectionWindow::onTestConsole);
+        toolsMenu->addAction(testConsoleAction);
+        
+        // View Menu
+        QMenu* viewMenu = menuBar->addMenu("&View");
+        
+        QAction* toggleConsoleAction = new QAction("Show/Hide Console", this);
+        toggleConsoleAction->setCheckable(true);
+        toggleConsoleAction->setChecked(true);
+        QObject::connect(toggleConsoleAction, &QAction::triggered,
+                       this, &SelectionWindow::onToggleConsole);
+        viewMenu->addAction(toggleConsoleAction);
+        
+        QAction* clearConsoleAction = new QAction("Clear Console", this);
+        QObject::connect(clearConsoleAction, &QAction::triggered,
+                       this, &SelectionWindow::onClearConsole);
+        viewMenu->addAction(clearConsoleAction);
         
         // Help Menu
         QMenu* helpMenu = menuBar->addMenu("&Help");
@@ -730,6 +874,371 @@ private:
             "- Qt code export\n\n"
             "No factory functions needed!");
     }
+    
+    void onExecuteGlobal()
+    {
+        if (!m_selectedProcess)
+        {
+            QMessageBox::warning(this, "No Process",
+                "Please select a process first from the Processes menu.");
+            return;
+        }
+        
+        if (!m_processInstance)
+        {
+            QMessageBox::warning(this, "No Instance",
+                "Please create a process instance first from the Instances menu.");
+            return;
+        }
+        
+        qDebug() << "\n===========================================";
+        qDebug() << "Testing ExecuteGlobal()";
+        qDebug() << "===========================================\n";
+        
+        // ExecuteGlobal is a virtual method that must be implemented by the concrete
+        // process implementation class. We need to get the concrete type.
+        // The m_processInstance was created by MetaProcess::Create() which returns
+        // the correct concrete type, but we need to call ExecuteGlobal on it.
+        
+        try {
+            // Try to find the ExecuteGlobal method dynamically
+            // Get the class name from the process
+            QString processId = QString::fromUtf8(m_selectedProcess->Id().c_str());
+            
+            qDebug() << "Process ID:" << processId;
+            qDebug() << "Instance type:" << typeid(*m_processInstance).name();
+            
+            // The instance is the concrete implementation created by MetaProcess::Create()
+            // We can safely call ExecuteGlobal on it - it should be overridden
+            bool result = m_processInstance->ExecuteGlobal();
+            
+            QMessageBox::information(this, "ExecuteGlobal Result",
+                QString("ExecuteGlobal() completed.\n\n"
+                        "Result: %1")
+                    .arg(result ? "Success (true)" : "Failed (false)"));
+            
+            qDebug() << "✓ ExecuteGlobal() returned:" << result;
+        }
+        catch (const pcl::Error& e)
+        {
+            QString errorMsg = QString::fromUtf16(
+                reinterpret_cast<const char16_t*>(e.Message().c_str())
+            );
+            
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle("PCL Error");
+            msgBox.setIcon(QMessageBox::Critical);
+            msgBox.setTextFormat(Qt::RichText);
+            msgBox.setText(QString(
+                "<h3>ExecuteGlobal() Error</h3>"
+                "<p><b>PCL Error:</b></p>"
+                "<p>%1</p>"
+                "<hr>"
+                "<p><i>Note: ExecuteGlobal() must be reimplemented in your "
+                "process implementation class (descendant of ProcessImplementation).</i></p>"
+            ).arg(errorMsg));
+            msgBox.exec();
+            
+            qDebug() << "❌ PCL Error:" << errorMsg;
+        }
+        catch (const std::exception& e)
+        {
+            QMessageBox::critical(this, "Error",
+                QString("ExecuteGlobal() threw exception:\n%1")
+                    .arg(e.what()));
+            qDebug() << "❌ Exception:" << e.what();
+        }
+    }
+    
+    void onExecuteGlobalOnCurrentView()
+    {
+        if (!m_selectedProcess)
+        {
+            QMessageBox::warning(this, "No Process",
+                "Please select a process first from the Processes menu.");
+            return;
+        }
+        
+        qDebug() << "\n===========================================";
+        qDebug() << "Testing ExecuteGlobalOnCurrentView()";
+        qDebug() << "===========================================\n";
+        
+        QMessageBox::information(this, "ExecuteGlobalOnCurrentView",
+            "This method would execute on the current view.\n\n"
+            "In a real PixInsight environment, this would operate on\n"
+            "the currently active image view.");
+        
+        qDebug() << "ℹ ExecuteGlobalOnCurrentView() - would execute on current view";
+    }
+    
+    void onExecuteGlobalOnCurrentWindow()
+    {
+        if (!m_selectedProcess)
+        {
+            QMessageBox::warning(this, "No Process",
+                "Please select a process first from the Processes menu.");
+            return;
+        }
+        
+        qDebug() << "\n===========================================";
+        qDebug() << "Testing ExecuteGlobalOnCurrentWindow()";
+        qDebug() << "===========================================\n";
+        
+        QMessageBox::information(this, "ExecuteGlobalOnCurrentWindow",
+            "This method would execute on the current window.\n\n"
+            "In a real PixInsight environment, this would operate on\n"
+            "the currently active image window.");
+        
+        qDebug() << "ℹ ExecuteGlobalOnCurrentWindow() - would execute on current window";
+    }
+    
+    void onShowProcessInfo()
+    {
+        if (!m_selectedProcess)
+        {
+            QMessageBox::warning(this, "No Process",
+                "No process currently selected.");
+            return;
+        }
+        
+        QString processId = QString::fromUtf8(m_selectedProcess->Id().c_str());
+        uint32_t versionNum = m_selectedProcess->Version();
+        QString processVersion = QString("0x%1").arg(versionNum, 0, 16);
+        QString processCategory = QString::fromUtf8(m_selectedProcess->Category().c_str());
+        pcl::String descStr = m_selectedProcess->Description();
+        QString processDescription = QString::fromUtf16(
+            reinterpret_cast<const char16_t*>(descStr.c_str())
+        );
+        
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("Current Process Information");
+        msgBox.setTextFormat(Qt::RichText);
+        
+        QString message = QString(
+            "<h3>Current Process:</h3>"
+            "<p><b>ID:</b> %1</p>"
+            "<p><b>Version:</b> %2</p>"
+            "<p><b>Category:</b> %3</p>"
+            "<p><b>Description:</b></p>"
+            "%4"
+        ).arg(processId)
+         .arg(processVersion)
+         .arg(processCategory.isEmpty() ? "<i>(none)</i>" : processCategory)
+         .arg(processDescription);
+        
+        msgBox.setText(message);
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+    }
+    
+    void onToggleConsole()
+    {
+        if (m_consoleDock)
+        {
+            m_consoleDock->setVisible(!m_consoleDock->isVisible());
+        }
+    }
+    
+    void onClearConsole()
+    {
+        if (m_consoleWidget)
+        {
+            m_consoleWidget->clear();
+        }
+    }
+    
+    void onTestConsole()
+    {
+        if (!m_consoleWidget)
+        {
+            QMessageBox::warning(this, "No Console",
+                "Console widget not available.");
+            return;
+        }
+        
+        // Test the console with sample output
+        m_consoleWidget->appendText("===========================================\n");
+        m_consoleWidget->appendText("Console Output Test\n");
+        m_consoleWidget->appendText("===========================================\n");
+        m_consoleWidget->appendText("This is a test of the console output system.\n");
+        m_consoleWidget->appendText("\n");
+        m_consoleWidget->appendText("Features:\n");
+        m_consoleWidget->appendText("  - Scrollable text area\n");
+        m_consoleWidget->appendText("  - Monospace font for alignment\n");
+        m_consoleWidget->appendText("  - Captures PCL Console::Write() calls\n");
+        m_consoleWidget->appendText("  - Dockable window (bottom or right)\n");
+        m_consoleWidget->appendText("\n");
+        m_consoleWidget->appendText("To integrate with PCL, see:\n");
+        m_consoleWidget->appendText("  PCLMockAPI_ConsoleIntegration.cpp\n");
+        m_consoleWidget->appendText("\n");
+        m_consoleWidget->appendText("Test completed successfully!\n");
+        m_consoleWidget->appendText("===========================================\n");
+        
+        QMessageBox::information(this, "Console Test",
+            "Test output has been written to the console.\n\n"
+            "Check the console window at the bottom of the main window.");
+    }
+    
+    void onTestFITSLoader()
+    {
+        qDebug() << "\n===========================================";
+        qDebug() << "Testing FITS Loader";
+        qDebug() << "===========================================\n";
+        
+        QString result = testFileFormatLoader("FITS", "fits");
+        
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("FITS Loader Test");
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText(result);
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+    }
+    
+    void onTestTIFFLoader()
+    {
+        qDebug() << "\n===========================================";
+        qDebug() << "Testing TIFF Loader";
+        qDebug() << "===========================================\n";
+        
+        QString result = testFileFormatLoader("TIFF", "tif");
+        
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("TIFF Loader Test");
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText(result);
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+    }
+    
+    void onTestXISFLoader()
+    {
+        qDebug() << "\n===========================================";
+        qDebug() << "Testing XISF Loader";
+        qDebug() << "===========================================\n";
+        
+        QString result = testFileFormatLoader("XISF", "xisf");
+        
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("XISF Loader Test");
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText(result);
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+    }
+    
+    void onTestAllLoaders()
+    {
+        qDebug() << "\n===========================================";
+        qDebug() << "Testing All File Format Loaders";
+        qDebug() << "===========================================\n";
+        
+        QString fitsResult = testFileFormatLoader("FITS", "fits");
+        QString tiffResult = testFileFormatLoader("TIFF", "tif");
+        QString xisfResult = testFileFormatLoader("XISF", "xisf");
+        
+        QString combined = QString(
+            "<h3>File Format Loader Tests</h3>"
+            "<hr>"
+            "%1"
+            "<hr>"
+            "%2"
+            "<hr>"
+            "%3"
+        ).arg(fitsResult).arg(tiffResult).arg(xisfResult);
+        
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("All Loader Tests");
+        msgBox.setTextFormat(Qt::RichText);
+        msgBox.setText(combined);
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+    }
+    
+    QString testFileFormatLoader(const QString& formatName, const QString& extension)
+    {
+        qDebug() << "Testing" << formatName << "loader...";
+        
+        QString result = QString("<h4>%1 Loader Test</h4>").arg(formatName);
+        
+        try {
+            // Try to find the file format in PCL's registry
+            const pcl::FileFormat* foundFormat = nullptr;
+            
+            // Search through all file formats
+            pcl::Array<pcl::FileFormat> formats = pcl::FileFormat::AllFormats();
+            
+            qDebug() << "  Searching through" << formats.Length() << "registered formats...";
+            
+            for (const pcl::FileFormat& fmt : formats)
+            {
+                pcl::StringList extensions = fmt.FileExtensions();
+                for (const pcl::String& ext : extensions)
+                {
+                    pcl::IsoString isoExt = ext.ToIsoString();
+                    if (isoExt.CompareIC(extension.toUtf8().constData()) == 0)
+                    {
+                        foundFormat = &fmt;
+                        break;
+                    }
+                }
+                if (foundFormat)
+                    break;
+            }
+            
+            if (foundFormat)
+            {
+                result += QString("<p><b>✓ Format found:</b> %1</p>")
+                    .arg(QString::fromUtf8(foundFormat->Name().c_str()));
+                
+                qDebug() << "  ✓ Found format:" << foundFormat->Name().c_str();
+                
+                // Get format information
+                pcl::StringList extensions = foundFormat->FileExtensions();
+                result += "<p><b>Extensions:</b> ";
+                QStringList extList;
+                for (const pcl::String& ext : extensions)
+                {
+                    extList << QString::fromUtf16(reinterpret_cast<const char16_t*>(ext.c_str()));
+                }
+                result += extList.join(", ") + "</p>";
+                
+                result += QString("<p><b>Can read:</b> %1</p>")
+                    .arg(foundFormat->CanRead() ? "Yes" : "No");
+                result += QString("<p><b>Can write:</b> %1</p>")
+                    .arg(foundFormat->CanWrite() ? "Yes" : "No");
+                result += QString("<p><b>Can read incrementally:</b> %1</p>")
+                    .arg(foundFormat->CanReadIncrementally() ? "Yes" : "No");
+                result += QString("<p><b>Can write incrementally:</b> %1</p>")
+                    .arg(foundFormat->CanWriteIncrementally() ? "Yes" : "No");
+                
+                qDebug() << "  Can read:" << foundFormat->CanRead();
+                qDebug() << "  Can write:" << foundFormat->CanWrite();
+                qDebug() << "  Extensions:" << extList.join(", ");
+            }
+            else
+            {
+                result += QString("<p><b>❌ Format not found</b></p>");
+                result += QString("<p>Extension '.%1' is not registered in PCL.</p>").arg(extension);
+                result += QString("<p>Available formats: %1</p>").arg(formats.Length());
+                
+                qDebug() << "  ❌ Format not found for extension:" << extension;
+                qDebug() << "  Available formats:" << formats.Length();
+            }
+        }
+        catch (const std::exception& e)
+        {
+            result += QString("<p><b>❌ Exception:</b> %1</p>").arg(e.what());
+            qDebug() << "  ❌ Exception:" << e.what();
+        }
+        catch (...)
+        {
+            result += "<p><b>❌ Unknown exception occurred</b></p>";
+            qDebug() << "  ❌ Unknown exception";
+        }
+        
+        return result;
+    }
 
     bool constructInterface(const DiscoveredInterface& di)
     {
@@ -836,6 +1345,9 @@ private:
     QMenu* m_exportMenu;
     QList<QAction*> m_processActions;
     QList<QAction*> m_instanceActions;
+    
+    QDockWidget* m_consoleDock;
+    ConsoleWidget* m_consoleWidget;
 };
 
 // ============================================================================
@@ -973,7 +1485,20 @@ Menus:
 - Processes: Select which process to use (when multiple are available)
 - Interfaces: Select which interface to work with
 - Instances: Create and manage process instances
+- Tools: Test ExecuteGlobal and file format loaders
+- View: Toggle console visibility
 - Export: Export the selected interface to Qt code
+
+Console Output:
+- A dockable console window captures PCL console output
+- To integrate with PCLMockAPI.cpp, modify the WriteConsole function:
+
+    api_bool GlobalContext::WriteConsole(console_handle, const char16_type* text, api_bool newline)
+    {
+        extern void MockMainWriteConsole(const char16_t*, bool);
+        MockMainWriteConsole(text, newline != 0);
+        return api_true;
+    }
 
 Your module code needs NO special factory functions!
 

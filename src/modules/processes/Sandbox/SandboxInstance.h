@@ -39,6 +39,7 @@ public:
    UndoFlags UndoMode( const View& ) const override;
    bool CanExecuteOn( const View&, pcl::String& whyNot ) const override;
    bool ExecuteOn( View& ) override;
+   bool ExecuteGlobal() override;
    void* LockParameter( const MetaParameter*, size_type tableRow ) override;
    bool AllocateParameter( size_type sizeOrLength, const MetaParameter* p, size_type tableRow ) override;
    size_type ParameterLength( const MetaParameter* p, size_type tableRow ) const override;

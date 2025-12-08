@@ -182,6 +182,12 @@ size_type SandboxInstance::ParameterLength( const MetaParameter* p, size_type ta
    return 0;
 }
 
+bool SandboxInstance::ExecuteGlobal()
+{
+  Console().WriteLn("Sandbox execute global");
+  return true;
+}
+  
 // ----------------------------------------------------------------------------
 
 } // pcl

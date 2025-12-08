@@ -128,4 +128,5 @@ extern QList<MockBase*> g_topLevelWidgets;
 // ---------------------------------------------------------------
 extern "C" {
 void SetDebugLogging(bool);
+void MockMainWriteConsole(const char16_type *text, bool appendNewline);
 };

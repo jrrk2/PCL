@@ -2875,15 +2875,17 @@ uint32 GlobalContext::MessageBox(const char16_type* text,
     
     return msgBox.exec();
 }
-
+ 
 api_bool GlobalContext::ShowConsole(console_handle, api_bool)
 {
     return api_true;
 }
 
-api_bool GlobalContext::WriteConsole(console_handle, const char16_type*, api_bool)
+api_bool GlobalContext::WriteConsole(console_handle, const char16_type *text, api_bool newline)
 {
-    return api_true;
+  // Forward to MockMain's console widget
+  MockMainWriteConsole(text, newline != 0);
+  return api_true;
 }
 
 api_bool GlobalContext::WriteSettingsInteger(api_handle, int32, const char*, api_bool)
@@ -11706,30 +11708,6 @@ uint32_t GlobalContext::GetProcessStatus() {
     return 0x00000000; // Normal status, not aborted
 }
 
-  api_bool WriteConsole(console_handle handle, const char16_type *text16, api_bool appendNewline )
-  {
-    if (!text16) {
-      if (appendNewline) {
-        putchar('\n');
-	return api_true;
-      }
-      return api_false;
-    }
-    
-    // Just output to stdout for now
-    while (*text16)
-      {
-	uint16_t ch;
-	ch = *text16++;
-	putchar(ch);
-      }
-    if (appendNewline) {
-        putchar('\n');
-    }
-    
-    return api_true; // success
-}
-
 // Mock for EnableAbort
 int EnableAbort() {
   LogDbg("EnableAbort called");
@@ -11813,6 +11791,12 @@ api_bool ControlContext::GetControlAncestry(const_control_handle, const_control_
 void EditContext::SetEditSelected(control_handle, api_bool) {}
 api_bool EditContext::SetEditCompletedEventRoutine(control_handle, control_handle, pcl::event_routine) { return api_true; }
 api_bool EditContext::SetReturnPressedEventRoutine(control_handle, control_handle, pcl::event_routine) { return api_true; }
+
+api_bool             FileFormatContext::EnumerateFileFormats( pcl::format_enumeration_callback, void* )
+{
+  return api_false;
+}
+
 
 // =============================================================
 // END OF IMPLEMENTATION
