@@ -22,6 +22,7 @@ all: $(OBJ_DIR)/libMock-pxi.a
 SRC_FILES= \
 ../../FITS.cpp \
 ../../PCLMockAPI.cpp \
+../../PCLMockImageWindow.cpp \
 ../../PCLThreadMock.cpp \
 ../../QtUiExporter.cpp \
 ../../ExportHelper.cpp \
@@ -34,6 +35,7 @@ SRC_FILES= \
 
 OBJ_FILES= \
 ./arm64/Release/PCLMockAPI.o \
+./arm64/Release/PCLMockImageWindow.o \
 ./arm64/Release/PCLThreadMock.o \
 ./arm64/Release/QtUiExporter.o \
 ./arm64/Release/ExportHelper.o \
@@ -46,6 +48,7 @@ OBJ_FILES= \
 
 DEP_FILES= \
 ./arm64/Release/PCLMockAPI.d \
+./arm64/Release/PCLMockImageWindow.d \
 ./arm64/Release/PCLThreadMock.d \
 ./arm64/Release/QtUiExporter.d \
 ./arm64/Release/ExportHelper.d \

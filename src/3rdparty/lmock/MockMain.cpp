@@ -32,7 +32,9 @@
 #include <pcl/ProcessInterface.h>
 #include <pcl/ProcessImplementation.h>
 #include <pcl/FileFormat.h>
-// #include <pcl/Error.h>
+#include <pcl/Exception.h>
+#include <pcl/View.h>
+#include <pcl/ImageWindow.h>
 
 #include "PCLInterfaceScanner.h"
 #include "PCLMockAPI.h"
@@ -529,15 +531,22 @@ private:
                        this, &SelectionWindow::onExecuteGlobal);
         globalExecMenu->addAction(execGlobalAction);
         
-        QAction* execGlobalOnCurrentViewAction = new QAction("ExecuteGlobalOnCurrentView()", this);
+        QAction* execGlobalOnCurrentViewAction = new QAction("ExecuteOn(View&)", this);
         QObject::connect(execGlobalOnCurrentViewAction, &QAction::triggered,
                        this, &SelectionWindow::onExecuteGlobalOnCurrentView);
         globalExecMenu->addAction(execGlobalOnCurrentViewAction);
         
-        QAction* execGlobalOnCurrentWindowAction = new QAction("ExecuteGlobalOnCurrentWindow()", this);
-        QObject::connect(execGlobalOnCurrentWindowAction, &QAction::triggered,
-                       this, &SelectionWindow::onExecuteGlobalOnCurrentWindow);
-        globalExecMenu->addAction(execGlobalOnCurrentWindowAction);
+        QAction* execOnImageAction = new QAction("ExecuteOn(ImageVariant&, hints)", this);
+        QObject::connect(execOnImageAction, &QAction::triggered,
+                       this, &SelectionWindow::onExecuteOnImage);
+        globalExecMenu->addAction(execOnImageAction);
+        
+        globalExecMenu->addSeparator();
+        
+        QAction* createTestImageAction = new QAction("Create Test Image Window", this);
+        QObject::connect(createTestImageAction, &QAction::triggered,
+                       this, &SelectionWindow::onCreateTestImage);
+        globalExecMenu->addAction(createTestImageAction);
         
         // File Format Loaders submenu
         QMenu* fileFormatMenu = toolsMenu->addMenu("File Format Loaders");
@@ -919,7 +928,7 @@ private:
             
             qDebug() << "✓ ExecuteGlobal() returned:" << result;
         }
-        catch (const pcl::Error& e)
+        catch (const pcl::Exception& e)
         {
             QString errorMsg = QString::fromUtf16(
                 reinterpret_cast<const char16_t*>(e.Message().c_str())
@@ -959,19 +968,84 @@ private:
             return;
         }
         
+        if (!m_processInstance)
+        {
+            QMessageBox::warning(this, "No Instance",
+                "Please create a process instance first from the Instances menu.");
+            return;
+        }
+        
         qDebug() << "\n===========================================";
-        qDebug() << "Testing ExecuteGlobalOnCurrentView()";
+        qDebug() << "Testing ExecuteOn(View&)";
         qDebug() << "===========================================\n";
         
-        QMessageBox::information(this, "ExecuteGlobalOnCurrentView",
-            "This method would execute on the current view.\n\n"
-            "In a real PixInsight environment, this would operate on\n"
-            "the currently active image view.");
-        
-        qDebug() << "ℹ ExecuteGlobalOnCurrentView() - would execute on current view";
+        try {
+            // Get all open image windows
+            pcl::Array<pcl::ImageWindow> windows = pcl::ImageWindow::AllWindows();
+            
+            if (windows.IsEmpty())
+            {
+                QMessageBox::information(this, "No Images",
+                    "No image windows are currently open.\n\n"
+                    "To test ExecuteOn(View&), you need to:\n"
+                    "1. Load an image file (FITS, TIFF, or XISF)\n"
+                    "2. Or create a test image window\n\n"
+                    "For now, this is just a placeholder.");
+                
+                qDebug() << "ℹ No image windows available";
+                return;
+            }
+            
+            // Get the main view of the first window
+            pcl::ImageWindow& window = windows[0];
+            pcl::View view = window.MainView();
+            
+            QString windowId = QString::fromUtf8(window.MainView().Id().c_str());
+            qDebug() << "Executing on view:" << windowId;
+            
+            bool result = m_processInstance->ExecuteOn(view);
+            
+            QMessageBox::information(this, "ExecuteOn Result",
+                QString("ExecuteOn(View&) completed.\n\n"
+                        "View: %1\n"
+                        "Result: %2")
+                    .arg(windowId)
+                    .arg(result ? "Success (true)" : "Failed (false)"));
+            
+            qDebug() << "✓ ExecuteOn() returned:" << result;
+        }
+        catch (const pcl::Exception& e)
+        {
+            QString errorMsg = QString::fromUtf16(
+                reinterpret_cast<const char16_t*>(e.Message().c_str())
+            );
+            
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle("PCL Error");
+            msgBox.setIcon(QMessageBox::Critical);
+            msgBox.setTextFormat(Qt::RichText);
+            msgBox.setText(QString(
+                "<h3>ExecuteOn(View&) Error</h3>"
+                "<p><b>PCL Error:</b></p>"
+                "<p>%1</p>"
+                "<hr>"
+                "<p><i>Note: ExecuteOn() must be reimplemented in your "
+                "process implementation class if it processes images.</i></p>"
+            ).arg(errorMsg));
+            msgBox.exec();
+            
+            qDebug() << "❌ PCL Error:" << errorMsg;
+        }
+        catch (const std::exception& e)
+        {
+            QMessageBox::critical(this, "Error",
+                QString("ExecuteOn() threw exception:\n%1")
+                    .arg(e.what()));
+            qDebug() << "❌ Exception:" << e.what();
+        }
     }
     
-    void onExecuteGlobalOnCurrentWindow()
+    void onExecuteOnImage()
     {
         if (!m_selectedProcess)
         {
@@ -980,16 +1054,83 @@ private:
             return;
         }
         
+        if (!m_processInstance)
+        {
+            QMessageBox::warning(this, "No Instance",
+                "Please create a process instance first from the Instances menu.");
+            return;
+        }
+        
         qDebug() << "\n===========================================";
-        qDebug() << "Testing ExecuteGlobalOnCurrentWindow()";
+        qDebug() << "Testing ExecuteOn(ImageVariant&, hints)";
         qDebug() << "===========================================\n";
         
-        QMessageBox::information(this, "ExecuteGlobalOnCurrentWindow",
-            "This method would execute on the current window.\n\n"
-            "In a real PixInsight environment, this would operate on\n"
-            "the currently active image window.");
-        
-        qDebug() << "ℹ ExecuteGlobalOnCurrentWindow() - would execute on current window";
+        try {
+            // Get all open image windows
+            pcl::Array<pcl::ImageWindow> windows = pcl::ImageWindow::AllWindows();
+            
+            if (windows.IsEmpty())
+            {
+                QMessageBox::information(this, "No Images",
+                    "No image windows are currently open.\n\n"
+                    "To test ExecuteOn(ImageVariant&), you need to:\n"
+                    "1. Create a test image via 'Create Test Image Window'\n"
+                    "2. Or load an image file (FITS, TIFF, or XISF)");
+                
+                qDebug() << "ℹ No image windows available";
+                return;
+            }
+            
+            // Get the main view of the first window and its image
+            pcl::ImageWindow& window = windows[0];
+            pcl::View view = window.MainView();
+            pcl::ImageVariant image = view.Image();
+            
+            QString windowId = QString::fromUtf8(view.Id().c_str());
+            qDebug() << "Executing on image from view:" << windowId;
+            
+            // Execute with empty hints string
+            pcl::IsoString hints;
+            bool result = m_processInstance->ExecuteOn(image, hints);
+            
+            QMessageBox::information(this, "ExecuteOn Result",
+                QString("ExecuteOn(ImageVariant&, hints) completed.\n\n"
+                        "View: %1\n"
+                        "Result: %2")
+                    .arg(windowId)
+                    .arg(result ? "Success (true)" : "Failed (false)"));
+            
+            qDebug() << "✓ ExecuteOn(ImageVariant&) returned:" << result;
+        }
+        catch (const pcl::Exception& e)
+        {
+            QString errorMsg = QString::fromUtf16(
+                reinterpret_cast<const char16_t*>(e.Message().c_str())
+            );
+            
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle("PCL Error");
+            msgBox.setIcon(QMessageBox::Critical);
+            msgBox.setTextFormat(Qt::RichText);
+            msgBox.setText(QString(
+                "<h3>ExecuteOn(ImageVariant&) Error</h3>"
+                "<p><b>PCL Error:</b></p>"
+                "<p>%1</p>"
+                "<hr>"
+                "<p><i>Note: ExecuteOn() must be reimplemented in your "
+                "process implementation class if it processes images.</i></p>"
+            ).arg(errorMsg));
+            msgBox.exec();
+            
+            qDebug() << "❌ PCL Error:" << errorMsg;
+        }
+        catch (const std::exception& e)
+        {
+            QMessageBox::critical(this, "Error",
+                QString("ExecuteOn() threw exception:\n%1")
+                    .arg(e.what()));
+            qDebug() << "❌ Exception:" << e.what();
+        }
     }
     
     void onShowProcessInfo()
@@ -1077,6 +1218,151 @@ private:
         QMessageBox::information(this, "Console Test",
             "Test output has been written to the console.\n\n"
             "Check the console window at the bottom of the main window.");
+    }
+    
+    void onCreateTestImage()
+    {
+        qDebug() << "\n===========================================";
+        qDebug() << "Creating test image window";
+        qDebug() << "===========================================\n";
+        
+        if (m_consoleWidget)
+        {
+            m_consoleWidget->appendText("Creating 512x512 test image...\n");
+        }
+        
+        try {
+            // This calls: ImageWindowContext::CreateImageWindow() via the API
+            // The constructor signature is:
+            // ImageWindow(width, height, channels, bitsPerSample, floatSample, color, initialProcessing, id)
+            
+            pcl::ImageWindow window(
+                512,                      // width
+                512,                      // height
+                1,                        // numberOfChannels (grayscale)
+                32,                       // bitsPerSample
+                true,                     // floatSample
+                false,                    // color
+                true,                     // initialProcessing
+                pcl::IsoString("TestImage") // id
+            );
+            
+            if (m_consoleWidget)
+            {
+                m_consoleWidget->appendText("✓ ImageWindow created successfully\n");
+                m_consoleWidget->appendText("  ID: TestImage\n");
+                m_consoleWidget->appendText("  Size: 512x512\n");
+                m_consoleWidget->appendText("  Type: 32-bit float, grayscale\n");
+            }
+            
+            // Get the main view and its image
+            pcl::View view = window.MainView();
+            
+            if (view.IsNull())
+            {
+                throw pcl::Error("Failed to get main view from window");
+            }
+            
+            // Get the image variant
+            pcl::ImageVariant image = view.Image();
+            
+            if (image.IsFloatSample())
+            {
+                // Cast to float image and fill with gradient pattern
+                pcl::Image& img = static_cast<pcl::Image&>(*image);
+                
+                if (m_consoleWidget)
+                {
+                    m_consoleWidget->appendText("Filling with gradient pattern...\n");
+                }
+                
+                // Create a gradient pattern: value = (x/width) * (y/height)
+                for (int y = 0; y < 512; ++y)
+                {
+                    for (int x = 0; x < 512; ++x)
+                    {
+                        float value = (float)x / 511.0f * (float)y / 511.0f;
+                        img.Pixel(x, y, 0) = value;
+                    }
+                }
+                
+                if (m_consoleWidget)
+                {
+                    m_consoleWidget->appendText("✓ Pattern created\n");
+                }
+            }
+            
+            // Show and zoom the window
+            window.Show();
+            window.ZoomToFit();
+            
+            if (m_consoleWidget)
+            {
+                m_consoleWidget->appendText("✓ Window displayed\n");
+            }
+            
+            QMessageBox::information(this, "Test Image Created",
+                "A 512x512 test image has been created.\n\n"
+                "ID: TestImage\n"
+                "Type: 32-bit float, grayscale\n"
+                "Pattern: Gradient (x * y)\n\n"
+                "You can now test ExecuteOn(View&) and\n"
+                "ExecuteOn(ImageVariant&) with this image.\n\n"
+                "Note: The window is managed by ImageWindowContext\n"
+                "mock implementations in PCLMockAPI.cpp");
+            
+            qDebug() << "✓ Test image window created successfully";
+        }
+        catch (const pcl::Exception& e)
+        {
+            QString errorMsg = QString::fromUtf16(
+                reinterpret_cast<const char16_t*>(e.Message().c_str())
+            );
+            
+            if (m_consoleWidget)
+            {
+                m_consoleWidget->appendText("❌ Failed to create test image\n");
+                m_consoleWidget->appendText(QString("   Error: %1\n").arg(errorMsg));
+            }
+            
+            QMessageBox msgBox(this);
+            msgBox.setWindowTitle("Image Creation Failed");
+            msgBox.setIcon(QMessageBox::Critical);
+            msgBox.setTextFormat(Qt::RichText);
+            msgBox.setText(QString(
+                "<h3>Test Image Creation Failed</h3>"
+                "<p><b>Error:</b> %1</p>"
+                "<hr>"
+                "<p><b>This means ImageWindowContext::CreateImageWindow() needs implementation.</b></p>"
+                "<p>To fix this:</p>"
+                "<ol>"
+                "<li>Implement <b>CreateImageWindow()</b> in PCLMockAPI.cpp</li>"
+                "<li>Return a valid window_handle (can be a MockBase* or similar)</li>"
+                "<li>See <b>ImageWindowMock_Implementation.cpp</b> for a complete example</li>"
+                "</ol>"
+                "<p>Key functions to implement:</p>"
+                "<ul>"
+                "<li>CreateImageWindow() - Must return non-null handle</li>"
+                "<li>GetImageWindowMainView() - Return a view_handle</li>"
+                "<li>ViewContext::GetViewImage() - Return image data</li>"
+                "</ul>"
+            ).arg(errorMsg));
+            msgBox.exec();
+            
+            qDebug() << "❌ PCL Error:" << errorMsg;
+        }
+        catch (const std::exception& e)
+        {
+            if (m_consoleWidget)
+            {
+                m_consoleWidget->appendText("❌ Exception during image creation\n");
+                m_consoleWidget->appendText(QString("   %1\n").arg(e.what()));
+            }
+            
+            QMessageBox::critical(this, "Error",
+                QString("Failed to create test image:\n%1").arg(e.what()));
+            qDebug() << "❌ Exception:" << e.what();
+        }
     }
     
     void onTestFITSLoader()

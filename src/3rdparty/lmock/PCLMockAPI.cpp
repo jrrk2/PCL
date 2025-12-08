@@ -22,6 +22,37 @@
 #include <pcl/XISF.h>
 #include <pcl/api/APIInterface.h>
 
+// ImageWindowMock_Implementation.cpp
+// Implementations for ImageWindow stubs to support test image creation
+//
+// Add these to PCLMockAPI.cpp to enable image window functionality
+
+#include <QWidget>
+#include <QLabel>
+#include <QVBoxLayout>
+#include <QImage>
+#include <QPainter>
+#include <QPixmap>
+#include <QScrollArea>
+#include <map>
+#include <vector>
+#include <string>
+
+view_handle ImageWindowContext::GetPreviewById(const_window_handle, const char*) { return nullptr; }
+
+void ImageWindowContext::EnumeratePreviews(const_window_handle, pcl::view_enumeration_callback, void*) {}
+
+api_bool ImageWindowContext::LoadImageWindows(const char16_type*,
+					      const char*,
+					      const char*,
+					      api_bool,
+					      api_bool,
+					      pcl::window_enumeration_callback,
+					      void*)
+{
+    return api_false;
+}
+
 static bool g_enableDebugLogging = false;
 
 void SetDebugLogging(bool on)
@@ -2919,18 +2950,6 @@ process_handle ProcessContext::CloneProcessInstance(api_handle, const_process_ha
 }
 
 // =============================================================
-// View Context
-// =============================================================
-
-void ViewContext::UnlockView(void*, uint32, uint32, uint32) {}
-view_handle ViewContext::GetViewById(const char*) { return nullptr; }
-void ViewContext::GetViewLocks(const void*, uint32*, uint32*) {}
-api_bool ViewContext::GetViewFullId(const void*, char*, size_type*) { return api_false; }
-void ViewContext::LockView(void*, uint32, uint32, uint32) {}
-api_bool ViewContext::GetViewId(const void*, char*, size_type*) { return api_false; }
-image_handle ViewContext::GetViewImage(view_handle) { return nullptr; }
-
-// =============================================================
 // Dialog Context
 // =============================================================
 
@@ -2944,125 +2963,9 @@ api_bool DialogContext::ExecuteOpenMultipleFilesDialog(char16_type*, uint32(*)(c
     return api_false;
 }
 
-// =============================================================
-// ImageWindow Context - Stubs
-// =============================================================
-
-window_handle ImageWindowContext::CreateImageWindow(int, int, int, int, uint32, uint32, uint32, const char*)
-{
-    return nullptr;
-}
-
-api_bool ImageWindowContext::LoadImageWindows(const char16_type*, const char*, const char*, api_bool, api_bool, pcl::window_enumeration_callback, void*)
-{
-    return api_false;
-}
-
-api_bool ImageWindowContext::CloseImageWindow(window_handle, api_bool)
-{
-    return api_false;
-}
-
-window_handle ImageWindowContext::GetImageWindowById(const char*)
-{
-    return nullptr;
-}
-
-window_handle ImageWindowContext::GetImageWindowByFilePath(const char16_type*)
-{
-    return nullptr;
-}
-
-window_handle ImageWindowContext::GetActiveImageWindow()
-{
-    QWidget* w = QApplication::activeWindow();
-    return reinterpret_cast<window_handle>(w);
-}
-
-void ImageWindowContext::SetImageWindowVisible(window_handle handle, api_bool visible)
-{
-    QWidget* w = reinterpret_cast<QWidget*>(handle);
-    if (!w) return;
-    
-    if (visible)
-        w->show();
-    else
-        w->hide();
-}
-
-void ImageWindowContext::ZoomImageWindowToFit(window_handle, api_bool, api_bool, api_bool, api_bool) {}
-int32 ImageWindowContext::GetImageWindowZoomFactor(const_window_handle) { return 1; }
-void ImageWindowContext::SetImageWindowZoomFactor(window_handle, int32) {}
-
-// Remaining ImageWindow stubs
-void ImageWindowContext::EnumerateImageWindows(pcl::window_enumeration_callback, void*, api_bool) {}
-void ImageWindowContext::EnumeratePreviews(const_window_handle, pcl::view_enumeration_callback, void*) {}
-api_bool ImageWindowContext::GetImageWindowNewFlag(const_window_handle) { return api_false; }
-api_bool ImageWindowContext::GetImageWindowCopyFlag(const_window_handle) { return api_false; }
-api_bool ImageWindowContext::GetImageWindowFileURL(const_window_handle, char16_type*, size_type*) { return api_false; }
-api_bool ImageWindowContext::GetImageWindowFilePath(const_window_handle, char16_type*, size_type*) { return api_false; }
-api_bool ImageWindowContext::GetImageWindowFileInfo(const_window_handle, api_image_file_info*) { return api_false; }
-size_type ImageWindowContext::GetImageWindowModifyCount(const_window_handle) { return 0; }
-view_handle ImageWindowContext::GetImageWindowMainView(const_window_handle) { return nullptr; }
-view_handle ImageWindowContext::GetImageWindowCurrentView(const_window_handle) { return nullptr; }
-void ImageWindowContext::SetImageWindowCurrentView(window_handle, view_handle) {}
-int32 ImageWindowContext::GetImageType(const_window_handle) { return 0; }
-api_bool ImageWindowContext::SetImageType(window_handle, int32, api_bool) { return api_false; }
-void ImageWindowContext::PurgeImageWindowProperties(window_handle) {}
-api_bool ImageWindowContext::ValidateImageWindowView(const_window_handle, const_view_handle) { return api_false; }
-int32 ImageWindowContext::GetPreviewCount(const_window_handle) { return 0; }
-view_handle ImageWindowContext::GetPreviewById(const_window_handle, const char*) { return nullptr; }
-view_handle ImageWindowContext::GetSelectedPreview(const_window_handle) { return nullptr; }
-void ImageWindowContext::SelectPreview(window_handle, view_handle) {}
-view_handle ImageWindowContext::CreatePreview(window_handle, int32, int32, int32, int32, const char*) { return nullptr; }
-void ImageWindowContext::ModifyPreview(window_handle, const char*, int32, int32, int32, int32, const char*) {}
-void ImageWindowContext::GetPreviewRect(const_window_handle, const char*, int32*, int32*, int32*, int32*) {}
-void ImageWindowContext::DeletePreview(window_handle, const char*) {}
-void ImageWindowContext::DeletePreviews(window_handle) {}
-window_handle ImageWindowContext::GetImageWindowMask(const_window_handle, api_bool*) { return nullptr; }
-void ImageWindowContext::SetImageWindowMask(window_handle, window_handle, api_bool) {}
-api_bool ImageWindowContext::GetImageWindowMaskEnabled(const_window_handle) { return api_false; }
-void ImageWindowContext::SetImageWindowMaskEnabled(window_handle, api_bool) {}
-api_bool ImageWindowContext::GetImageWindowMaskVisible(const_window_handle) { return api_false; }
-void ImageWindowContext::SetImageWindowMaskVisible(window_handle, api_bool) {}
-api_bool ImageWindowContext::ValidateImageWindowMask(const_window_handle, const_window_handle) { return api_false; }
-int32 ImageWindowContext::GetMaskReferenceCount(const_window_handle) { return 0; }
-void ImageWindowContext::RemoveImageWindowMaskReferences(window_handle) {}
-void ImageWindowContext::UpdateImageWindowMaskReferences(window_handle) {}
-
-// Remaining stubs continue...
-void ImageWindowContext::GetImageWindowSampleFormat(const_window_handle, uint32*, api_bool*) {}
-void ImageWindowContext::SetImageWindowSampleFormat(window_handle, uint32, api_bool) {}
-void ImageWindowContext::GetImageWindowRGBWS(const_window_handle, api_RGBWS*) {}
-void ImageWindowContext::SetImageWindowRGBWS(window_handle, const api_RGBWS*) {}
-api_bool ImageWindowContext::GetImageWindowGlobalRGBWS(const_window_handle) { return api_false; }
-void ImageWindowContext::SetImageWindowGlobalRGBWS(window_handle) {}
-void ImageWindowContext::GetGlobalRGBWS(api_RGBWS*) {}
-void ImageWindowContext::SetGlobalRGBWS(const api_RGBWS*) {}
-
 // Graphics, SVG, Brush, Pen contexts - all stubs
 api_bool GraphicsContext::GetGraphicsStatus(const_graphics_handle) { return api_false; }
 void GraphicsContext::EndPaint(graphics_handle) {}
-
-// =============================================================
-// Shared Image Context
-// =============================================================
-
-void* SharedImageContext::GetImageOwner(const_image_handle) { return nullptr; }
-api_bool SharedImageContext::GetImageRefCount(const_image_handle, uint32*) { return api_false; }
-api_bool SharedImageContext::IsValidImageHandle(const_image_handle) { return api_false; }
-api_bool SharedImageContext::AttachToImage(image_handle, void*) { return api_false; }
-api_bool SharedImageContext::DetachFromImage(image_handle, void*) { return api_false; }
-api_bool SharedImageContext::GetImageFormat(const_image_handle, uint32*, api_bool*) { return api_false; }
-api_bool SharedImageContext::SetImageRGBWS(image_handle, const api_RGBWS*) { return api_false; }
-api_bool SharedImageContext::GetImageColorSpace(const_image_handle, uint32*) { return api_false; }
-api_bool SharedImageContext::SetImageColorSpace(image_handle, uint32) { return api_false; }
-api_bool SharedImageContext::GetImageGeometry(const_image_handle, uint32*, uint32*, uint32*) { return api_false; }
-api_bool SharedImageContext::SetImageGeometry(image_handle, uint32, uint32, uint32) { return api_false; }
-api_bool SharedImageContext::GetImagePixelData(image_handle, void***) { return api_false; }
-api_bool SharedImageContext::SetImagePixelData(image_handle, void**) { return api_false; }
-api_bool SharedImageContext::GetImageRGBWS(const_image_handle, api_RGBWS*) { return api_false; }
-image_handle SharedImageContext::CreateImage(uint32, uint32, uint32, uint32, uint32, uint32, void*) { return nullptr; }
 
 // =============================================================
 // Thread Context (uses PCLThreadMock)
@@ -3148,22 +3051,6 @@ api_bool ViewList_SetViewListCurrentViewUpdatedEventRoutine(control_handle, api_
 
 void LogDebug(const std::string& message) {
   qDebug() << "[PCLMockAPI] " << message.c_str() << "\n";    
-}
-
-static inline void LogDbg(const std::string& msg) {
-    LogDebug(msg.c_str());
-}
-/*
-static inline void LogDbg(const pcl::String& msg) {
-    LogDebug(msg.ToUTF8().c_str());
-}
-*/
-static inline void LogDbg(const QString& msg) {
-  //    LogDebug(msg);
-}
-
-inline void LogDbg(const char* msg) {
-    LogDebug(msg);
 }
 
 struct FFTTransform {
@@ -3637,20 +3524,6 @@ function_resolver GetMockFunctionResolver() {
     return mock_function_resolver;
 }
 
-// PCLMockAPI_Additional.cpp
-// Additional mock implementations for PCL API functions
-// Add these to the END of your existing PCLMockAPI.cpp
-
-// =============================================================
-// ViewContext
-// =============================================================
-
-api_bool ViewContext::IsPreview(const void* handle)
-{
-    // In mock environment, nothing is a preview
-    return api_false;
-}
-
 // =============================================================
 // CursorContext
 // =============================================================
@@ -4099,75 +3972,10 @@ void FontContext::SetFontWeight(void* handle, int weight)
     // No-op
 }
 
-// =============================================================
-// ViewContext - Views and Images
-// =============================================================
-
-api_bool ViewContext::IsViewColorImage(const void* handle)
-{
-    return api_true; // Mock: assume color
-}
-
-api_bool ViewContext::GetViewDimensions(const void* handle, int* width, int* height)
-{
-    if (width) *width = 1024;
-    if (height) *height = 768;
-    return api_true;
-}
-
-api_bool ViewContext::ComputeViewProperty(void* handle, void* view, 
-                                         const char* property, uint32 flags,
-                                         api_property_value* value)
-{
-    return api_false; // No computed properties in mock
-}
-
 void* ViewContext::GetViewParentWindow(const void* handle)
 {
     static int dummyWindow = 0;
     return &dummyWindow;
-}
-
-api_bool ViewContext::IsViewDynamicTarget(const void* handle)
-{
-    return api_false;
-}
-
-api_bool ViewContext::GetViewPropertyValue(void* handle, const void* view,
-                                          const char* property,
-                                          api_property_value* value)
-{
-    return api_false; // No properties in mock
-}
-
-api_bool ViewContext::GetViewPropertyExists(void* handle, const void* view,
-                                           const char* property, uint64* type)
-{
-    return api_false;
-}
-
-void ViewContext::AddViewToDynamicTargets(void* handle)
-{
-    // No-op
-}
-
-api_bool ViewContext::EnumerateViewProperties(const void* handle,
-                                              uint32 (*callback)(const char*, uint64, void*),
-                                              char* buffer, size_type* size, void* data)
-{
-    if (size) *size = 0; // No properties
-    return api_false;
-}
-
-void ViewContext::RemoveViewFromDynamicTargets(void* handle)
-{
-    // No-op
-}
-
-api_bool ViewContext::SetViewId(void* handle, const char* id)
-{
-    // No-op
-    return api_true;
 }
 
 // =============================================================
@@ -5159,59 +4967,6 @@ uint32 ImageWindowContext::GetImageWindowICCProfileLength(const_window_handle wi
 // =============================================================
 // END OF COLOR MANAGEMENT STUBS
 // =============================================================
-
-// =============================================================
-// ViewContext - Property Management Stubs
-// =============================================================
-
-api_bool ViewContext::SetViewPropertyValue(view_handle view, void* image,
-                                          const char* propertyId,
-                                          const api_property_value* value,
-                                          uint32 notify, uint32 flags)
-{
-    logf("[Mock] ViewContext::SetViewPropertyValue (propertyId=%s, notify=%u, flags=%u)",
-         propertyId ? propertyId : "null", notify, flags);
-    
-    // Mock implementation: accept property but don't actually store it
-    // In real implementation, this would set a property on the view/image
-    return api_true;
-}
-
-api_bool ViewContext::IsReservedViewPropertyId(const char* propertyId)
-{
-    logf("[Mock] ViewContext::IsReservedViewPropertyId (propertyId=%s)",
-         propertyId ? propertyId : "null");
-    
-    // Mock implementation: check if property ID is reserved
-    // Reserved properties in PCL typically start with specific prefixes
-    if (!propertyId)
-        return api_false;
-    
-    // Check for common reserved property prefixes
-    if (std::strncmp(propertyId, "PCL:", 4) == 0)
-        return api_true;
-    if (std::strncmp(propertyId, "PI:", 3) == 0)
-        return api_true;
-    
-    return api_false;
-}
-
-api_bool ViewContext::GetViewPropertyAttributes(view_handle view, const void* image,
-                                               const char* propertyId,
-                                               uint32* type, uint64* attributes)
-{
-    logf("[Mock] ViewContext::GetViewPropertyAttributes (propertyId=%s)",
-         propertyId ? propertyId : "null");
-    
-    // Mock implementation: no properties stored, return false
-    // In real implementation, this would return property type and attributes
-    if (type)
-        *type = 0;
-    if (attributes)
-        *attributes = 0;
-    
-    return api_false;
-}
 
 // =============================================================
 // ComboBoxContext - Text Retrieval Stub
@@ -9861,13 +9616,13 @@ api_bool ControlContext::GetControlResourcePixelRatio(const_control_handle handl
     
     if (!handle) {
         *ratio = 1.0;
-        return api_false;
+        return api_true;
     }
 
     MockControl* wdg = GetControlBox(handle);
     
     if (!ratio || !wdg) {
-        return api_false;
+        return api_true;
     }
     
     QWidget* widget = wdg->widget;
@@ -11174,13 +10929,6 @@ cursor_handle CursorContext::CreateCursor(api_handle client,
 
     return h;
 }
-
-struct MockImageWindow {
-    QWidget* window;       // or QMainWindow / QDialog
-    api_handle clientHandle;
-    image_handle currentImage;
-    // plus whatever else you store for image data, views, etc.
-};
 
 static std::map<window_handle, MockImageWindow*> g_image_window_map;
 
