@@ -155,33 +155,7 @@ private:
     MockBase* base;
 };
 
-// =============================================================
-// Global Object Registry
-// =============================================================
-
-template <typename H>
-struct HandleHash
-{
-   std::size_t operator()(const void *h) const noexcept
-   {
-      auto p = reinterpret_cast<std::uintptr_t>(h);
-      return std::hash<std::uintptr_t>{}(p);
-   }
-};
- 
-template <typename H>
-struct HandleEqual
-{
-   bool operator()(const void *a, const void *b) const noexcept
-   {
-      return a == b;
-   }
-};
-
-// The global object map: client pointer -> MockBase
-static std::unordered_map<const void *, std::unique_ptr<MockBase>, 
-                          HandleHash<control_handle>, 
-                          HandleEqual<control_handle>> g_objects;
+g_objects_t g_objects;
 
 QList<MockBase*> g_topLevelWidgets;
 
@@ -298,6 +272,8 @@ static QWidget* determineParentWidget(control_handle parent)
 // CONTROL CREATION TEMPLATE - Consistent Architecture
 // =============================================================
 
+static int ctrl_cnt = 0;
+
 template <class T>
 control_handle createControl(api_handle module, 
                              control_handle client,      // PCL Control* pointer
@@ -308,7 +284,7 @@ control_handle createControl(api_handle module,
     
     // Create Qt widget
     T* qtWidget = new T(parentWidget);
-    
+    qtWidget->setObjectName(QString("control_%1_%2").arg(demangle(typeid(T).name()).c_str()).arg(++ctrl_cnt));
     // Create mock wrapper
     auto* mock = new MockBase();
     mock->isSizer = false;

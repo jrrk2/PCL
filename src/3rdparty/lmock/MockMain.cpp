@@ -9,35 +9,6 @@
 // Symbol Resolution Utilities (from original MockMain.cpp)
 // ============================================================================
 
-#include <cxxabi.h>
-#include <string>
-#include <regex>
-#include <map>
-
-static std::string demangle(const char* mangled, bool includeParams = true)
-{
-    if (!mangled)
-        return std::string();
-    
-    int status = 0;
-    char* dem = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
-    
-    if (status != 0 || !dem)
-        return std::string(mangled);
-    
-    std::string result(dem);
-    std::free(dem);
-    
-    if (!includeParams)
-    {
-        size_t parenPos = result.find('(');
-        if (parenPos != std::string::npos)
-            result = result.substr(0, parenPos);
-    }
-    
-    return result;
-}
-
 static const char* getExecutablePath()
 {
 #ifdef __APPLE__
@@ -545,6 +516,50 @@ void SelectionWindow::onZoomToFit()
             m_consoleWidget->appendText(QString("  Error: %1\n").arg(msg));
         }
     }
+}
+
+void SelectionWindow::onExportLua()
+{
+    if (m_consoleWidget)
+        m_consoleWidget->appendText("Exporting Lua automation script...\n");
+    
+    // Get all top-level widgets from QApplication
+    QWidgetList topLevelWidgets = QApplication::topLevelWidgets();
+    
+    // Filter out our own window
+    QList<QWidget*> candidates;
+    for (QWidget* w : topLevelWidgets)
+    {
+        if (w == this) continue;  // Skip SelectionWindow
+        if (!w->isVisible()) continue;  // Skip hidden
+        candidates.append(w);
+    }
+    
+    if (candidates.isEmpty())
+    {
+        if (m_consoleWidget)
+            m_consoleWidget->appendText("  ERROR: No interface widgets found!\n");
+        return;
+    }
+    
+    // Use your existing smart selector
+    QWidget* rootWidget = RootWidgetSelector::selectBestRoot(candidates, false);
+    
+    if (!rootWidget)
+    {
+        if (m_consoleWidget)
+            m_consoleWidget->appendText("  ERROR: Could not select root!\n");
+        return;
+    }
+    
+    // Export
+    QString processName = rootWidget->objectName();
+    if (processName.isEmpty()) processName = "SandboxProcess";
+    
+    LuaExportHelper::exportInterface(rootWidget, "Sandbox", processName, "./exported");
+    
+    if (m_consoleWidget)
+        m_consoleWidget->appendText(QString("  ✓ Exported: ./exported/%1.lua\n").arg(processName));
 }
 
 // ============================================================================

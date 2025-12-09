@@ -6,6 +6,10 @@
 #include <QtWidgets>
 #include <pcl/api/APIDefs.h>
 #include <pcl/ProcessInterface.h>
+#include <cxxabi.h>
+#include <string>
+#include <regex>
+#include <map>
 
 // ---------------------------------------------------------------
 // Basic Types
@@ -38,6 +42,30 @@ static inline void LogDbg(const QString& msg) {
 
 inline void LogDbg(const char* msg) {
     LogDebug(msg);
+}
+
+static inline std::string demangle(const char* mangled, bool includeParams = true)
+{
+    if (!mangled)
+        return std::string();
+    
+    int status = 0;
+    char* dem = abi::__cxa_demangle(mangled, nullptr, nullptr, &status);
+    
+    if (status != 0 || !dem)
+        return std::string(mangled);
+    
+    std::string result(dem);
+    std::free(dem);
+    
+    if (!includeParams)
+    {
+        size_t parenPos = result.find('(');
+        if (parenPos != std::string::npos)
+            result = result.substr(0, parenPos);
+    }
+    
+    return result;
 }
 
 // ---------------------------------------------------------------
@@ -401,6 +429,36 @@ struct MockImageWindow
     }
   
 };
+
+// =============================================================
+// Global Object Registry
+// =============================================================
+
+template <typename H>
+struct HandleHash
+{
+   std::size_t operator()(const void *h) const noexcept
+   {
+      auto p = reinterpret_cast<std::uintptr_t>(h);
+      return std::hash<std::uintptr_t>{}(p);
+   }
+};
+ 
+template <typename H>
+struct HandleEqual
+{
+   bool operator()(const void *a, const void *b) const noexcept
+   {
+      return a == b;
+   }
+};
+
+// The global object map: client pointer -> MockBase
+typedef std::unordered_map<const void *, std::unique_ptr<MockBase>, 
+                          HandleHash<control_handle>, 
+                          HandleEqual<control_handle>> g_objects_t;
+
+extern g_objects_t g_objects;
 
 // ---------------------------------------------------------------
 // Core APIs

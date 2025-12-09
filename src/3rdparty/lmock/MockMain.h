@@ -38,7 +38,7 @@
 #include "PCLInterfaceScanner.h"
 #include "PCLMockAPI.h"
 #include "RootWidgetSelector.h"
-#include "ExportHelper.h"
+#include "LuaScriptExporter.h"
 #include "ImageReader.h"
 
 using RawCtor0 = void (*)(void*);
@@ -336,10 +336,10 @@ private:
         m_exportMenu = menuBar->addMenu("&Export");
         m_exportMenu->setEnabled(false);
         
-        QAction* exportAction = new QAction("Export to Qt Code...", this);
-        QObject::connect(exportAction, &QAction::triggered, 
-                       this, &SelectionWindow::onExportInterface);
-        m_exportMenu->addAction(exportAction);
+	QAction* exportLuaAction = new QAction("Export Lua &Script...", this);
+	exportLuaAction->setShortcut(Qt::CTRL | Qt::Key_L);
+	connect(exportLuaAction, &QAction::triggered, this, &SelectionWindow::onExportLua);
+	m_exportMenu->addAction(exportLuaAction);
         
         // Tools Menu
         QMenu* toolsMenu = menuBar->addMenu("&Tools");
@@ -615,81 +615,7 @@ private:
                 .arg(action->text()));
     }
     
-    void onExportInterface()
-    {
-        if (!m_selectedInterface)
-        {
-            QMessageBox::warning(this, "No Interface",
-                "Please select an interface first.");
-            return;
-        }
-        
-        if (!m_interfaceRoot || !m_interfaceRoot->widget)
-        {
-            QMessageBox::critical(this, "Error",
-                "Interface widget not available!");
-            return;
-        }
-        
-        qDebug() << "\n===========================================";
-        qDebug() << "Exporting interface...";
-        qDebug() << "===========================================\n";
-        
-        // Wait for UI to initialize
-        QApplication::processEvents();
-        QThread::msleep(200);
-        QApplication::processEvents();
-        
-        // Find root widget
-        QList<QWidget*> candidates;
-        candidates.append(m_interfaceRoot->widget);
-        
-        QWidget* root = RootWidgetSelector::selectBestRoot(candidates, true);
-        if (!root)
-        {
-            QMessageBox::critical(this, "Error",
-                "Failed to find root widget for export!");
-            return;
-        }
-        
-        // Get base name
-        std::string baseName = m_currentClassName;
-        size_t colonPos = baseName.rfind("::");
-        if (colonPos != std::string::npos)
-            baseName = baseName.substr(colonPos + 2);
-        
-        QString qBaseName = QString::fromStdString(baseName);
-        QString outputDir = "./exported";
-        
-        qDebug() << "Interface:" << qBaseName;
-        qDebug() << "Output:   " << outputDir;
-        
-        bool success = ExportHelper::exportInterface(root, qBaseName, outputDir);
-        
-        if (success)
-        {
-            QMessageBox::information(this, "Export Complete",
-                QString("Successfully exported interface!\n\n"
-                        "Output directory: %1\n\n"
-                        "Generated files:\n"
-                        "- %2.h\n"
-                        "- %2.cpp\n"
-                        "- %2_metadata.json\n"
-                        "- CMakeLists.txt\n"
-                        "- main.cpp\n"
-                        "- README.md")
-                    .arg(outputDir, qBaseName));
-            
-            qDebug() << "\n✅ EXPORT COMPLETED SUCCESSFULLY!";
-        }
-        else
-        {
-            QMessageBox::critical(this, "Export Failed",
-                "Failed to export interface. Check console for details.");
-            
-            qDebug() << "\n❌ EXPORT FAILED!";
-        }
-    }
+    void onExportLua();
     
     void onAbout()
     {

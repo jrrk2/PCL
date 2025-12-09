@@ -25,7 +25,7 @@ SRC_FILES= \
 ../../PCLMockImageWindow.cpp \
 ../../PCLThreadMock.cpp \
 ../../QtUiExporter.cpp \
-../../ExportHelper.cpp \
+../../LuaScriptExporter.cpp \
 ../../MockMain.cpp \
 ../../PCLInterfaceScanner.cpp \
 ../../ImageReader.cpp \
@@ -39,7 +39,7 @@ OBJ_FILES= \
 ./arm64/Release/PCLMockImageWindow.o \
 ./arm64/Release/PCLThreadMock.o \
 ./arm64/Release/QtUiExporter.o \
-./arm64/Release/ExportHelper.o \
+./arm64/Release/LuaScriptExporter.o \
 ./arm64/Release/MockMain.o \
 ./arm64/Release/PCLInterfaceScanner.o \
 ./arm64/Release/ImageReader.o \
@@ -53,7 +53,7 @@ DEP_FILES= \
 ./arm64/Release/PCLMockImageWindow.d \
 ./arm64/Release/PCLThreadMock.d \
 ./arm64/Release/QtUiExporter.d \
-./arm64/Release/ExportHelper.d \
+./arm64/Release/LuaScriptExporter.d \
 ./arm64/Release/MockMain.d \
 ./arm64/Release/PCLInterfaceScanner.d \
 ./arm64/Release/ImageReader.d \
