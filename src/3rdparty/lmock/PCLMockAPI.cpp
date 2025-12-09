@@ -2620,14 +2620,38 @@ void BitmapContext::SetBitmapAlpha(bitmap_handle, int32, int32, int32, int32, ui
 // UI Context
 // =============================================================
 
+struct UIObjectInfo
+{
+    QWidget* widget;
+    api_handle client;
+    api_handle module;
+    size_type refcnt;
+};
+
+static std::map<api_handle, UIObjectInfo> g_uiObjects;
+
 api_bool UIContext::AttachToUIObject(api_handle object, api_handle client)
 {
-    if (!object) return api_false;
-    
-    MockBase* C = get(object);
-    if (!C) return api_false;
+    if (!object) 
+    {
+        logf("[Mock] UIContext::AttachToUIObject: NULL object");
+        return api_false;
+    }
     
     logf("[Mock] UIContext::AttachToUIObject: object=%p client=%p", object, client);
+    
+    // The object handle IS the QWidget pointer
+    QWidget* widget = reinterpret_cast<QWidget*>(object);
+    
+    // Store the UI object info
+    UIObjectInfo info;
+    info.widget = widget;
+    info.client = client;
+    
+    g_uiObjects[object] = info;
+    
+    logf("[Mock]   Attached QWidget(%p) to client(%p)", widget, client);
+    logf("[Mock]   Total UI objects: %zu", g_uiObjects.size());
     
     return api_true;
 }
@@ -2636,32 +2660,35 @@ api_bool UIContext::DetachFromUIObject(api_handle object, api_handle client)
 {
     if (!object) return api_true;
     
-    MockBase* C = get(object);
-    if (!C) return api_true;
-    
     logf("[Mock] UIContext::DetachFromUIObject: object=%p client=%p", object, client);
+    
+    auto it = g_uiObjects.find(object);
+    if (it != g_uiObjects.end())
+    {
+        logf("[Mock]   Found and removing UI object");
+        g_uiObjects.erase(it);
+        logf("[Mock]   Remaining UI objects: %zu", g_uiObjects.size());
+    }
+    else
+    {
+        logf("[Mock]   UI object not found (may have been removed already)");
+    }
     
     return api_true;
 }
 
 api_handle UIContext::GetUIObjectModule(const_api_handle object)
 {
-    if (!object) return nullptr;
-    
+    // Try g_objects first (PCL controls)
     MockBase* C = get(object);
-    if (!C) return nullptr;
+    if (C) return C->moduleHandle;
     
-    return C->moduleHandle;
-}
-
-size_type UIContext::GetUIObjectRefCount(const_api_handle object)
-{
-    if (!object) return 0;
+    // Try g_uiObjects (raw widgets)
+    auto it = g_uiObjects.find(const_cast<api_handle>(object));
+    if (it != g_uiObjects.end())
+        return it->second.module;
     
-    MockBase* C = get(object);
-    if (!C) return 0;
-    
-    return 1;
+    return nullptr;
 }
 
 api_bool UIContext::GetUIObjectType(const_api_handle object, 
@@ -2754,6 +2781,15 @@ api_bool UIContext::SetUIObjectId(api_handle object, const char16_type* id)
     return api_true;
 }
 
+size_type UIContext::GetUIObjectRefCount(const_api_handle object)
+{
+    // Try g_uiObjects (raw widgets)
+    auto it = g_uiObjects.find(const_cast<api_handle>(object));
+    if (it != g_uiObjects.end())
+        return it->second.refcnt;
+    return 1;
+ }
+
 api_bool UIContext::SetHandleDestroyedEventRoutine(api_handle object,
                                                pcl::destroy_event_routine routine)
 {
@@ -2762,27 +2798,27 @@ api_bool UIContext::SetHandleDestroyedEventRoutine(api_handle object,
 }
 
 // UI Control Object functions (aliases)
-api_bool UIContext::AttachToUIControlObject(api_handle object, api_handle client)
+api_bool UIContext::AttachToUIControlObject(api_handle object, control_handle client)
 {
     return AttachToUIObject(object, client);
 }
 
-api_bool UIContext::DetachFromUIControlObject(api_handle object, api_handle client)
+api_bool UIContext::DetachFromUIControlObject(api_handle object, control_handle client)
 {
     return DetachFromUIObject(object, client);
 }
 
-api_handle UIContext::GetUIControlObjectModule(const_api_handle object)
+api_handle UIContext::GetUIControlObjectModule(const_control_handle object)
 {
     return GetUIObjectModule(object);
 }
 
-size_type UIContext::GetUIControlObjectRefCount(const_api_handle object)
+size_type UIContext::GetUIControlObjectRefCount(const_control_handle object)
 {
     return GetUIObjectRefCount(object);
 }
 
-api_bool UIContext::GetUIControlObjectType(const_api_handle object, 
+api_bool UIContext::GetUIControlObjectType(const_control_handle object, 
                                 char* type, 
                                 size_type* len)
 {
@@ -3654,24 +3690,24 @@ size_t NumericalContext::FFTComplexOptimizedLengthD(size_t length)
 // ImageWindowContext
 // =============================================================
 
-void ImageWindowContext::AddImageWindowKeyword(void* handle, const char* name, 
+void ImageWindowContext::AddImageWindowKeyword(window_handle handle, const char* name, 
                                                const char* value, const char* comment)
 {
     // No-op in mock
 }
 
-void ImageWindowContext::ResetImageWindowKeywords(void* handle)
+void ImageWindowContext::ResetImageWindowKeywords(window_handle handle)
 {
     // No-op in mock
 }
 
-int32 ImageWindowContext::GetImageWindowKeywordCount(const void* handle)
+int32 ImageWindowContext::GetImageWindowKeywordCount(const_window_handle handle)
 {
     // No keywords in mock
     return 0;
 }
 
-void ImageWindowContext::GetImageWindowKeyword(const void* handle, int index,
+void ImageWindowContext::GetImageWindowKeyword(const_window_handle handle, int index,
                                                char* name, size_t nameSize,
                                                char* value, size_t valueSize,
                                                char* comment, size_t commentSize)
@@ -3970,12 +4006,6 @@ int32 FontContext::GetFontAscent(const void* handle)
 void FontContext::SetFontWeight(void* handle, int weight)
 {
     // No-op
-}
-
-void* ViewContext::GetViewParentWindow(const void* handle)
-{
-    static int dummyWindow = 0;
-    return &dummyWindow;
 }
 
 // =============================================================
@@ -4394,22 +4424,22 @@ api_bool NumericalContext::SurfaceSplineDeserialize(void** handle, const char* d
 // ImageWindowContext - Image Window Operations
 // =============================================================
 
-void ImageWindowContext::ImageToViewportD(const void* handle, double* x, double* y)
+void ImageWindowContext::ImageToViewportD(const_window_handle handle, double* x, double* y)
 {
     // No-op - coordinates unchanged in mock
 }
 
-void ImageWindowContext::UpdateViewportRect(void* handle, int x, int y, int w, int h)
+void ImageWindowContext::UpdateViewportRect(window_handle handle, int x, int y, int w, int h)
 {
     // No-op
 }
 
-void ImageWindowContext::EndViewportSelection(void* handle)
+void ImageWindowContext::EndViewportSelection(window_handle handle)
 {
     // No-op
 }
 
-api_bool ImageWindowContext::GetViewportSelection(const void* handle, int* x0, int* y0,
+api_bool ImageWindowContext::GetViewportSelection(const_window_handle handle, int* x0, int* y0,
                                                   int* x1, int* y1, uint32* flags)
 {
     if (x0) *x0 = 0;
@@ -4420,43 +4450,43 @@ api_bool ImageWindowContext::GetViewportSelection(const void* handle, int* x0, i
     return api_false;
 }
 
-void ImageWindowContext::BeginViewportSelection(void* handle, int x, int y, uint32 flags)
+void ImageWindowContext::BeginViewportSelection(window_handle handle, int x, int y, uint32 flags)
 {
     // No-op
 }
 
-void ImageWindowContext::ImageScalarToViewportD(const void* handle, double* value)
+void ImageWindowContext::ImageScalarToViewportD(const_window_handle handle, double* value)
 {
     // No-op - value unchanged
 }
 
-void ImageWindowContext::SetImageWindowViewport(void* handle, double cx, double cy, int zoom)
+void ImageWindowContext::SetImageWindowViewport(window_handle handle, double cx, double cy, int zoom)
 {
     // No-op
 }
 
-void ImageWindowContext::BringImageWindowToFront(void* handle)
+void ImageWindowContext::BringImageWindowToFront(window_handle handle)
 {
     // No-op
 }
 
-void ImageWindowContext::ModifyViewportSelection(void* handle, int x, int y, uint32 flags)
+void ImageWindowContext::ModifyViewportSelection(window_handle handle, int x, int y, uint32 flags)
 {
     // No-op
 }
 
-int32 ImageWindowContext::GetImageWindowDisplayChannel(const void* handle)
+int32 ImageWindowContext::GetImageWindowDisplayChannel(const_window_handle handle)
 {
     return 0; // Red channel
 }
 
-api_bool ImageWindowContext::GetImageWindowDisplayPixelRatio(const void* handle, double* ratio)
+api_bool ImageWindowContext::GetImageWindowDisplayPixelRatio(const_window_handle handle, double* ratio)
 {
     if (ratio) *ratio = 1.0;
     return api_true;
 }
 
-void ImageWindowContext::GetImageWindowVisibleViewportRect(const void* handle,
+void ImageWindowContext::GetImageWindowVisibleViewportRect(const_window_handle handle,
                                                            int* x0, int* y0, int* x1, int* y1)
 {
     if (x0) *x0 = 0;
@@ -4465,7 +4495,7 @@ void ImageWindowContext::GetImageWindowVisibleViewportRect(const void* handle,
     if (y1) *y1 = 768;
 }
 
-api_bool ImageWindowContext::GetImageWindowHasAstrometricSolution(const void* handle)
+api_bool ImageWindowContext::GetImageWindowHasAstrometricSolution(const_window_handle handle)
 {
     return api_false; // No astrometry in mock
 }

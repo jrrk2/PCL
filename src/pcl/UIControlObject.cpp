@@ -296,7 +296,7 @@ UIControlObject::~UIControlObject() noexcept( false )
 {
    if ( handle != nullptr )
    {
-      api_handle theHandle = handle;
+      control_handle theHandle = handle;
 
       s_objects.Remove( this );
 
@@ -385,13 +385,13 @@ void UIControlObject::SetObjectId( const String& id )
 
 // ----------------------------------------------------------------------------
 
-void UIControlObject::SetHandle( void* newHandle )
+void UIControlObject::SetHandle( control_handle newHandle )
 {
    if ( newHandle != handle )
    {
       if ( handle != nullptr )
       {
-         api_handle oldHandle = handle;
+         control_handle oldHandle = handle;
 
          s_objects.Remove( this );
 
@@ -419,7 +419,7 @@ void UIControlObject::TransferHandle( void* newHandle )
    {
       if ( handle != nullptr )
       {
-         api_handle oldHandle = handle;
+         control_handle oldHandle = handle;
 
          s_objects.Remove( this );
 

@@ -317,7 +317,7 @@ protected:
    /*!
     * \internal
     */
-   void SetHandle( void* );
+   void SetHandle( control_handle );
 
    /*!
     * \internal
@@ -330,7 +330,7 @@ protected:
     * classes must reimplement this function to return the handle of a newly
     * constructed UI object.
     */
-   virtual void* CloneHandle() const
+   virtual control_handle CloneHandle() const
    {
       return nullptr;
    }

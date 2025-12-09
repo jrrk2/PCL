@@ -514,8 +514,8 @@ typedef const_api_handle   const_view_handle;
 /*
  * Handle to a PixInsight image window
  */
-typedef api_handle         window_handle;
-typedef const_api_handle   const_window_handle;
+typedef control_handle     window_handle;
+typedef const_control_handle   const_window_handle;
 
 /*
  * Handle to a console object

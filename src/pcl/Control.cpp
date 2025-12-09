@@ -896,7 +896,7 @@ double Control::ResourcePixelRatio() const
 
 // ----------------------------------------------------------------------------
 
-void* Control::CloneHandle() const
+control_handle Control::CloneHandle() const
 {
    throw Error( "Cannot clone a Control handle" );
 }

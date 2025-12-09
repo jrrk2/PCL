@@ -45,7 +45,7 @@ public:
 ImageWindow::ImageWindow( int width, int height, int numberOfChannels,
                           int bitsPerSample, bool floatSample, bool color,
                           bool initialProcessing, const IsoString& id )
-   : UIObject( (API->ImageWindow->CreateImageWindow)( width, height, numberOfChannels,
+   : UIControlObject( (API->ImageWindow->CreateImageWindow)( width, height, numberOfChannels,
                                                        bitsPerSample, floatSample, color,
                                                        initialProcessing, id.c_str() ) )
 {

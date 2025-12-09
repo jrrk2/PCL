@@ -838,14 +838,14 @@ struct api_context UIContext
 
    api_bool       (SetHandleDestroyedEventRoutine)( api_handle, pcl::destroy_event_routine );
 
-   api_bool       (AttachToUIControlObject)( api_handle, api_handle );
-   api_bool       (DetachFromUIControlObject)( api_handle, api_handle );
+   api_bool       (AttachToUIControlObject)( api_handle, control_handle );
+   api_bool       (DetachFromUIControlObject)( api_handle, control_handle );
 
-   api_handle     (GetUIControlObjectModule)( const_api_handle );
+   api_handle     (GetUIControlObjectModule)( const_control_handle );
 
-   size_type      (GetUIControlObjectRefCount)( const_api_handle );
+   size_type      (GetUIControlObjectRefCount)( const_control_handle );
 
-   api_bool       (GetUIControlObjectType)( const_api_handle, char*, size_type* );
+   api_bool       (GetUIControlObjectType)( const_control_handle, char*, size_type* );
 
    api_bool       (GetUIControlObjectId)( const_api_handle, char16_type*, size_type* );
    api_bool       (SetUIControlObjectId)( api_handle, const char16_type* );

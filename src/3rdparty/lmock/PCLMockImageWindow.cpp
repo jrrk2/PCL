@@ -896,13 +896,195 @@ window_handle ImageWindowContext::GetImageWindowById(const char* id)
     return nullptr;
 }
 
-// Continued in next part...
+void ImageWindowContext::GetPreviewRect(const_window_handle handle, 
+                                           const char* previewId,
+                                           int32* x0, int32* y0, 
+                                           int32* x1, int32* y1)
+{
+    qDebug() << "*** GetPreviewRect called";
+    qDebug() << "  handle:" << handle;
+    qDebug() << "  previewId:" << (previewId ? previewId : "NULL");
+    
+    auto it = g_mockWindows.find(const_cast<window_handle>(handle));
+    if (it == g_mockWindows.end())
+    {
+        qDebug() << "  ERROR: window not found";
+        return;
+    }
+    
+    // For now, return no preview rect (preview system not implemented)
+    // Real implementation would look up preview rectangles by ID
+    if (x0) *x0 = 0;
+    if (y0) *y0 = 0;
+    if (x1) *x1 = 0;
+    if (y1) *y1 = 0;
+    
+    qDebug() << "  No preview rect (not implemented)";
+    return ;
+}
 
-/*
-TO BE CONTINUED: ImageWindowContext implementation follows same pattern.
-Key insight: 
-- CreateImageWindow() creates both a MockWindow AND calls SharedImageContext::CreateImage()
-- MainView gets the image_handle from the created image
-- GenericImage::PixelAddress() ultimately calls SharedImageContext::GetImagePixelData()
-  to get the array of channel pointers, then indexes into the appropriate channel
-*/
+api_bool ImageWindowContext::CloseImageWindow(window_handle handle, api_bool flags)
+{
+    qDebug() << "*** CloseImageWindow called";
+    qDebug() << "  handle:" << handle;
+    qDebug() << "  flags:" << flags;
+    
+    auto it = g_mockWindows.find(handle);
+    if (it == g_mockWindows.end())
+    {
+        qDebug() << "  ERROR: window not found";
+        return api_false;
+    }
+    
+    MockImageWindow* win = it->second;
+    
+    // Hide and close the window
+    if (win->widget)
+    {
+        win->widget->close();
+        win->widget->deleteLater();
+    }
+    
+    // Remove from tracking
+    g_mockWindows.erase(it);
+    
+    qDebug() << "  Window closed and removed";
+    qDebug() << "  Remaining windows:" << g_mockWindows.size();
+    return api_true;
+}
+
+void ImageWindowContext::GetImageWindowRGBWS(const_window_handle handle, api_RGBWS* rgbws)
+{
+    qDebug() << "*** GetImageWindowRGBWS (window) called";
+    qDebug() << "  handle:" << handle;
+    
+    auto it = g_mockWindows.find(const_cast<window_handle>(handle));
+    if (it == g_mockWindows.end() || !rgbws)
+    {
+        qDebug() << "  ERROR: window not found or rgbws is NULL";
+        return ;
+    }
+    
+    MockImageWindow* win = it->second;
+    /*    
+    // Get the image's RGBWS by calling the image version
+    if (win->imageHandle)
+    {
+        GetImageWindowRGBWS(win->imageHandle, rgbws);
+	return;
+    }
+    */
+    // Fallback: return default sRGB working space
+    rgbws->gamma = 2.2;
+    rgbws->isSRGBGamma = api_true;
+    rgbws->x[0] = 0.6400; rgbws->x[1] = 0.3000; rgbws->x[2] = 0.1500;
+    rgbws->y[0] = 0.3300; rgbws->y[1] = 0.6000; rgbws->y[2] = 0.0600;
+    rgbws->Y[0] = 0.2126; rgbws->Y[1] = 0.7152; rgbws->Y[2] = 0.0722;
+    
+    qDebug() << "  Returned default sRGB";
+    return ;
+}
+
+view_handle ImageWindowContext::GetImageWindowCurrentView(const_window_handle handle)
+{
+    qDebug() << "*** GetImageWindowCurrentView called";
+    qDebug() << "  handle:" << handle;
+    
+    auto it = g_mockWindows.find(const_cast<window_handle>(handle));
+    if (it == g_mockWindows.end())
+    {
+        qDebug() << "  ERROR: window not found";
+        return nullptr;
+    }
+    
+    MockImageWindow* win = it->second;
+    
+    qDebug() << "  Current view:" << win->mainView;
+    return win->mainView;
+}
+
+void ImageWindowContext::SetImageWindowCurrentView(window_handle handle, view_handle view)
+{
+    qDebug() << "*** SetImageWindowCurrentView called";
+    qDebug() << "  handle:" << handle;
+    qDebug() << "  view:" << view;
+    
+    auto it = g_mockWindows.find(handle);
+    if (it == g_mockWindows.end())
+    {
+        qDebug() << "  ERROR: window not found";
+        return;
+    }
+    
+    MockImageWindow* win = it->second;
+    
+    // Verify the view exists
+    auto viewIt = g_mockViews.find(view);
+    if (viewIt == g_mockViews.end())
+    {
+        qDebug() << "  ERROR: view not found";
+        return;
+    }
+    
+    // Set as current view (though we only have main view for now)
+    win->mainView = view;
+    
+    qDebug() << "  Current view set";
+}
+
+void ImageWindowContext::GetImageWindowSampleFormat(const_window_handle handle,
+                                                       uint32* bitsPerSample,
+                                                       uint32* floatSample)
+{
+    qDebug() << "*** GetImageWindowSampleFormat called";
+    qDebug() << "  handle:" << handle;
+    
+    auto it = g_mockWindows.find(const_cast<window_handle>(handle));
+    if (it == g_mockWindows.end())
+    {
+        qDebug() << "  ERROR: window not found";
+        return ;
+    }
+    
+    MockImageWindow* win = it->second;
+    
+    if (bitsPerSample)
+        *bitsPerSample = win->bitsPerSample;
+    
+    if (floatSample)
+        *floatSample = win->floatSample ? 1 : 0;
+    
+    qDebug() << "  bitsPerSample:" << win->bitsPerSample;
+    qDebug() << "  floatSample:" << win->floatSample;
+    
+    return ;
+}
+
+void ImageWindowContext::SetImageWindowSampleFormat(window_handle handle,
+                                                    uint32 bitsPerSample,
+                                                    uint32 floatSample)
+{
+    qDebug() << "*** SetImageWindowSampleFormat called";
+    qDebug() << "  handle:" << handle;
+    qDebug() << "  bitsPerSample:" << bitsPerSample;
+    qDebug() << "  floatSample:" << floatSample;
+    
+    auto it = g_mockWindows.find(handle);
+    if (it == g_mockWindows.end())
+    {
+        qDebug() << "  ERROR: window not found";
+        return;
+    }
+    
+    MockImageWindow* win = it->second;
+    
+    win->bitsPerSample = bitsPerSample;
+    win->floatSample = (floatSample != 0);
+    
+    // Note: This doesn't convert existing pixel data, just changes the format flag
+    // Real implementation would need to convert the actual image data
+    
+    qDebug() << "  Sample format updated";
+    qDebug() << "  WARNING: Pixel data not converted - format change is metadata only";
+}
+

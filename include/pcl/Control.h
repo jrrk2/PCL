@@ -1749,7 +1749,7 @@ protected:
     * Reimplemented from UIControlObject. Throws an Error exception because Control
     * objects are unique, and hence cannot be duplicated.
     */
-   void* CloneHandle() const override;
+   control_handle CloneHandle() const override;
 
    friend class BitmapBox;
    friend class CheckBox;

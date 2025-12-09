@@ -32,7 +32,7 @@
 #include <pcl/ByteArray.h>
 #include <pcl/FITSHeaderKeyword.h>
 #include <pcl/ImageOptions.h>
-#include <pcl/UIObject.h>
+#include <pcl/UIControlObject.h>
 #include <pcl/View.h>
 
 #endif   // !__PCL_BUILDING_PIXINSIGHT_APPLICATION
@@ -250,7 +250,7 @@ using UndoFlags = Flags<UndoFlag::mask_type>;
  *
  * \sa View
  */
-class PCL_CLASS ImageWindow : public UIObject
+class PCL_CLASS ImageWindow : public UIControlObject
 {
 public:
 
@@ -373,7 +373,7 @@ public:
     * they refer to the same server-side object.
     */
    ImageWindow( const ImageWindow& w )
-      : UIObject( w )
+      : UIControlObject( w )
    {
    }
 
@@ -381,7 +381,7 @@ public:
     * Move constructor.
     */
    ImageWindow( ImageWindow&& x )
-      : UIObject( std::move( x ) )
+      : UIControlObject( std::move( x ) )
    {
    }
 
@@ -3051,7 +3051,7 @@ public:
 
 private:
 
-   ImageWindow( void* h ) : UIObject( h )
+   ImageWindow( control_handle h ) : UIControlObject( h )
    {
    }
 
