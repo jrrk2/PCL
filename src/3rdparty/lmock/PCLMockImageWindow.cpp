@@ -88,38 +88,8 @@ struct MockViewExtended
 };
 
 // Global storage - replace the simple MockView with MockViewExtended
-static std::map<view_handle, MockViewExtended*> g_mockViewsExt;
-
-// ============================================================================
-// Mock Image Storage (replaces previous MockImageWindow)
-// ============================================================================
-
-struct MockView
-{
-    std::string viewId;
-    window_handle windowHandle;
-    image_handle imageHandle;
-    
-    // View state
-    bool readLocked = false;
-    bool writeLocked = false;
-    bool isDynamicTarget = false;
-    
-    // STF
-    bool hasSTF = false;
-    bool stfEnabled = false;
-    double stf_m[3] = {0.5, 0.5, 0.5};
-    double stf_c0[3] = {0, 0, 0};
-    double stf_c1[3] = {1, 1, 1};
-    double stf_r0[3] = {0, 0, 0};
-    double stf_r1[3] = {1, 1, 1};
-    
-    // Properties
-    std::map<std::string, std::pair<uint64_t, api_property_value>> properties;
-    
-    MockView(const std::string& id, window_handle win, image_handle img)
-        : viewId(id), windowHandle(win), imageHandle(img) {}
-};
+static std::map<window_handle, MockImageWindow*> g_mockWindows;
+static std::map<view_handle, MockViewExtended*> g_mockViews;
 
 struct MockWindow
 {
@@ -235,7 +205,6 @@ struct MockWindow
 
 // Global storage
 static std::map<image_handle, MockImage*> g_images;
-static std::map<view_handle, MockView*> g_views;
 static std::map<window_handle, MockWindow*> g_windows;
 static std::map<std::string, window_handle> g_windowsByID;
 static std::vector<view_handle> g_dynamicTargets;
@@ -315,23 +284,50 @@ api_bool SharedImageContext::DetachFromImage(image_handle handle, void* owner)
 
 api_bool SharedImageContext::GetImageFormat(const_image_handle handle, uint32* nbits, api_bool* flt)
 {
+    qDebug() << "*** GetImageFormat called, handle:" << handle;
+    qDebug() << "  g_images.size():" << g_images.size();
+    
     auto it = g_images.find(const_cast<image_handle>(handle));
     if (it == g_images.end())
+    {
+        qDebug() << "  ERROR: handle not found in g_images!";
+        qDebug() << "  Available handles:";
+        for (const auto& pair : g_images) {
+            qDebug() << "    " << pair.first;
+        }
         return api_false;
+    }
+    
+    qDebug() << "  Found image:";
+    qDebug() << "    bitsPerSample:" << it->second->bitsPerSample;
+    qDebug() << "    floatSample:" << it->second->floatSample;
     
     if (nbits)
         *nbits = it->second->bitsPerSample;
     if (flt)
         *flt = it->second->floatSample ? api_true : api_false;
     
+    qDebug() << "  Returning values: bits=" << (nbits ? *nbits : 0) 
+             << " float=" << (flt ? *flt : 0);
+    
     return api_true;
 }
 
 api_bool SharedImageContext::GetImageGeometry(const_image_handle handle, uint32* w, uint32* h, uint32* n)
 {
+    qDebug() << "*** GetImageGeometry called, handle:" << handle;
+    
     auto it = g_images.find(const_cast<image_handle>(handle));
     if (it == g_images.end())
+    {
+        qDebug() << "  ERROR: handle not found!";
         return api_false;
+    }
+    
+    qDebug() << "  Found image:";
+    qDebug() << "    width:" << it->second->width;
+    qDebug() << "    height:" << it->second->height;
+    qDebug() << "    channels:" << it->second->numberOfChannels;
     
     if (w) *w = it->second->width;
     if (h) *h = it->second->height;
@@ -371,9 +367,31 @@ api_bool SharedImageContext::SetImageColorSpace(image_handle handle, uint32 cs)
     return api_true;
 }
 
-api_bool SharedImageContext::GetImageRGBWS(const_image_handle, api_RGBWS*)
+api_bool SharedImageContext::GetImageRGBWS(const_image_handle handle, api_RGBWS* rgbws)
 {
-    return api_false;  // Not implemented
+    auto it = g_images.find(const_cast<image_handle>(handle));
+    if (it == g_images.end() || !rgbws)
+        return api_false;
+    
+    // Return default sRGB working space
+    rgbws->gamma = 2.2;
+    rgbws->isSRGBGamma = api_true;
+    
+    // sRGB chromaticity coordinates
+    rgbws->x[0] = 0.6400;  // Red x
+    rgbws->x[1] = 0.3000;  // Green x
+    rgbws->x[2] = 0.1500;  // Blue x
+    
+    rgbws->y[0] = 0.3300;  // Red y
+    rgbws->y[1] = 0.6000;  // Green y
+    rgbws->y[2] = 0.0600;  // Blue y
+    
+    // Luminance coefficients (Rec. 709)
+    rgbws->Y[0] = 0.2126;  // Red
+    rgbws->Y[1] = 0.7152;  // Green
+    rgbws->Y[2] = 0.0722;  // Blue
+    
+    return api_true;
 }
 
 api_bool SharedImageContext::SetImageRGBWS(image_handle, const api_RGBWS*)
@@ -418,7 +436,7 @@ view_handle ViewContext::GetViewById(const char* fullId)
 {
     if (!fullId) return nullptr;
     
-    for (const auto& pair : g_views)
+    for (const auto& pair : g_mockViews)
     {
         if (pair.second->viewId == fullId)
             return pair.first;
@@ -431,7 +449,7 @@ void ViewContext::EnumerateViews(pcl::view_enumeration_callback callback, void* 
 {
     if (!callback) return;
     
-    for (const auto& pair : g_views)
+    for (const auto& pair : g_mockViews)
     {
         if (includeMainViews)
         {
@@ -447,16 +465,16 @@ api_bool ViewContext::IsStoredPreview(const_view_handle) { return api_false; }
 
 window_handle ViewContext::GetViewParentWindow(const_view_handle handle)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end())
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end())
         return nullptr;
     return it->second->windowHandle;
 }
 
 api_bool ViewContext::GetViewId(const_view_handle handle, char* id, size_type* len)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end())
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end())
         return api_false;
     
     const std::string& viewId = it->second->viewId;
@@ -485,8 +503,8 @@ api_bool ViewContext::GetViewFullId(const_view_handle handle, char* fullId, size
 
 api_bool ViewContext::SetViewId(view_handle handle, const char* newId)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end() || !newId)
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end() || !newId)
         return api_false;
     
     it->second->viewId = newId;
@@ -495,8 +513,8 @@ api_bool ViewContext::SetViewId(view_handle handle, const char* newId)
 
 void ViewContext::GetViewLocks(const_view_handle handle, api_bool* readLock, api_bool* writeLock)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end())
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end())
     {
         if (readLock) *readLock = api_false;
         if (writeLock) *writeLock = api_false;
@@ -509,8 +527,8 @@ void ViewContext::GetViewLocks(const_view_handle handle, api_bool* readLock, api
 
 void ViewContext::LockView(view_handle handle, api_bool readLock, api_bool writeLock, api_bool)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end()) return;
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end()) return;
     
     if (readLock) it->second->readLocked = true;
     if (writeLock) it->second->writeLocked = true;
@@ -518,8 +536,8 @@ void ViewContext::LockView(view_handle handle, api_bool readLock, api_bool write
 
 void ViewContext::UnlockView(view_handle handle, api_bool readLock, api_bool writeLock, api_bool)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end()) return;
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end()) return;
     
     if (readLock) it->second->readLocked = false;
     if (writeLock) it->second->writeLocked = false;
@@ -537,8 +555,8 @@ void ViewContext::AddViewToDynamicTargets(view_handle handle)
     if (!IsViewDynamicTarget(handle))
     {
         g_dynamicTargets.push_back(handle);
-        auto it = g_views.find(handle);
-        if (it != g_views.end())
+        auto it = g_mockViews.find(handle);
+        if (it != g_mockViews.end())
             it->second->isDynamicTarget = true;
     }
 }
@@ -549,29 +567,60 @@ void ViewContext::RemoveViewFromDynamicTargets(view_handle handle)
     if (pos != g_dynamicTargets.end())
     {
         g_dynamicTargets.erase(pos);
-        auto it = g_views.find(handle);
-        if (it != g_views.end())
+        auto it = g_mockViews.find(handle);
+        if (it != g_mockViews.end())
             it->second->isDynamicTarget = false;
     }
 }
 
+image_handle ViewContext::GetViewImage(view_handle handle)
+{
+    qDebug() << "\n*** GetViewImage called ***";
+    qDebug() << "  handle:" << handle;
+    qDebug() << "  g_mockViews.size():" << g_mockViews.size();
+    
+    // Show all view handles in the map
+    if (!g_mockViews.empty())
+    {
+        qDebug() << "  Available view handles:";
+        for (const auto& pair : g_mockViews)
+        {
+            qDebug() << "    " << pair.first << "-> imageHandle:" << pair.second->imageWindow->imageHandle;
+        }
+    }
+    
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end())
+    {
+        qDebug() << "  ERROR: view handle NOT FOUND in g_mockViews!";
+        return nullptr;
+    }
+    
+    qDebug() << "  Found view, imageHandle:" << it->second->imageWindow->imageHandle;
+    qDebug() << "*** GetViewImage complete ***\n";
+    
+    return it->second->imageWindow ? it->second->imageWindow->imageHandle : nullptr;
+}
+
+/*
 // CRITICAL: Returns the image handle for this view
 image_handle ViewContext::GetViewImage(view_handle handle)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end())
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end())
         return nullptr;
     
     return it->second->imageHandle;
 }
+*/
 
 api_bool ViewContext::IsViewColorImage(const_view_handle handle)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end())
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end())
         return api_false;
     
-    image_handle imgHandle = it->second->imageHandle;
+    image_handle imgHandle = it->second->imageWindow->imageHandle;
     auto imgIt = g_images.find(imgHandle);
     if (imgIt == g_images.end())
         return api_false;
@@ -581,11 +630,11 @@ api_bool ViewContext::IsViewColorImage(const_view_handle handle)
 
 api_bool ViewContext::GetViewDimensions(const_view_handle handle, int32* width, int32* height)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end())
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end())
         return api_false;
     
-    image_handle imgHandle = it->second->imageHandle;
+    image_handle imgHandle = it->second->imageWindow->imageHandle;
     auto imgIt = g_images.find(imgHandle);
     if (imgIt == g_images.end())
         return api_false;
@@ -600,12 +649,12 @@ api_bool ViewContext::GetViewDimensions(const_view_handle handle, int32* width, 
 api_bool ViewContext::GetViewScreenTransferFunctions(const_view_handle handle,
                                                      double* m, double* c0, double* c1, double* r0, double* r1)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end() || !it->second->hasSTF)
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end() || !it->second->hasSTF)
         return api_false;
     
-    MockView* view = it->second;
-    image_handle imgHandle = view->imageHandle;
+    MockViewExtended* view = it->second;
+    image_handle imgHandle = view->imageWindow->imageHandle;
     auto imgIt = g_images.find(imgHandle);
     int channels = (imgIt != g_images.end()) ? imgIt->second->numberOfChannels : 1;
     
@@ -625,11 +674,11 @@ api_bool ViewContext::SetViewScreenTransferFunctions(view_handle handle,
                                                      const double* m, const double* c0, const double* c1,
                                                      const double* r0, const double* r1, api_bool)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end())
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end())
         return api_false;
     
-    MockView* view = it->second;
+    MockViewExtended* view = it->second;
     
     for (int i = 0; i < 3; ++i)
     {
@@ -646,8 +695,8 @@ api_bool ViewContext::SetViewScreenTransferFunctions(view_handle handle,
 
 api_bool ViewContext::DestroyViewScreenTransferFunctions(view_handle handle, api_bool)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end())
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end())
         return api_false;
     
     it->second->hasSTF = false;
@@ -656,8 +705,8 @@ api_bool ViewContext::DestroyViewScreenTransferFunctions(view_handle handle, api
 
 api_bool ViewContext::GetViewScreenTransferFunctionsEnabled(view_handle handle)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end())
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end())
         return api_false;
     
     return it->second->stfEnabled ? api_true : api_false;
@@ -665,8 +714,8 @@ api_bool ViewContext::GetViewScreenTransferFunctionsEnabled(view_handle handle)
 
 void ViewContext::SetViewScreenTransferFunctionsEnabled(view_handle handle, api_bool enabled, api_bool)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end())
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end())
         return;
     
     it->second->stfEnabled = (enabled != 0);
@@ -697,15 +746,15 @@ api_bool ViewContext::EnumerateViewProperties(const_view_handle handle,
                                               pcl::property_enumeration_callback callback,
                                               char* id, size_type* len, void* data)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end() || !callback)
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end() || !callback)
         return api_false;
     
     // The callback signature is: api_bool (*callback)(const char* id, uint64 type, void* data)
     for (const auto& prop : it->second->properties)
     {
         // Call the callback with property ID, type, and user data
-        if (!callback(prop.first.c_str(), prop.second.first, data))
+        if (!callback(prop.first.c_str(), prop.second.type, data))
             break;
     }
     
@@ -715,30 +764,30 @@ api_bool ViewContext::EnumerateViewProperties(const_view_handle handle,
 api_bool ViewContext::GetViewPropertyValue(api_handle, const_view_handle handle,
                                            const char* id, api_property_value* value)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end() || !id || !value)
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end() || !id || !value)
         return api_false;
     
     auto propIt = it->second->properties.find(id);
     if (propIt == it->second->properties.end())
         return api_false;
     
-    *value = propIt->second.second;
+    *value = propIt->second.value;
     return api_true;
 }
 
 api_bool ViewContext::GetViewPropertyAttributes(api_handle, const_view_handle handle,
                                                 const char* id, uint32* flags, uint64* type)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end() || !id)
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end() || !id)
         return api_false;
     
     auto propIt = it->second->properties.find(id);
     if (propIt == it->second->properties.end())
         return api_false;
     
-    if (type) *type = propIt->second.first;
+    if (type) *type = propIt->second.type;
     if (flags) *flags = 0;  // Would need to store flags separately
     
     return api_true;
@@ -748,12 +797,12 @@ api_bool ViewContext::SetViewPropertyValue(api_handle, view_handle handle,
                                            const char* id, const api_property_value* value,
                                            uint32 flags, api_bool)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end() || !id || !value)
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end() || !id || !value)
         return api_false;
     
     // Store type as 0 for now (would need to extract from value)
-    it->second->properties[id] = std::make_pair(0, *value);
+    it->second->properties[id] = * new ViewProperty ();
     return api_true;
 }
 
@@ -765,23 +814,23 @@ api_bool ViewContext::SetViewPropertyAttributes(api_handle, view_handle, const c
 api_bool ViewContext::GetViewPropertyExists(api_handle, const_view_handle handle,
                                             const char* id, uint64* type)
 {
-    auto it = g_views.find(const_cast<view_handle>(handle));
-    if (it == g_views.end() || !id)
+    auto it = g_mockViews.find(const_cast<view_handle>(handle));
+    if (it == g_mockViews.end() || !id)
         return api_false;
     
     auto propIt = it->second->properties.find(id);
     if (propIt == it->second->properties.end())
         return api_false;
     
-    if (type) *type = propIt->second.first;
+    if (type) *type = propIt->second.type;
     return api_true;
 }
 
 api_bool ViewContext::DeleteViewProperty(api_handle, view_handle handle,
                                          const char* id, api_bool)
 {
-    auto it = g_views.find(handle);
-    if (it == g_views.end() || !id)
+    auto it = g_mockViews.find(handle);
+    if (it == g_mockViews.end() || !id)
         return api_false;
     
     return it->second->properties.erase(id) > 0 ? api_true : api_false;
@@ -791,11 +840,6 @@ api_bool ViewContext::ComputeViewProperty(api_handle, view_handle, const char*, 
 {
     return api_false;  // Not computing derived properties
 }
-
-
-// Global storage for mock windows
-static std::map<window_handle, MockImageWindow*> g_mockWindows;
-static std::map<view_handle, MockViewExtended*> g_mockViews;
 
 window_handle ImageWindowContext::CreateImageWindow(int width, int height, int numberOfChannels, 
                                                      int bitsPerSample, uint32 floatSample, 

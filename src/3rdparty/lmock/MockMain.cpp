@@ -1256,8 +1256,103 @@ private:
             }
             
             // Get the main view and its image
-            pcl::View view = window.MainView();
-            
+	    pcl::View view = window.MainView();
+
+	    // Get the view's image handle
+	    void* viewHandle = view.handle;  // or view.Handle()
+
+	    // Call the API directly to get the image handle
+	    image_handle imgHandle = API->View->GetViewImage(viewHandle);
+
+	    if (m_consoleWidget)
+	    {
+		m_consoleWidget->appendText(QString("View handle: %1\n").arg((quintptr)viewHandle));
+		m_consoleWidget->appendText(QString("Image handle: %1\n").arg((quintptr)imgHandle));
+	    }
+
+	    if (imgHandle != nullptr)
+	    {
+		// Get image format directly
+		uint32_t bits = 0;
+		api_bool isFloat = api_false;
+
+		if (API->SharedImage->GetImageFormat(imgHandle, &bits, &isFloat))
+		{
+		    if (m_consoleWidget)
+		    {
+			m_consoleWidget->appendText(QString("Image format: %1-bit %2\n")
+			    .arg(bits).arg(isFloat ? "float" : "integer"));
+		    }
+
+		    if (isFloat && bits == 32)
+		    {
+			// Get pixel data
+			void** channelData = nullptr;
+			if (API->SharedImage->GetImagePixelData(imgHandle, &channelData) && channelData)
+			{
+			    // Get geometry
+			    uint32_t width = 0, height = 0, channels = 0;
+			    API->SharedImage->GetImageGeometry(imgHandle, &width, &height, &channels);
+
+			    if (m_consoleWidget)
+			    {
+				m_consoleWidget->appendText(QString("Image size: %1x%2, %3 channels\n")
+				    .arg(width).arg(height).arg(channels));
+				m_consoleWidget->appendText("Filling with gradient pattern...\n");
+			    }
+
+			    // Fill with gradient
+			    float* pixels = static_cast<float*>(channelData[0]);
+
+			    for (uint32_t y = 0; y < height; ++y)
+			    {
+				for (uint32_t x = 0; x < width; ++x)
+				{
+				    float value = (float)x / (width - 1.0f) * (float)y / (height - 1.0f);
+				    pixels[y * width + x] = value;
+				}
+			    }
+
+			    if (m_consoleWidget)
+			    {
+				m_consoleWidget->appendText("✓ Gradient pattern created!\n");
+				m_consoleWidget->appendText(QString("  Samples: [0,0]=%1, [255,255]=%2, [511,511]=%3\n")
+				    .arg(pixels[0])
+				    .arg(pixels[255 * width + 255])
+				    .arg(pixels[(width * height) - 1]));
+			    }
+			}
+			else
+			{
+			    if (m_consoleWidget)
+			    {
+				m_consoleWidget->appendText("✗ Failed to get pixel data!\n");
+			    }
+			}
+		    }
+		    else
+		    {
+			if (m_consoleWidget)
+			{
+			    m_consoleWidget->appendText("✗ Image is not 32-bit float!\n");
+			}
+		    }
+		}
+		else
+		{
+		    if (m_consoleWidget)
+		    {
+			m_consoleWidget->appendText("✗ GetImageFormat failed!\n");
+		    }
+		}
+	    }
+	    else
+	    {
+		if (m_consoleWidget)
+		{
+		    m_consoleWidget->appendText("✗ Failed to get image handle from view!\n");
+		}
+	    }            
             if (view.IsNull())
             {
                 throw pcl::Error("Failed to get main view from window");

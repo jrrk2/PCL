@@ -242,9 +242,9 @@ public:
     */
    void SetObjectId( const String& id );
 
-protected:
 
    void* handle = nullptr;
+protected:
    bool  alias  = false;
 
    /*!
