@@ -221,7 +221,7 @@ struct MockImageWindow
         scrollArea->setWidgetResizable(false);
         
         layout->addWidget(scrollArea);
-        widget->resize(width + 20, height + 20);
+        widget->resize(std::min(width,800), std::min(height,600));
     }
     
     ~MockImageWindow()
