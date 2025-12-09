@@ -376,6 +376,177 @@ void SelectionWindow::onOpenImageFile()
     }
 }
 
+void SelectionWindow::onZoomIn()
+{
+    if (m_consoleWidget)
+    {
+        m_consoleWidget->appendText("Zoom In\n");
+    }
+    
+    try
+    {
+        // Get the active image window
+        pcl::ImageWindow window = pcl::ImageWindow::ActiveWindow();
+        
+        if (window.IsNull())
+        {
+            if (m_consoleWidget)
+            {
+                m_consoleWidget->appendText("  No active window\n");
+            }
+            return;
+        }
+        
+        // Get current zoom factor
+        int currentZoom = window.ZoomFactor();
+        
+        // Increase zoom (positive = zoom in)
+        int newZoom = currentZoom + 1;
+        if (newZoom > 16)  // Max zoom
+            newZoom = 16;
+        
+        window.SetZoomFactor(newZoom);
+        
+        if (m_consoleWidget)
+        {
+            m_consoleWidget->appendText(QString("  Zoom: %1 → %2\n")
+                .arg(currentZoom).arg(newZoom));
+        }
+    }
+    catch (const pcl::Exception& e)
+    {
+        if (m_consoleWidget)
+        {
+            QString msg = QString::fromUtf16(
+                reinterpret_cast<const char16_t*>(e.Message().c_str()));
+            m_consoleWidget->appendText(QString("  Error: %1\n").arg(msg));
+        }
+    }
+}
+
+void SelectionWindow::onZoomOut()
+{
+    if (m_consoleWidget)
+    {
+        m_consoleWidget->appendText("Zoom Out\n");
+    }
+    
+    try
+    {
+        pcl::ImageWindow window = pcl::ImageWindow::ActiveWindow();
+        
+        if (window.IsNull())
+        {
+            if (m_consoleWidget)
+            {
+                m_consoleWidget->appendText("  No active window\n");
+            }
+            return;
+        }
+        
+        int currentZoom = window.ZoomFactor();
+        
+        // Decrease zoom (negative = zoom out)
+        int newZoom = currentZoom - 1;
+        if (newZoom < -16)  // Max zoom out
+            newZoom = -16;
+        
+        window.SetZoomFactor(newZoom);
+        
+        if (m_consoleWidget)
+        {
+            m_consoleWidget->appendText(QString("  Zoom: %1 → %2\n")
+                .arg(currentZoom).arg(newZoom));
+        }
+    }
+    catch (const pcl::Exception& e)
+    {
+        if (m_consoleWidget)
+        {
+            QString msg = QString::fromUtf16(
+                reinterpret_cast<const char16_t*>(e.Message().c_str()));
+            m_consoleWidget->appendText(QString("  Error: %1\n").arg(msg));
+        }
+    }
+}
+
+void SelectionWindow::onZoom11()
+{
+    if (m_consoleWidget)
+    {
+        m_consoleWidget->appendText("Zoom to 1:1\n");
+    }
+    
+    try
+    {
+        pcl::ImageWindow window = pcl::ImageWindow::ActiveWindow();
+        
+        if (window.IsNull())
+        {
+            if (m_consoleWidget)
+            {
+                m_consoleWidget->appendText("  No active window\n");
+            }
+            return;
+        }
+        
+        // Zoom factor 1 = 1:1 (actual pixels)
+        window.SetZoomFactor(1);
+        
+        if (m_consoleWidget)
+        {
+            m_consoleWidget->appendText("  Set zoom to 1:1\n");
+        }
+    }
+    catch (const pcl::Exception& e)
+    {
+        if (m_consoleWidget)
+        {
+            QString msg = QString::fromUtf16(
+                reinterpret_cast<const char16_t*>(e.Message().c_str()));
+            m_consoleWidget->appendText(QString("  Error: %1\n").arg(msg));
+        }
+    }
+}
+
+void SelectionWindow::onZoomToFit()
+{
+    if (m_consoleWidget)
+    {
+        m_consoleWidget->appendText("Zoom to Fit\n");
+    }
+    
+    try
+    {
+        pcl::ImageWindow window = pcl::ImageWindow::ActiveWindow();
+        
+        if (window.IsNull())
+        {
+            if (m_consoleWidget)
+            {
+                m_consoleWidget->appendText("  No active window\n");
+            }
+            return;
+        }
+        
+        window.ZoomToFit();
+        
+        if (m_consoleWidget)
+        {
+            m_consoleWidget->appendText("  Zoomed to fit window\n");
+        }
+    }
+    catch (const pcl::Exception& e)
+    {
+        if (m_consoleWidget)
+        {
+            QString msg = QString::fromUtf16(
+                reinterpret_cast<const char16_t*>(e.Message().c_str()));
+            m_consoleWidget->appendText(QString("  Error: %1\n").arg(msg));
+        }
+    }
+}
+
 // ============================================================================
 // Main Entry Point
 // ============================================================================

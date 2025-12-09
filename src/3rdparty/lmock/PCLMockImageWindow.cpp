@@ -862,18 +862,7 @@ window_handle ImageWindowContext::CreateImageWindow(int width, int height, int n
     // Link window → image
     mockWin->imageHandle = imgHandle;
     mockWin->imagePtr    = g_images[imgHandle];
-    /*
-    // TEMPORARY HACK: Fill with gradient
-    MockImage* testImg = mockWin->imagePtr;
-    if (testImg && testImg->floatSample) {
-	float* data = (float*)testImg->channelData[0];
-	for (uint32_t y = 0; y < testImg->height; ++y) {
-	    for (uint32_t x = 0; x < testImg->width; ++x) {
-		data[y * testImg->width + x] = (float)x / 511.0f * (float)y / 511.0f;
-	    }
-	}
-    }
-    */
+
     window_handle handle = reinterpret_cast<window_handle>(mockWin->widget);
     g_mockWindows[handle] = mockWin;
     g_windowsByID[windowId] = handle;
@@ -905,6 +894,67 @@ void ImageWindowContext::ZoomImageWindowToFit(window_handle handle, api_bool, ap
     
     MockImageWindow* win = it->second;
     win->zoomToFit();
+}
+
+int ImageWindowContext::GetImageWindowZoomFactor(const_window_handle handle)
+{
+    auto it = g_mockWindows.find(const_cast<window_handle>(handle));
+    if (it == g_mockWindows.end())
+        return 1;
+    
+    MockImageWindow* win = it->second;
+    double zoom = win->zoomFactor;
+    
+    // Convert our double zoom to PCL's integer format
+    if (zoom >= 1.0)
+    {
+        // Zoom in: 1.0 → 1, 2.0 → 2, 3.5 → 3
+        return static_cast<int>(std::round(zoom));
+    }
+    else if (zoom > 0.0)
+    {
+        // Zoom out: 0.5 → -1 (1:2), 0.25 → -2 (1:4), 0.125 → -3 (1:8)
+        double ratio = 1.0 / zoom;
+        return -static_cast<int>(std::round(ratio - 1));
+    }
+    else
+    {
+        return 1;  // Default
+    }
+}
+
+void ImageWindowContext::SetImageWindowZoomFactor(window_handle handle, int zoom)
+{
+    qDebug() << "*** SetImageWindowZoomFactor called";
+    qDebug() << "  handle:" << handle;
+    qDebug() << "  PCL zoom factor:" << zoom;
+    
+    auto it = g_mockWindows.find(handle);
+    if (it == g_mockWindows.end())
+        return;
+    
+    MockImageWindow* win = it->second;
+    
+    // Convert PCL's integer zoom to our double zoom factor
+    if (zoom >= 1)
+    {
+        // Zoom in: 1 → 1.0x, 2 → 2.0x, 3 → 3.0x
+        win->zoomFactor = static_cast<double>(zoom);
+    }
+    else if (zoom < 0)
+    {
+        // Zoom out: -1 → 0.5x (1:2), -2 → 0.25x (1:4), -3 → 0.125x (1:8)
+        win->zoomFactor = 1.0 / static_cast<double>(-zoom + 1);
+    }
+    else  // zoom == 0
+    {
+        // PCL shouldn't send 0, but treat as 1:1
+        win->zoomFactor = 1.0;
+    }
+    
+    qDebug() << "  Internal zoom factor set to:" << win->zoomFactor;
+    
+    win->updateDisplay();
 }
 
 void ImageWindowContext::SetImageWindowVisible(window_handle handle, api_bool visible)

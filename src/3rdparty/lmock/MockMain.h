@@ -228,7 +228,34 @@ private:
 	exitAction->setShortcut(QKeySequence::Quit);
 	connect(exitAction, &QAction::triggered, this, &QMainWindow::close);
 	m_fileMenu->addAction(exitAction);
-        
+
+	// ADD VIEW MENU
+	m_viewMenu = menuBar->addMenu("&View");
+
+	m_zoomInAction = new QAction("Zoom &In", this);
+	m_zoomInAction->setShortcut(QKeySequence::ZoomIn);  // Ctrl/Cmd + Plus
+	// m_zoomInAction->setEnabled(false);  // Enable when window is active
+	connect(m_zoomInAction, &QAction::triggered, this, &SelectionWindow::onZoomIn);
+	m_viewMenu->addAction(m_zoomInAction);
+
+	m_zoomOutAction = new QAction("Zoom &Out", this);
+	m_zoomOutAction->setShortcut(QKeySequence::ZoomOut);  // Ctrl/Cmd + Minus
+	// m_zoomOutAction->setEnabled(false);
+	connect(m_zoomOutAction, &QAction::triggered, this, &SelectionWindow::onZoomOut);
+	m_viewMenu->addAction(m_zoomOutAction);
+
+	m_zoom11Action = new QAction("&Actual Size (1:1)", this);
+	m_zoom11Action->setShortcut(Qt::CTRL | Qt::Key_0);  // Ctrl/Cmd + 0
+	// m_zoom11Action->setEnabled(false);
+	connect(m_zoom11Action, &QAction::triggered, this, &SelectionWindow::onZoom11);
+	m_viewMenu->addAction(m_zoom11Action);
+
+	m_zoomToFitAction = new QAction("Zoom to &Fit", this);
+	m_zoomToFitAction->setShortcut(Qt::CTRL | Qt::Key_F);  // Ctrl/Cmd + F
+	// m_zoomToFitAction->setEnabled(false);
+	connect(m_zoomToFitAction, &QAction::triggered, this, &SelectionWindow::onZoomToFit);
+	m_viewMenu->addAction(m_zoomToFitAction);
+	
         // Processes Menu - hierarchical: Process > Methods
         if (!m_processes.isEmpty())
         {
@@ -1580,6 +1607,10 @@ private:
 
 private slots:
     void onOpenImageFile();      // NEW
+    void onZoomIn();
+    void onZoomOut();
+    void onZoom11();
+    void onZoomToFit();
     
 private:
     std::vector<DiscoveredInterface> m_discovered;
@@ -1599,6 +1630,12 @@ private:
     QDockWidget* m_consoleDock;
     ConsoleWidget* m_consoleWidget;
     QMenu* m_fileMenu;           // NEW (or find if it exists)
+    QMenu* m_viewMenu;
+    
     QAction* m_openAction;       // NEW
+    QAction* m_zoomInAction;
+    QAction* m_zoomOutAction;
+    QAction* m_zoom11Action;
+    QAction* m_zoomToFitAction;
 
 };

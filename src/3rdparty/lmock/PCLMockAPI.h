@@ -202,7 +202,7 @@ struct MockImageWindow
     MockImage*  imagePtr    = nullptr;    // cached pointer for convenience
   
     view_handle mainView = nullptr;
-    int zoomFactor = 1;
+    double zoomFactor = 1.0;
     bool isVisible = true;
     
     MockImageWindow(const std::string& windowId, int w, int h, int ch, int bits, bool isFloat)
@@ -342,14 +342,23 @@ struct MockImageWindow
 	qDebug() << "  QPixmap created:";
 	qDebug() << "    isNull:" << pix.isNull();
 	qDebug() << "    size:" << pix.size();
+	qDebug() << "    zoomFactor:" << zoomFactor;
 
-	if (zoomFactor != 1)
+	// Apply zoom scaling
+	if (zoomFactor != 1.0)
 	{
-	    qDebug() << "  Applying zoom factor:" << zoomFactor;
-	    pix = pix.scaled(img->width * zoomFactor,
-			     img->height * zoomFactor,
-			     Qt::KeepAspectRatio);
-	    qDebug() << "  Zoomed pixmap size:" << pix.size();
+	    int scaledWidth = static_cast<int>(img->width * zoomFactor);
+	    int scaledHeight = static_cast<int>(img->height * zoomFactor);
+
+	    qDebug() << "  Scaling pixmap:";
+	    qDebug() << "    original:" << pix.size();
+	    qDebug() << "    scaled to:" << QSize(scaledWidth, scaledHeight);
+
+	    pix = pix.scaled(scaledWidth, scaledHeight, 
+				  Qt::KeepAspectRatio, 
+				  Qt::SmoothTransformation);
+
+	    qDebug() << "    final size:" << pix.size();
 	}
 
 	qDebug() << "  Setting pixmap on label...";
@@ -370,18 +379,27 @@ struct MockImageWindow
 
     void zoomToFit()
     {
-        if (!widget || !scrollArea) return;
-        
-        int viewWidth = scrollArea->viewport()->width() - 20;
-        int viewHeight = scrollArea->viewport()->height() - 20;
-        
-        float scaleX = static_cast<float>(viewWidth) / width;
-        float scaleY = static_cast<float>(viewHeight) / height;
-        float scale = std::min(scaleX, scaleY);
-        
-        zoomFactor = std::max(1, static_cast<int>(scale));
-        updateDisplay();
+	if (!widget || !scrollArea) return;
+
+	int viewWidth = scrollArea->viewport()->width() - 20;
+	int viewHeight = scrollArea->viewport()->height() - 20;
+
+	float scaleX = static_cast<float>(viewWidth) / width;
+	float scaleY = static_cast<float>(viewHeight) / height;
+	float scale = std::min(scaleX, scaleY);
+
+	// Store exact fractional zoom
+	zoomFactor = static_cast<double>(scale);
+
+	qDebug() << "*** zoomToFit()";
+	qDebug() << "  viewport:" << viewWidth << "x" << viewHeight;
+	qDebug() << "  image:" << width << "x" << height;
+	qDebug() << "  scaleX:" << scaleX << "scaleY:" << scaleY;
+	qDebug() << "  final zoom:" << zoomFactor;
+
+	updateDisplay();
     }
+  
 };
 
 // ---------------------------------------------------------------
