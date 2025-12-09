@@ -1,0 +1,217 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Generated on .... 2025-04-07T08:57:49.713Z
+# Project id ...... TIFF
+# Project type .... Module
+# Platform ........ MacOSX/g++
+# Configuration ... Release/arm64
+# --------------------------------------------------------------------
+# Additional include search directories:
+# $(PCLSRCDIR)/3rdparty/zlib
+######################################################################
+
+DEVELOPER_ID=pleiades
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR="$(PCLSRCDIR)/modules/file-formats/TIFF/macosx/g++/arm64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/libTIFF-pxm.a
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../TIFF.cpp \
+../../TIFFFormat.cpp \
+../../TIFFInstance.cpp \
+../../TIFFModule.cpp \
+../../TIFFOptionsDialog.cpp \
+../../TIFFPreferencesDialog.cpp \
+../../TIFFRangeOptionsDialog.cpp \
+../../libtiff/tif_aux.c \
+../../libtiff/tif_close.c \
+../../libtiff/tif_codec.c \
+../../libtiff/tif_color.c \
+../../libtiff/tif_compress.c \
+../../libtiff/tif_dir.c \
+../../libtiff/tif_dirinfo.c \
+../../libtiff/tif_dirread.c \
+../../libtiff/tif_dirwrite.c \
+../../libtiff/tif_dumpmode.c \
+../../libtiff/tif_error.c \
+../../libtiff/tif_extension.c \
+../../libtiff/tif_fax3.c \
+../../libtiff/tif_fax3sm.c \
+../../libtiff/tif_flush.c \
+../../libtiff/tif_getimage.c \
+../../libtiff/tif_hash_set.c \
+../../libtiff/tif_jbig.c \
+../../libtiff/tif_jpeg.c \
+../../libtiff/tif_jpeg_12.c \
+../../libtiff/tif_lerc.c \
+../../libtiff/tif_luv.c \
+../../libtiff/tif_lzma.c \
+../../libtiff/tif_lzw.c \
+../../libtiff/tif_next.c \
+../../libtiff/tif_ojpeg.c \
+../../libtiff/tif_open.c \
+../../libtiff/tif_packbits.c \
+../../libtiff/tif_pixarlog.c \
+../../libtiff/tif_predict.c \
+../../libtiff/tif_print.c \
+../../libtiff/tif_read.c \
+../../libtiff/tif_stream.cxx \
+../../libtiff/tif_strip.c \
+../../libtiff/tif_swab.c \
+../../libtiff/tif_thunder.c \
+../../libtiff/tif_tile.c \
+../../libtiff/tif_unix.c \
+../../libtiff/tif_version.c \
+../../libtiff/tif_warning.c \
+../../libtiff/tif_webp.c \
+../../libtiff/tif_write.c \
+../../libtiff/tif_zip.c \
+../../libtiff/tif_zstd.c
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./arm64/Release/TIFF.o \
+./arm64/Release/TIFFFormat.o \
+./arm64/Release/TIFFInstance.o \
+./arm64/Release/TIFFModule.o \
+./arm64/Release/TIFFOptionsDialog.o \
+./arm64/Release/TIFFPreferencesDialog.o \
+./arm64/Release/TIFFRangeOptionsDialog.o \
+./arm64/Release/libtiff/tif_aux.o \
+./arm64/Release/libtiff/tif_close.o \
+./arm64/Release/libtiff/tif_codec.o \
+./arm64/Release/libtiff/tif_color.o \
+./arm64/Release/libtiff/tif_compress.o \
+./arm64/Release/libtiff/tif_dir.o \
+./arm64/Release/libtiff/tif_dirinfo.o \
+./arm64/Release/libtiff/tif_dirread.o \
+./arm64/Release/libtiff/tif_dirwrite.o \
+./arm64/Release/libtiff/tif_dumpmode.o \
+./arm64/Release/libtiff/tif_error.o \
+./arm64/Release/libtiff/tif_extension.o \
+./arm64/Release/libtiff/tif_fax3.o \
+./arm64/Release/libtiff/tif_fax3sm.o \
+./arm64/Release/libtiff/tif_flush.o \
+./arm64/Release/libtiff/tif_getimage.o \
+./arm64/Release/libtiff/tif_hash_set.o \
+./arm64/Release/libtiff/tif_jbig.o \
+./arm64/Release/libtiff/tif_jpeg.o \
+./arm64/Release/libtiff/tif_jpeg_12.o \
+./arm64/Release/libtiff/tif_lerc.o \
+./arm64/Release/libtiff/tif_luv.o \
+./arm64/Release/libtiff/tif_lzma.o \
+./arm64/Release/libtiff/tif_lzw.o \
+./arm64/Release/libtiff/tif_next.o \
+./arm64/Release/libtiff/tif_ojpeg.o \
+./arm64/Release/libtiff/tif_open.o \
+./arm64/Release/libtiff/tif_packbits.o \
+./arm64/Release/libtiff/tif_pixarlog.o \
+./arm64/Release/libtiff/tif_predict.o \
+./arm64/Release/libtiff/tif_print.o \
+./arm64/Release/libtiff/tif_read.o \
+./arm64/Release/libtiff/tif_stream.o \
+./arm64/Release/libtiff/tif_strip.o \
+./arm64/Release/libtiff/tif_swab.o \
+./arm64/Release/libtiff/tif_thunder.o \
+./arm64/Release/libtiff/tif_tile.o \
+./arm64/Release/libtiff/tif_unix.o \
+./arm64/Release/libtiff/tif_version.o \
+./arm64/Release/libtiff/tif_warning.o \
+./arm64/Release/libtiff/tif_webp.o \
+./arm64/Release/libtiff/tif_write.o \
+./arm64/Release/libtiff/tif_zip.o \
+./arm64/Release/libtiff/tif_zstd.o
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/TIFF.d \
+./arm64/Release/TIFFFormat.d \
+./arm64/Release/TIFFInstance.d \
+./arm64/Release/TIFFModule.d \
+./arm64/Release/TIFFOptionsDialog.d \
+./arm64/Release/TIFFPreferencesDialog.d \
+./arm64/Release/TIFFRangeOptionsDialog.d \
+./arm64/Release/libtiff/tif_aux.d \
+./arm64/Release/libtiff/tif_close.d \
+./arm64/Release/libtiff/tif_codec.d \
+./arm64/Release/libtiff/tif_color.d \
+./arm64/Release/libtiff/tif_compress.d \
+./arm64/Release/libtiff/tif_dir.d \
+./arm64/Release/libtiff/tif_dirinfo.d \
+./arm64/Release/libtiff/tif_dirread.d \
+./arm64/Release/libtiff/tif_dirwrite.d \
+./arm64/Release/libtiff/tif_dumpmode.d \
+./arm64/Release/libtiff/tif_error.d \
+./arm64/Release/libtiff/tif_extension.d \
+./arm64/Release/libtiff/tif_fax3.d \
+./arm64/Release/libtiff/tif_fax3sm.d \
+./arm64/Release/libtiff/tif_flush.d \
+./arm64/Release/libtiff/tif_getimage.d \
+./arm64/Release/libtiff/tif_hash_set.d \
+./arm64/Release/libtiff/tif_jbig.d \
+./arm64/Release/libtiff/tif_jpeg.d \
+./arm64/Release/libtiff/tif_jpeg_12.d \
+./arm64/Release/libtiff/tif_lerc.d \
+./arm64/Release/libtiff/tif_luv.d \
+./arm64/Release/libtiff/tif_lzma.d \
+./arm64/Release/libtiff/tif_lzw.d \
+./arm64/Release/libtiff/tif_next.d \
+./arm64/Release/libtiff/tif_ojpeg.d \
+./arm64/Release/libtiff/tif_open.d \
+./arm64/Release/libtiff/tif_packbits.d \
+./arm64/Release/libtiff/tif_pixarlog.d \
+./arm64/Release/libtiff/tif_predict.d \
+./arm64/Release/libtiff/tif_print.d \
+./arm64/Release/libtiff/tif_read.d \
+./arm64/Release/libtiff/tif_stream.d \
+./arm64/Release/libtiff/tif_strip.d \
+./arm64/Release/libtiff/tif_swab.d \
+./arm64/Release/libtiff/tif_thunder.d \
+./arm64/Release/libtiff/tif_tile.d \
+./arm64/Release/libtiff/tif_unix.d \
+./arm64/Release/libtiff/tif_version.d \
+./arm64/Release/libtiff/tif_warning.d \
+./arm64/Release/libtiff/tif_webp.d \
+./arm64/Release/libtiff/tif_write.d \
+./arm64/Release/libtiff/tif_zip.d \
+./arm64/Release/libtiff/tif_zstd.d
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/libTIFF-pxm.a: $(OBJ_FILES)
+	ar rc $@ $(OBJ_FILES)
+	cp -p $@ $(PCLLIBDIR64)
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/TIFF-pxm.mock
+
+./arm64/Release/%.o: ../../%.cpp
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -I"$(PCLSRCDIR)/3rdparty/zlib" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+./arm64/Release/libtiff/%.o: ../../libtiff/%.cxx
+	clang++ -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -I"$(PCLSRCDIR)/3rdparty/zlib" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+./arm64/Release/libtiff/%.o: ../../libtiff/%.c
+	clang -c -pipe -pthread -arch arm64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -I"$(PCLSRCDIR)/3rdparty/zlib" -minline-all-stringops -O2 -ffunction-sections -fdata-sections -fvisibility=default -std=c99 -Wall -Wno-parentheses -Wno-error=implicit-function-declaration -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+

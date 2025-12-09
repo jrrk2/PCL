@@ -28,6 +28,7 @@ SRC_FILES= \
 ../../ExportHelper.cpp \
 ../../MockMain.cpp \
 ../../PCLInterfaceScanner.cpp \
+../../ImageReader.cpp \
 
 #
 # Object files
@@ -41,6 +42,7 @@ OBJ_FILES= \
 ./arm64/Release/ExportHelper.o \
 ./arm64/Release/MockMain.o \
 ./arm64/Release/PCLInterfaceScanner.o \
+./arm64/Release/ImageReader.o \
 
 #
 # Dependency files
@@ -54,6 +56,7 @@ DEP_FILES= \
 ./arm64/Release/ExportHelper.d \
 ./arm64/Release/MockMain.d \
 ./arm64/Release/PCLInterfaceScanner.d \
+./arm64/Release/ImageReader.d \
 
 #
 # Rules
