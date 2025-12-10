@@ -329,6 +329,26 @@ BackgroundExtractionInterface::GUIData::GUIData( BackgroundExtractionInterface& 
    Output_SectionBar.SetTitle( "Output" );
    Output_SectionBar.SetSection( Output_Control );
 
+   OutputBackgroundModel_CheckBox.SetText( "Output background model" );
+   OutputBackgroundModel_CheckBox.SetToolTip(
+      "<p>Create a new image window showing the extracted background model.</p>"
+   );
+   OutputBackgroundModel_CheckBox.OnClick( (Button::click_event_handler)&BackgroundExtractionInterface::e_Click, w );
+
+   // NEW: Add STF checkbox (only enabled when output background is checked)
+   ApplySTFToBackground_CheckBox.SetText( "Apply auto-stretch to background" );
+   ApplySTFToBackground_CheckBox.SetToolTip(
+      "<p>Apply Screen Transfer Function (auto-stretch) to the background model window. "
+      "This makes subtle gradients much more visible by stretching the histogram.</p>"
+   );
+   ApplySTFToBackground_CheckBox.OnClick( (Button::click_event_handler)&BackgroundExtractionInterface::e_Click, w );
+   ApplySTFToBackground_CheckBox.SetEnabled( false ); // Disabled by default
+
+   OutputBackgroundModel_Sizer.Add( OutputBackgroundModel_CheckBox );
+   OutputBackgroundModel_Sizer.AddSpacing( 8 );
+   OutputBackgroundModel_Sizer.Add( ApplySTFToBackground_CheckBox );
+   OutputBackgroundModel_Sizer.AddStretch();
+   
    // Global Sizer
    Global_Sizer.SetMargin( 8 );
    Global_Sizer.SetSpacing( 6 );
@@ -348,8 +368,34 @@ BackgroundExtractionInterface::GUIData::GUIData( BackgroundExtractionInterface& 
 
 // ----------------------------------------------------------------------------
 
+void BackgroundExtractionInterface::e_Click( Button& sender, bool checked )
+{
+   if ( sender == OutputBackgroundModel_CheckBox )
+   {
+      instance.p_outputBackgroundModel = checked;
+      
+      // Enable/disable the STF option based on whether we're outputting background
+      ApplySTFToBackground_CheckBox.SetEnabled( checked );
+      if ( !checked )
+      {
+         ApplySTFToBackground_CheckBox.SetChecked( false );
+         instance.p_applySTFToBackground = false;
+      }
+   }
+   else if ( sender == ApplySTFToBackground_CheckBox )
+   {
+      instance.p_applySTFToBackground = checked;
+   }
+   // ... other checkboxes ...
+}
+
+// ----------------------------------------------------------------------------
+
 void BackgroundExtractionInterface::UpdateControls()
 {
+   OutputBackgroundModel_CheckBox.SetChecked( instance.p_outputBackgroundModel );
+   ApplySTFToBackground_CheckBox.SetChecked( instance.p_applySTFToBackground );
+   ApplySTFToBackground_CheckBox.SetEnabled( instance.p_outputBackgroundModel );
    UpdateModelControls();
    UpdateSamplingControls();
    UpdateRejectionControls();

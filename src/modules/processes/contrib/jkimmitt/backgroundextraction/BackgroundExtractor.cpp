@@ -1,0 +1,422 @@
+// ****************************************************************************
+// PixInsight Class Library - PCL 02.08.05
+// Standard BackgroundExtraction Process Module Version 1.0.0
+// ****************************************************************************
+// BackgroundExtractor.cpp - Released 2025-12-10
+// ****************************************************************************
+
+#include "BackgroundExtractor.h"
+#include "BackgroundExtractionInstance.h"
+#include "BackgroundExtractionParameters.h"
+
+#include <pcl/LinearFit.h>
+#include <pcl/Math.h>
+#include <pcl/Random.h>
+
+namespace pcl
+{
+
+// ============================================================================
+
+BackgroundExtractor::BackgroundExtractor( const DImage& image, const BackgroundExtractionInstance& instance )
+   : m_image( image )
+   , m_instance( instance )
+   , m_background( image.Width(), image.Height() )
+{
+}
+
+// ============================================================================
+
+BackgroundExtractor::~BackgroundExtractor()
+{
+}
+
+// ============================================================================
+
+void BackgroundExtractor::GenerateSamples()
+{
+   ClearSamples();
+   
+   switch ( m_instance.p_sampleGenerationMode )
+   {
+   case BGSampleGenerationMode::Automatic:
+      GenerateAutomaticSamples();
+      break;
+   case BGSampleGenerationMode::Grid:
+      GenerateGridSamples();
+      break;
+   case BGSampleGenerationMode::GradientAnalysis:
+      GenerateGradientSamples();
+      break;
+   case BGSampleGenerationMode::Manual:
+      // Manual samples are added via AddSample()
+      break;
+   }
+   
+   // Apply outlier rejection if enabled
+   if ( m_instance.p_enableOutlierRejection && m_samples.Length() > 3 )
+   {
+      RejectOutliers();
+   }
+}
+
+// ============================================================================
+
+void BackgroundExtractor::GenerateAutomaticSamples()
+{
+   int width = m_image.Width();
+   int height = m_image.Height();
+   int sampleSize = RoundInt( m_instance.p_sampleSize * Min( width, height ) );
+   
+   // Make sure sample size is odd
+   if ( sampleSize % 2 == 0 )
+      ++sampleSize;
+   
+   int halfSize = sampleSize / 2;
+   
+   // Random number generator
+   RandomNumberGenerator rng;
+   
+   int targetSamples = m_instance.p_maxSamples;
+   int attempts = 0;
+   int maxAttempts = targetSamples * 10;
+   
+   while ( m_samples.Length() < size_t( targetSamples ) && attempts < maxAttempts )
+   {
+      // Generate random position
+      int x = rng.UniformI( halfSize, width - halfSize - 1 );
+      int y = rng.UniformI( halfSize, height - halfSize - 1 );
+      
+      // Check if this is a valid sample location
+      if ( IsSampleValid( x, y, sampleSize ) )
+      {
+         double value = MeasureSample( x, y, sampleSize );
+         m_samples.Add( BackgroundSample( x, y, value ) );
+      }
+      
+      ++attempts;
+   }
+   
+   // Make sure we have minimum samples
+   if ( m_samples.Length() < size_t( m_instance.p_minSamples ) )
+   {
+      throw Error( String().Format( "Could not generate minimum number of samples (%d generated, %d required)",
+                                   m_samples.Length(), m_instance.p_minSamples ) );
+   }
+}
+
+// ============================================================================
+
+void BackgroundExtractor::GenerateGridSamples()
+{
+   int width = m_image.Width();
+   int height = m_image.Height();
+   int sampleSize = RoundInt( m_instance.p_sampleSize * Min( width, height ) );
+   
+   if ( sampleSize % 2 == 0 )
+      ++sampleSize;
+   
+   int halfSize = sampleSize / 2;
+   
+   int spacingX = m_instance.p_gridSpacingX;
+   int spacingY = m_instance.p_gridSpacingY;
+   
+   for ( int y = halfSize; y < height - halfSize; y += spacingY )
+   {
+      for ( int x = halfSize; x < width - halfSize; x += spacingX )
+      {
+         if ( IsSampleValid( x, y, sampleSize ) )
+         {
+            double value = MeasureSample( x, y, sampleSize );
+            m_samples.Add( BackgroundSample( x, y, value ) );
+         }
+      }
+   }
+}
+
+// ============================================================================
+
+void BackgroundExtractor::GenerateGradientSamples()
+{
+   // For now, just use automatic sampling
+   // TODO: Implement gradient analysis to place samples in low-gradient areas
+   GenerateAutomaticSamples();
+}
+
+// ============================================================================
+
+bool BackgroundExtractor::IsSampleValid( int x, int y, int size ) const
+{
+   int halfSize = size / 2;
+   
+   // Check bounds
+   if ( x - halfSize < 0 || x + halfSize >= m_image.Width() ||
+        y - halfSize < 0 || y + halfSize >= m_image.Height() )
+      return false;
+   
+   // Sample area and check for stars (high values or high variance)
+   double sum = 0;
+   double sum2 = 0;
+   int count = 0;
+   
+   for ( int dy = -halfSize; dy <= halfSize; ++dy )
+   {
+      for ( int dx = -halfSize; dx <= halfSize; ++dx )
+      {
+         double v = m_image( x + dx, y + dy );
+         sum += v;
+         sum2 += v * v;
+         ++count;
+      }
+   }
+   
+   double mean = sum / count;
+   double variance = (sum2 / count) - (mean * mean);
+   double stddev = Sqrt( variance );
+   
+   // Reject if too bright (likely contains stars)
+   if ( mean > 0.1 )
+      return false;
+   
+   // Reject if too much variance (not uniform background)
+   if ( stddev > m_instance.p_sampleTolerance * mean )
+      return false;
+   
+   return true;
+}
+
+// ============================================================================
+
+double BackgroundExtractor::MeasureSample( int x, int y, int size ) const
+{
+   int halfSize = size / 2;
+   double sum = 0;
+   int count = 0;
+   
+   // Use median instead of mean for robustness
+   Array<double> values;
+   
+   for ( int dy = -halfSize; dy <= halfSize; ++dy )
+   {
+      for ( int dx = -halfSize; dx <= halfSize; ++dx )
+      {
+         values.Add( m_image( x + dx, y + dy ) );
+      }
+   }
+   
+   values.Sort();
+   return values[values.Length() / 2]; // Median
+}
+
+// ============================================================================
+
+void BackgroundExtractor::RejectOutliers()
+{
+   if ( m_samples.Length() < 4 )
+      return;
+   
+   int iterations = m_instance.p_outlierRejectionIterations;
+   double threshold = m_instance.p_outlierRejectionThreshold;
+   
+   for ( int iter = 0; iter < iterations; ++iter )
+   {
+      // Calculate median and MAD of sample values
+      Array<double> values;
+      for ( const auto& sample : m_samples )
+         if ( sample.weight > 0 )
+            values.Add( sample.value );
+      
+      if ( values.Length() < 4 )
+         break;
+      
+      values.Sort();
+      double median = values[values.Length() / 2];
+      
+      // Calculate MAD
+      Array<double> deviations;
+      for ( double v : values )
+         deviations.Add( Abs( v - median ) );
+      deviations.Sort();
+      double mad = deviations[deviations.Length() / 2];
+      
+      if ( mad < 1e-10 )
+         break; // All samples are identical
+      
+      // Mark outliers
+      int rejectedCount = 0;
+      for ( auto& sample : m_samples )
+      {
+         if ( sample.weight > 0 )
+         {
+            double deviation = Abs( sample.value - median ) / mad;
+            if ( deviation > threshold )
+            {
+               sample.weight = 0; // Reject this sample
+               ++rejectedCount;
+            }
+         }
+      }
+      
+      if ( rejectedCount == 0 )
+         break; // No more outliers
+   }
+   
+   // Remove rejected samples
+   SampleArray validSamples;
+   for ( const auto& sample : m_samples )
+      if ( sample.weight > 0 )
+         validSamples.Add( sample );
+   
+   m_samples = validSamples;
+}
+
+// ============================================================================
+
+void BackgroundExtractor::AddSample( const BackgroundSample& sample )
+{
+   m_samples.Add( sample );
+}
+
+// ============================================================================
+
+void BackgroundExtractor::ClearSamples()
+{
+   m_samples.Clear();
+}
+
+// ============================================================================
+
+void BackgroundExtractor::FitBackground()
+{
+   if ( m_samples.IsEmpty() )
+      throw Error( "No samples available for background fitting" );
+   
+   // Choose fitting method based on model type
+   switch ( m_instance.p_modelType )
+   {
+   case BGModelType::Linear:
+      FitLinear();
+      break;
+   case BGModelType::Polynomial2:
+      FitPolynomial( 2 );
+      break;
+   case BGModelType::Polynomial3:
+      FitPolynomial( 3 );
+      break;
+   case BGModelType::RBF:
+      FitRBF();
+      break;
+   case BGModelType::GradientDomain:
+      FitGradientDomain();
+      break;
+   }
+   
+   // Evaluate model at all pixels
+   int width = m_background.Width();
+   int height = m_background.Height();
+   
+   for ( int y = 0; y < height; ++y )
+   {
+      for ( int x = 0; x < width; ++x )
+      {
+         m_background( x, y ) = EvaluateModel( x, y );
+      }
+   }
+}
+
+// ============================================================================
+
+void BackgroundExtractor::FitLinear()
+{
+   // Fit plane: z = a*x + b*y + c
+   
+   int n = m_samples.Length();
+   m_coefficients = Vector( 3 );
+   
+   // Build linear system: A * coeffs = b
+   Matrix A( n, 3 );
+   Vector b( n );
+   
+   for ( int i = 0; i < n; ++i )
+   {
+      A( i, 0 ) = m_samples[i].position.x;
+      A( i, 1 ) = m_samples[i].position.y;
+      A( i, 2 ) = 1.0;
+      b[i] = m_samples[i].value;
+   }
+   
+   // Solve using SVD (robust to singular matrices)
+   Matrix U, V;
+   Vector W;
+   A.SVD( U, W, V );
+   
+   // Back-substitute to get solution
+   Vector temp( 3 );
+   for ( int j = 0; j < 3; ++j )
+   {
+      double s = 0;
+      if ( W[j] > 1e-10 ) // Only use non-zero singular values
+      {
+         for ( int i = 0; i < n; ++i )
+            s += U( i, j ) * b[i];
+         s /= W[j];
+      }
+      temp[j] = s;
+   }
+   
+   for ( int j = 0; j < 3; ++j )
+   {
+      double s = 0;
+      for ( int k = 0; k < 3; ++k )
+         s += V( j, k ) * temp[k];
+      m_coefficients[j] = s;
+   }
+}
+
+// ============================================================================
+
+void BackgroundExtractor::FitPolynomial( int degree )
+{
+   // For simplicity, use linear fit for now
+   // TODO: Implement full polynomial fitting
+   FitLinear();
+}
+
+// ============================================================================
+
+void BackgroundExtractor::FitRBF()
+{
+   // For simplicity, use linear fit for now
+   // TODO: Implement RBF interpolation
+   FitLinear();
+}
+
+// ============================================================================
+
+void BackgroundExtractor::FitGradientDomain()
+{
+   // For simplicity, use linear fit for now
+   // TODO: Implement gradient domain solver
+   FitLinear();
+}
+
+// ============================================================================
+
+double BackgroundExtractor::EvaluateModel( double x, double y ) const
+{
+   // Evaluate linear model: z = a*x + b*y + c
+   if ( m_coefficients.Length() >= 3 )
+   {
+      return m_coefficients[0] * x + m_coefficients[1] * y + m_coefficients[2];
+   }
+   
+   return 0.0;
+}
+
+// ============================================================================
+
+} // pcl
+
+// ****************************************************************************
+// EOF BackgroundExtractor.cpp - Released 2025-12-10
+// ****************************************************************************

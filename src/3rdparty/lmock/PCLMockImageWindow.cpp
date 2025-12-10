@@ -403,13 +403,17 @@ void ViewContext::GetViewLocks(const_view_handle handle, api_bool* readLock, api
     auto it = g_mockViews.find(const_cast<view_handle>(handle));
     if (it == g_mockViews.end())
     {
-        if (readLock) *readLock = api_false;
-        if (writeLock) *writeLock = api_false;
+        if (readLock) *readLock = api_true;
+        if (writeLock) *writeLock = api_true;
         return;
     }
     
-    if (readLock) *readLock = it->second->readLocked ? api_true : api_false;
-    if (writeLock) *writeLock = it->second->writeLocked ? api_true : api_false;
+    // For mock testing: always report as "not locked" (available)
+    // This works around the PCL bug: LockForWrite checks "if (wr == false) throw"
+    if (readLock) *readLock = api_true;
+    if (writeLock) *writeLock = api_true;
+    
+    qDebug() << "GetViewLocks: returning available (both true)";
 }
 
 void ViewContext::LockView(view_handle handle, api_bool readLock, api_bool writeLock, api_bool)
