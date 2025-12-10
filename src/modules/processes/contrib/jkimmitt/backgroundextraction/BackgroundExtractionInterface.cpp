@@ -311,7 +311,8 @@ BackgroundExtractionInterface::GUIData::GUIData( BackgroundExtractionInterface& 
    ReplaceTarget_Sizer.AddUnscaledSpacing( w.Font().Width( String( 'M' ) ) );
    ReplaceTarget_Sizer.Add( ReplaceTarget_CheckBox );
    ReplaceTarget_Sizer.AddStretch();
-
+}
+   /*
    OutputBackground_CheckBox.SetText( "Output background model" );
    OutputBackground_CheckBox.SetToolTip( "<p>Create new image with background model.</p>" );
    OutputBackground_CheckBox.OnClick( (Button::click_event_handler)&BackgroundExtractionInterface::__OutputBackground_Click, w );
@@ -388,11 +389,13 @@ void BackgroundExtractionInterface::e_Click( Button& sender, bool checked )
    }
    // ... other checkboxes ...
 }
-
+   */
+   
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::UpdateControls()
 {
+  /*
    OutputBackgroundModel_CheckBox.SetChecked( instance.p_outputBackgroundModel );
    ApplySTFToBackground_CheckBox.SetChecked( instance.p_applySTFToBackground );
    ApplySTFToBackground_CheckBox.SetEnabled( instance.p_outputBackgroundModel );
@@ -400,19 +403,23 @@ void BackgroundExtractionInterface::UpdateControls()
    UpdateSamplingControls();
    UpdateRejectionControls();
    UpdateOutputControls();
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::UpdateModelControls()
 {
+  /*
    GUI->ModelType_ComboBox.SetCurrentItem( m_instance.p_model );
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::UpdateSamplingControls()
 {
+  /*
    GUI->SampleGen_ComboBox.SetCurrentItem( m_instance.p_sampleGeneration );
    GUI->Tolerance_NumericControl.SetValue( m_instance.p_tolerance );
    GUI->Deviation_NumericControl.SetValue( m_instance.p_deviation );
@@ -426,12 +433,14 @@ void BackgroundExtractionInterface::UpdateSamplingControls()
    GUI->GridRows_SpinBox.Enable( isGrid );
    GUI->GridColumns_Label.Enable( isGrid );
    GUI->GridColumns_SpinBox.Enable( isGrid );
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::UpdateRejectionControls()
 {
+  /*
    GUI->RejectionEnabled_CheckBox.SetChecked( m_instance.p_rejectionEnabled );
    GUI->RejectionLow_NumericControl.SetValue( m_instance.p_rejectionLow );
    GUI->RejectionHigh_NumericControl.SetValue( m_instance.p_rejectionHigh );
@@ -442,6 +451,7 @@ void BackgroundExtractionInterface::UpdateRejectionControls()
    GUI->RejectionHigh_NumericControl.Enable( enabled );
    GUI->RejectionIter_Label.Enable( enabled );
    GUI->RejectionIter_SpinBox.Enable( enabled );
+  */
 }
 
 // ----------------------------------------------------------------------------
@@ -458,35 +468,43 @@ void BackgroundExtractionInterface::UpdateOutputControls()
 
 void BackgroundExtractionInterface::__Model_ItemSelected( ComboBox& sender, int itemIndex )
 {
+  /*
    if ( sender == GUI->ModelType_ComboBox )
       m_instance.p_model = itemIndex;
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::__SampleGen_ItemSelected( ComboBox& sender, int itemIndex )
 {
+  /*
    if ( sender == GUI->SampleGen_ComboBox )
    {
       m_instance.p_sampleGeneration = itemIndex;
       UpdateSamplingControls();
    }
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::__Tolerance_ValueUpdated( NumericEdit& sender, double value )
 {
+  /*
    if ( sender == GUI->Tolerance_NumericControl )
       m_instance.p_tolerance = value;
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::__Deviation_ValueUpdated( NumericEdit& sender, double value )
 {
+  /*
    if ( sender == GUI->Deviation_NumericControl )
       m_instance.p_deviation = value;
+  */
 }
 
 // ----------------------------------------------------------------------------
@@ -509,51 +527,63 @@ void BackgroundExtractionInterface::__MaxSamples_ValueUpdated( SpinBox& sender, 
 
 void BackgroundExtractionInterface::__GridRows_ValueUpdated( SpinBox& sender, int value )
 {
+  /*
    if ( sender == GUI->GridRows_SpinBox )
       m_instance.p_gridRows = value;
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::__GridColumns_ValueUpdated( SpinBox& sender, int value )
 {
+  /*
    if ( sender == GUI->GridColumns_SpinBox )
       m_instance.p_gridColumns = value;
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::__RejectionEnabled_Click( Button& sender, bool checked )
 {
+  /*
    if ( sender == GUI->RejectionEnabled_CheckBox )
    {
       m_instance.p_rejectionEnabled = checked;
       UpdateRejectionControls();
    }
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::__RejectionLow_ValueUpdated( NumericEdit& sender, double value )
 {
+  /*
    if ( sender == GUI->RejectionLow_NumericControl )
       m_instance.p_rejectionLow = value;
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::__RejectionHigh_ValueUpdated( NumericEdit& sender, double value )
 {
+  /*
    if ( sender == GUI->RejectionHigh_NumericControl )
       m_instance.p_rejectionHigh = value;
+  */
 }
 
 // ----------------------------------------------------------------------------
 
 void BackgroundExtractionInterface::__RejectionIter_ValueUpdated( SpinBox& sender, int value )
 {
+  /*
    if ( sender == GUI->RejectionIter_SpinBox )
       m_instance.p_rejectionIterations = value;
+  */
 }
 
 // ----------------------------------------------------------------------------

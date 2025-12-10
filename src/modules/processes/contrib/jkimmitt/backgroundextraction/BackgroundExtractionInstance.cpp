@@ -13,6 +13,7 @@
 #include <pcl/StandardStatus.h>
 #include <pcl/View.h>
 #include <pcl/Console.h>
+#include <pcl/HistogramTransformation.h>
 
 namespace pcl
 {
@@ -87,28 +88,6 @@ bool BackgroundExtractionInstance::CanExecuteOn( const View& view, String& whyNo
 
 // ============================================================================
 
-bool BackgroundExtractionInstance::IsHistoryUpdater( const View& view ) const
-{
-   return true;
-}
-
-// ============================================================================
-
-bool BackgroundExtractionInstance::CanExecuteGlobal( String& whyNot ) const
-{
-   whyNot = "BackgroundExtraction can only be executed on views.";
-   return false;
-}
-
-// ============================================================================
-
-bool BackgroundExtractionInstance::ExecuteGlobal()
-{
-   throw Error( "BackgroundExtraction cannot be executed in the global context." );
-}
-
-// ============================================================================
-
 void* BackgroundExtractionInstance::LockParameter( const MetaParameter* p, size_type /*tableRow*/ )
 {
    if ( p == TheBGModelTypeParameter )
@@ -177,12 +156,11 @@ inline double MTF( double m, double x )
 }
 
 // ============================================================================
-// ExecuteOn - WITH STF SUPPORT
-// ============================================================================
 
 bool BackgroundExtractionInstance::ExecuteOn( View& view )
 {
-   qDebug() << "\n=== BackgroundExtraction::ExecuteOn START ===";
+   Console console;
+   console.WriteLn( "<end><cbr>BackgroundExtraction: Starting..." );
    
    // Lock the view for modification
    view.LockForWrite();
@@ -194,55 +172,59 @@ bool BackgroundExtractionInstance::ExecuteOn( View& view )
    int height = image.Height();
    int numberOfChannels = image.NumberOfChannels();
    
-   qDebug() << "Image dimensions:" << width << "x" << height << "x" << numberOfChannels;
+   console.WriteLn( String().Format( "Image: %dx%d, %d channel(s)", width, height, numberOfChannels ) );
    
    // Create a new Image to hold the background model
-   Image backgroundModel( width, height, numberOfChannels );
+   Image backgroundModel( width, height, 
+                          numberOfChannels > 1 ? ColorSpace::RGB : ColorSpace::Gray );
    
    // Process each channel
    for ( int c = 0; c < numberOfChannels; ++c )
    {
-      qDebug() << "Processing channel" << c;
+      console.WriteLn( String().Format( "Processing channel %d...", c ) );
       
-      // Extract single channel as DImage
+      // Extract single channel - ImageVariant is already selected to channel c
       image.SelectChannel( c );
-      DImage channelImage;
-      channelImage.Assign( image );
-      
-      // Sample a few pixels to verify we have data
-      qDebug() << "  Sample input pixels:";
-      qDebug() << "    [100,100]:" << channelImage(100, 100);
-      qDebug() << "    [500,500]:" << channelImage(500, 500);
-      qDebug() << "    [1000,1000]:" << channelImage(1000, 1000);
-      
+
+      // Access as the appropriate type and convert to DImage
+      DImage channelImage( width, height );
+      if ( image.IsFloatSample() )
+      {
+	 if ( image.BitsPerSample() == 32 )
+	 {
+	    Image& srcImage = static_cast<Image&>( *image );
+	    for ( int y = 0; y < height; ++y )
+	       for ( int x = 0; x < width; ++x )
+		  channelImage( x, y ) = srcImage( x, y );
+	 }
+	 else  // 64-bit double
+	 {
+	    DImage& srcImage = static_cast<DImage&>( *image );
+	    channelImage.Assign( srcImage );
+	 }
+      }
       // Create the background extractor
       BackgroundExtractor extractor( channelImage, *this );
       
       // Generate samples if in automatic mode
       if ( p_sampleGenerationMode == BGSampleGenerationMode::Automatic )
       {
-         qDebug() << "  Generating samples automatically...";
+         console.WriteLn( "Generating samples automatically..." );
          extractor.GenerateSamples();
-         qDebug() << "  Generated" << extractor.Samples().Length() << "samples";
+         console.WriteLn( String().Format( "Generated %d samples", extractor.Samples().Length() ) );
       }
       
       // Fit the background model
-      qDebug() << "  Fitting background model...";
+      console.WriteLn( "Fitting background model..." );
       extractor.FitBackground();
       
       // Get the fitted background for this channel
       const DImage& background = extractor.Background();
       
-      // Sample the background to see what we got
-      qDebug() << "  Sample background pixels:";
-      qDebug() << "    [100,100]:" << background(100, 100);
-      qDebug() << "    [500,500]:" << background(500, 500);
-      qDebug() << "    [1000,1000]:" << background(1000, 1000);
-      
       double minBg = background.MinimumPixelValue();
       double maxBg = background.MaximumPixelValue();
       double meanBg = background.Mean();
-      qDebug() << "  Background stats: min=" << minBg << "max=" << maxBg << "mean=" << meanBg;
+      console.WriteLn( String().Format( "Background: min=%.6f max=%.6f mean=%.6f", minBg, maxBg, meanBg ) );
       
       // Copy background to our model image
       for ( int y = 0; y < height; ++y )
@@ -256,7 +238,7 @@ bool BackgroundExtractionInstance::ExecuteOn( View& view )
       // Subtract background from original if replace mode is enabled
       if ( p_replaceTarget )
       {
-         qDebug() << "  Subtracting background from image...";
+         console.WriteLn( "Subtracting background..." );
          
          if ( image.IsFloatSample() )
          {
@@ -276,139 +258,104 @@ bool BackgroundExtractionInstance::ExecuteOn( View& view )
    // Reset channel selection
    image.ResetChannelRange();
    
-   qDebug() << "Background model extracted, creating new view...";
-   
    // Create a new ImageWindow to display the background model
    if ( p_outputBackgroundModel )
    {
-      try
+      console.WriteLn( "Creating background model window..." );
+      
+      // Generate a unique ID for the background window
+      IsoString backgroundId = view.FullId() + "_background";
+      
+      // Create the window
+      ImageWindow backgroundWindow( width, height, numberOfChannels,
+                                    32/*bits*/, true/*floatSample*/, 
+                                    numberOfChannels >= 3/*color*/,
+                                    true/*initialProcessing*/,
+                                    backgroundId );
+      
+      if ( !backgroundWindow.IsNull() )
       {
-         qDebug() << "Creating ImageWindow for background model...";
+         // Get the main view of the new window
+         View backgroundView = backgroundWindow.MainView();
          
-         // Generate a unique ID for the background window
-         IsoString backgroundId = view.FullId() + "_background";
+         // Lock it for writing
+         backgroundView.LockForWrite();
          
-         qDebug() << "  Background window ID:" << backgroundId.c_str();
+         // Get the image variant and copy our background model
+         ImageVariant backgroundImage = backgroundView.Image();
+         backgroundImage.CopyImage( backgroundModel );
          
-         // Create the window
-         ImageWindow backgroundWindow( width, height, numberOfChannels,
-                                       32/*bits*/, true/*floatSample*/, 
-                                       numberOfChannels >= 3/*color*/,
-                                       true/*initialProcessing*/,
-                                       backgroundId );
+         // Unlock
+         backgroundView.Unlock();
          
-         if ( backgroundWindow.IsNull() )
+         // Apply STF (auto-stretch) if requested
+         if ( p_applySTFToBackground )
          {
-            qWarning() << "Failed to create background window!";
-         }
-         else
-         {
-            qDebug() << "  Background window created successfully";
+            console.WriteLn( "Applying auto-stretch to background..." );
             
-            // Get the main view of the new window
-            View backgroundView = backgroundWindow.MainView();
-            qDebug() << "  Got main view:" << backgroundView.FullId().c_str();
-            
-            // Lock it for writing
-            backgroundView.LockForWrite();
-            
-            // Get the image variant and copy our background model
-            ImageVariant backgroundImage = backgroundView.Image();
-            qDebug() << "  Copying background model to view...";
-            backgroundImage.CopyImage( backgroundModel );
-            
-            // Unlock
-            backgroundView.Unlock();
-            
-            // Apply STF (auto-stretch) if requested
-            if ( p_applySTFToBackground )
+            try
             {
-               qDebug() << "  Applying STF (auto-stretch) to background...";
+               // Compute STF for the background model
+               View::stf_list stfList;
                
-               try
+               for ( int c = 0; c < numberOfChannels; ++c )
                {
-                  // Compute STF for the background model
-                  View::stf_list stfList;
+                  backgroundImage.SelectChannel( c );
                   
-                  for ( int c = 0; c < numberOfChannels; ++c )
+                  // Get channel statistics
+                  double median = backgroundImage.Median();
+                  double mad = backgroundImage.MAD( median );
+                  
+                  // Calculate shadow clipping point (median - 2.8*MAD)
+                  double c0 = Max( 0.0, median - 2.8 * mad );
+                  
+                  // Calculate midtones transfer point
+                  double m = 0.5;
+                  if ( median > c0 )
                   {
-                     backgroundImage.SelectChannel( c );
-                     
-                     // Get channel statistics
-                     double median, mad;
-                     if ( backgroundImage.IsFloatSample() )
-                     {
-                        Image& img = static_cast<Image&>( *backgroundImage );
-                        median = img.Median();
-                        mad = img.MAD( median );
-                     }
-                     else
-                     {
-                        median = backgroundImage.Median();
-                        mad = backgroundImage.MAD( median );
-                     }
-                     
-                     qDebug() << "    Channel" << c << "median:" << median << "MAD:" << mad;
-                     
-                     // Calculate shadow clipping point (median - 2.8*MAD)
-                     double c0 = Max( 0.0, median - 2.8 * mad );
-                     
-                     // Calculate midtones transfer point
-                     double m = 0.5;
-                     if ( median > c0 )
-                     {
-                        m = MTF( (median - c0), (1.0 - c0) );
-                     }
-                     
-                     // Calculate highlight clipping
-                     double c1 = 1.0;
-                     
-                     qDebug() << "    STF params: c0=" << c0 << "m=" << m << "c1=" << c1;
-                     
-                     // Create STF for this channel
-                     stfList.Add( View::stf( c0, m, c1, 0.0, 1.0 ) );
+                     m = MTF( (median - c0), (1.0 - c0) );
                   }
                   
-                  backgroundImage.ResetChannelRange();
+                  // Calculate highlight clipping
+                  double c1 = 1.0;
                   
-                  // Apply the STF to the view
-                  backgroundView.SetScreenTransferFunctions( stfList );
-                  backgroundView.EnableScreenTransferFunctions( true );
-                  
-                  qDebug() << "  ✓ STF applied";
+                  // Create STF for this channel
+		  // Create STF (Screen Transfer Function) for this channel
+		  // STF is basically: (shadows, midtones, highlights, low_range, high_range)
+		  HistogramTransformation H;
+		  H.SetShadowsClipping( c0 );  // Shadow clipping point
+		  H.SetMidtonesBalance( m );    // Midtones balance
+		  H.SetHighlightsClipping( c1 );  // Highlights clipping  
+		  H.SetLowRange( 0.0 );
+		  H.SetHighRange( 1.0 );
+		  stfList.Add( H );
                }
-               catch ( const Exception& ex )
-               {
-                  qWarning() << "Exception applying STF:" << ex.Message().c_str();
-               }
-               catch ( ... )
-               {
-                  qWarning() << "Unknown exception applying STF";
-               }
+               
+               backgroundImage.ResetChannelRange();
+               
+               // Apply the STF to the view
+               backgroundView.SetScreenTransferFunctions( stfList );
+               backgroundView.EnableScreenTransferFunctions( true );
+               
+               console.WriteLn( "STF applied successfully" );
             }
-            
-            qDebug() << "  Showing background window...";
-            
-            // Show the window
-            backgroundWindow.Show();
-            backgroundWindow.ZoomToFit( false/*allowMagnification*/ );
-            
-            qDebug() << "✓ Background model view created:" << backgroundView.FullId().c_str();
+            catch ( ... )
+            {
+               console.WarningLn( "** Warning: Could not apply STF" );
+            }
          }
-      }
-      catch ( const Exception& ex )
-      {
-         qWarning() << "Exception creating background window:" << ex.Message().c_str();
-      }
-      catch ( ... )
-      {
-         qWarning() << "Unknown exception creating background window";
+         
+         // Show the window
+         backgroundWindow.Show();
+         backgroundWindow.ZoomToFit( false/*allowMagnification*/ );
+         
+         console.WriteLn( "Background model window created: " + backgroundView.FullId() );
       }
    }
    
    view.Unlock();
    
-   qDebug() << "=== BackgroundExtraction::ExecuteOn COMPLETE ===\n";
+   console.WriteLn( "<end><cbr>BackgroundExtraction: Complete" );
    
    return true;
 }

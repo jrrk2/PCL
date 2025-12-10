@@ -25,7 +25,9 @@ SRC_FILES= \
 ../../BackgroundExtractionInstance.cpp \
 ../../BackgroundExtractionInterface.cpp \
 ../../BackgroundExtractionModule.cpp \
+../../BackgroundExtractionParameters.cpp \
 ../../BackgroundExtractionProcess.cpp \
+../../BackgroundExtractor.cpp \
 
 #
 # Object files
@@ -35,7 +37,9 @@ OBJ_FILES= \
 ./arm64/Release/BackgroundExtractionInstance.o \
 ./arm64/Release/BackgroundExtractionInterface.o \
 ./arm64/Release/BackgroundExtractionModule.o \
+./arm64/Release/BackgroundExtractionParameters.o \
 ./arm64/Release/BackgroundExtractionProcess.o \
+./arm64/Release/BackgroundExtractor.o \
 
 #
 # Dependency files
@@ -45,7 +49,9 @@ DEP_FILES= \
 ./arm64/Release/BackgroundExtractionInstance.d \
 ./arm64/Release/BackgroundExtractionInterface.d \
 ./arm64/Release/BackgroundExtractionModule.d \
+./arm64/Release/BackgroundExtractionParameters.d \
 ./arm64/Release/BackgroundExtractionProcess.d \
+./arm64/Release/BackgroundExtractor.d \
 
 #
 # Rules

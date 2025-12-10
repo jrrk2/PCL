@@ -105,6 +105,7 @@ private:
             CheckBox          ReplaceTarget_CheckBox;
          HorizontalSizer   OutputBackground_Sizer;
             CheckBox          OutputBackground_CheckBox;
+            CheckBox          ApplySTFToBackground_CheckBox;
    };
 
    GUIData* GUI = nullptr;
