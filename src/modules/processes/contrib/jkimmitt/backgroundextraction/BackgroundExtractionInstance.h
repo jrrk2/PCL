@@ -55,6 +55,7 @@ private:
    
    friend class BackgroundExtractionProcess;
    friend class BackgroundExtractionInterface;
+   friend class BackgroundExtractor;
 };
 
 // ----------------------------------------------------------------------------

@@ -84,8 +84,8 @@ void BackgroundExtractor::GenerateAutomaticSamples()
    while ( m_samples.Length() < size_t( targetSamples ) && attempts < maxAttempts )
    {
       // Generate random position
-      int x = rng.UniformI( halfSize, width - halfSize - 1 );
-      int y = rng.UniformI( halfSize, height - halfSize - 1 );
+      int x = halfSize + (rng.Rand32() % (width - 2*halfSize));
+      int y = halfSize + (rng.Rand32() % (height - 2*halfSize));
       
       // Check if this is a valid sample location
       if ( IsSampleValid( x, y, sampleSize ) )
@@ -190,8 +190,6 @@ bool BackgroundExtractor::IsSampleValid( int x, int y, int size ) const
 double BackgroundExtractor::MeasureSample( int x, int y, int size ) const
 {
    int halfSize = size / 2;
-   double sum = 0;
-   int count = 0;
    
    // Use median instead of mean for robustness
    Array<double> values;
@@ -333,43 +331,49 @@ void BackgroundExtractor::FitLinear()
    int n = m_samples.Length();
    m_coefficients = Vector( 3 );
    
-   // Build linear system: A * coeffs = b
-   Matrix A( n, 3 );
-   Vector b( n );
+   // Use simple least squares approach
+   double sumX = 0, sumY = 0, sumZ = 0;
+   double sumX2 = 0, sumY2 = 0, sumXY = 0;
+   double sumXZ = 0, sumYZ = 0;
    
    for ( int i = 0; i < n; ++i )
    {
-      A( i, 0 ) = m_samples[i].position.x;
-      A( i, 1 ) = m_samples[i].position.y;
-      A( i, 2 ) = 1.0;
-      b[i] = m_samples[i].value;
+      double x = m_samples[i].position.x;
+      double y = m_samples[i].position.y;
+      double z = m_samples[i].value;
+      sumX += x;
+      sumY += y;
+      sumZ += z;
+      sumX2 += x*x;
+      sumY2 += y*y;
+      sumXY += x*y;
+      sumXZ += x*z;
+      sumYZ += y*z;
    }
    
-   // Solve using SVD (robust to singular matrices)
-   Matrix U, V;
-   Vector W;
-   A.SVD( U, W, V );
+   // Solve normal equations for plane fitting
+   // n*a*x^2 + n*b*xy + n*c*x = n*xz
+   // n*a*xy + n*b*y^2 + n*c*y = n*yz  
+   // n*a*x + n*b*y + n*c = n*z
    
-   // Back-substitute to get solution
-   Vector temp( 3 );
-   for ( int j = 0; j < 3; ++j )
+   double det = n*(sumX2*sumY2 - sumXY*sumXY) - sumX*(sumX*sumY2 - sumY*sumXY) + sumY*(sumX*sumXY - sumY*sumX2);
+   
+   if ( Abs(det) > 1e-10 )
    {
-      double s = 0;
-      if ( W[j] > 1e-10 ) // Only use non-zero singular values
-      {
-         for ( int i = 0; i < n; ++i )
-            s += U( i, j ) * b[i];
-         s /= W[j];
-      }
-      temp[j] = s;
+      double a = (n*(sumXZ*sumY2 - sumYZ*sumXY) - sumX*(sumXZ*sumY - sumYZ*sumX) + sumY*(sumXZ*sumXY - sumYZ*sumX2)) / det;
+      double b = (n*(sumX2*sumYZ - sumXY*sumXZ) - sumX*(sumX*sumYZ - sumY*sumXZ) + sumY*(sumX*sumXY - sumY*sumX2)) / det;
+      double c = (sumZ - a*sumX - b*sumY) / n;
+      
+      m_coefficients[0] = a;
+      m_coefficients[1] = b;
+      m_coefficients[2] = c;
    }
-   
-   for ( int j = 0; j < 3; ++j )
+   else
    {
-      double s = 0;
-      for ( int k = 0; k < 3; ++k )
-         s += V( j, k ) * temp[k];
-      m_coefficients[j] = s;
+      // Degenerate case - use mean
+      m_coefficients[0] = 0;
+      m_coefficients[1] = 0;
+      m_coefficients[2] = sumZ / n;
    }
 }
 

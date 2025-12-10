@@ -6030,32 +6030,12 @@ api_bool ViewContext::GetViewScreenTransferFunctions(const_view_handle view,
     return api_false;  // No STF currently set
 }
 
-api_bool ViewContext::SetViewScreenTransferFunctions(view_handle view,
-                                                     const double* m, const double* c0,
-                                                     const double* c1, const double* r0,
-                                                     const double* r1, uint32 notify)
-{
-    logf("[Mock] ViewContext::SetViewScreenTransferFunctions");
-    
-    // Mock implementation: accept STF but don't apply
-    return api_true;
-}
-
 api_bool ViewContext::GetViewScreenTransferFunctionsEnabled(view_handle view)
 {
     logf("[Mock] ViewContext::GetViewScreenTransferFunctionsEnabled");
     
     // Mock implementation: STF not enabled
     return api_false;
-}
-
-void ViewContext::SetViewScreenTransferFunctionsEnabled(view_handle view,
-                                                        uint32 enabled, uint32 notify)
-{
-    logf("[Mock] ViewContext::SetViewScreenTransferFunctionsEnabled (%s)",
-         enabled ? "enabled" : "disabled");
-    
-    // Mock implementation: accept setting but don't apply
 }
 
 // =============================================================
