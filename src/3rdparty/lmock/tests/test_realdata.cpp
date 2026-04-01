@@ -1011,23 +1011,90 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    }
 
    // ----------------------------------------------------------------
-   // Step 7: Gentle S-curve for final contrast/separation.
-   // Maps via: f(x) = x + strength * x * (1-x) * (2*x - 1)
-   // This is a smooth cubic that darkens shadows, brightens highlights,
-   // and preserves midtones (f(0)=0, f(0.5)=0.5, f(1)=1).
+   // Step 7: Black point subtraction.
+   // Clips the pedestal at median - 2.5*MAD per channel, then rescales.
    // ----------------------------------------------------------------
    {
-      fprintf(stdout, "    Applying S-curve...\n");
-      const float sStrength = 0.3f;  // very gentle
+      fprintf(stdout, "    Black point subtraction...\n");
+      for ( int c = 0; c < 3; c++ )
+      {
+         ChannelStats cs = compute_channel_stats( result.final_, c );
+         float black = float( cs.median - 2.5 * cs.mad );
+         float scale = 1.0f / (1.0f - black);
+         fprintf(stdout, "    ch%d: black=%.6f scale=%.4f\n", c, black, scale);
+         for ( int y = 0; y < finH; y++ )
+            for ( int x = 0; x < finW; x++ )
+            {
+               float v = result.final_( x, y, c );
+               v = (v - black) * scale;
+               result.final_( x, y, c ) = std::max( 0.0f, std::min( 1.0f, v ) );
+            }
+      }
+   }
+
+   // ----------------------------------------------------------------
+   // Step 8: Second stretch — gamma < 1 brightens midtones.
+   // Applied per-channel to lift faint galaxy detail.
+   // ----------------------------------------------------------------
+   {
+      fprintf(stdout, "    Second stretch (gamma)...\n");
+      const float stretch = 0.5f;  // gamma < 1 brightens midtones
 
       for ( int c = 0; c < 3; c++ )
          for ( int y = 0; y < finH; y++ )
             for ( int x = 0; x < finW; x++ )
             {
                float v = result.final_( x, y, c );
-               float curved = v + sStrength * v * (1.0f - v) * (2.0f * v - 1.0f);
-               result.final_( x, y, c ) = std::max( 0.0f, std::min( 1.0f, curved ) );
+               result.final_( x, y, c ) = std::pow( v, stretch );
             }
+   }
+
+   // ----------------------------------------------------------------
+   // Step 9: Saturation boost on bright structures (L > threshold).
+   // Uses perceptual luminance to push chroma away from gray.
+   // ----------------------------------------------------------------
+   {
+      fprintf(stdout, "    Saturation boost...\n");
+
+      // Compute luminance stats for threshold
+      std::vector<float> postLum( finW * finH );
+      for ( int y = 0; y < finH; y++ )
+         for ( int x = 0; x < finW; x++ )
+            postLum[y * finW + x] = 0.2126f * result.final_( x, y, 0 )
+                                  + 0.7152f * result.final_( x, y, 1 )
+                                  + 0.0722f * result.final_( x, y, 2 );
+      std::vector<float> srtLum( postLum );
+      std::sort( srtLum.begin(), srtLum.end() );
+      float medLum = srtLum[srtLum.size() / 2];
+      std::vector<float> devLum( srtLum.size() );
+      for ( size_t i = 0; i < srtLum.size(); i++ )
+         devLum[i] = std::abs( srtLum[i] - medLum );
+      std::sort( devLum.begin(), devLum.end() );
+      float madLum = devLum[devLum.size() / 2];
+      float satThreshold = medLum + 1.0f * madLum;
+
+      const float satBoost = 1.4f;
+
+      for ( int y = 0; y < finH; y++ )
+         for ( int x = 0; x < finW; x++ )
+         {
+            float L = postLum[y * finW + x];
+            if ( L > satThreshold )
+            {
+               float R = result.final_( x, y, 0 );
+               float G = result.final_( x, y, 1 );
+               float B = result.final_( x, y, 2 );
+
+               R = L + satBoost * (R - L);
+               G = L + satBoost * (G - L);
+               B = L + satBoost * (B - L);
+
+               result.final_( x, y, 0 ) = std::max( 0.0f, std::min( 1.0f, R ) );
+               result.final_( x, y, 1 ) = std::max( 0.0f, std::min( 1.0f, G ) );
+               result.final_( x, y, 2 ) = std::max( 0.0f, std::min( 1.0f, B ) );
+            }
+         }
+      fprintf(stdout, "    Saturation threshold=%.4f boost=%.2f\n", satThreshold, satBoost);
    }
 
    for ( int c = 0; c < 3; c++ )
