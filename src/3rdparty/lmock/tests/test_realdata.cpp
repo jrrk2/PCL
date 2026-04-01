@@ -80,7 +80,7 @@ static const char* g_output_dir = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/
 
 // ============================================================================
 // Pipeline parameters — all tweakable from command line via --key=value
-// Convention: group.subgroup.param (e.g. --clahe.large.radius=100)
+// Convention: group.subgroup.param (e.g. --wavelet.gain2=1.5)
 // ============================================================================
 
 struct PipelineParams
@@ -100,25 +100,13 @@ struct PipelineParams
    double chroma_sigma      = 1.5;
    int    chroma_radius     = 3;
 
-   // CLAHE pre-smooth
-   double clahe_presmooth_sigma = 1.0;
-
-   // CLAHE background mask
-   double clahe_mask_lo_mad = 2.0;   // mask starts at median + lo*MAD
-   double clahe_mask_hi_mad = 6.0;   // mask fully active at median + hi*MAD
-
-   // CLAHE large scale
-   int    clahe_large_radius = 100;
-   double clahe_large_slope  = 2.0;
-   double clahe_large_amount = 0.2;
-
-   // CLAHE small scale
-   int    clahe_small_radius = 32;
-   double clahe_small_slope  = 2.5;
-   double clahe_small_amount = 0.03;
-
-   // CLAHE chroma boost (in masked blend)
-   double clahe_sat         = 1.25;
+   // Starlet wavelet decomposition (5 scales)
+   int    wavelet_scales    = 5;
+   double wavelet_gain0     = 0.0;   // scale 0: noise — kill
+   double wavelet_gain1     = 0.5;   // scale 1: small detail
+   double wavelet_gain2     = 1.5;   // scale 2: galaxy structure
+   double wavelet_gain3     = 2.0;   // scale 3: large structure
+   double wavelet_gain4     = 1.0;   // scale 4: very large
 
    // Post-LHE noise suppression
    double noise_sigma       = 0.7;
@@ -173,21 +161,13 @@ static void parse_param( const char* arg )
    // Chrominance
    else if ( key == "chroma.sigma" )          g_params.chroma_sigma = val;
    else if ( key == "chroma.radius" )         g_params.chroma_radius = int(val);
-   // CLAHE pre-smooth
-   else if ( key == "clahe.presmooth" )       g_params.clahe_presmooth_sigma = val;
-   // CLAHE mask
-   else if ( key == "clahe.mask.lo" )         g_params.clahe_mask_lo_mad = val;
-   else if ( key == "clahe.mask.hi" )         g_params.clahe_mask_hi_mad = val;
-   // CLAHE large
-   else if ( key == "clahe.large.radius" )    g_params.clahe_large_radius = int(val);
-   else if ( key == "clahe.large.slope" )     g_params.clahe_large_slope = val;
-   else if ( key == "clahe.large.amount" )    g_params.clahe_large_amount = val;
-   // CLAHE small
-   else if ( key == "clahe.small.radius" )    g_params.clahe_small_radius = int(val);
-   else if ( key == "clahe.small.slope" )     g_params.clahe_small_slope = val;
-   else if ( key == "clahe.small.amount" )    g_params.clahe_small_amount = val;
-   // CLAHE sat
-   else if ( key == "clahe.sat" )             g_params.clahe_sat = val;
+   // Wavelet
+   else if ( key == "wavelet.scales" )        g_params.wavelet_scales = int(val);
+   else if ( key == "wavelet.gain0" )         g_params.wavelet_gain0 = val;
+   else if ( key == "wavelet.gain1" )         g_params.wavelet_gain1 = val;
+   else if ( key == "wavelet.gain2" )         g_params.wavelet_gain2 = val;
+   else if ( key == "wavelet.gain3" )         g_params.wavelet_gain3 = val;
+   else if ( key == "wavelet.gain4" )         g_params.wavelet_gain4 = val;
    // Noise
    else if ( key == "noise.sigma" )           g_params.noise_sigma = val;
    else if ( key == "noise.mask.lo" )         g_params.noise_mask_lo_mad = val;
@@ -220,13 +200,10 @@ static void print_params()
            g_params.stretch_clip, g_params.stretch_target_bg);
    fprintf(stdout, "  chroma.sigma=%.1f  chroma.radius=%d\n",
            g_params.chroma_sigma, g_params.chroma_radius);
-   fprintf(stdout, "  clahe.presmooth=%.1f  clahe.mask=[%.1f,%.1f]mad\n",
-           g_params.clahe_presmooth_sigma, g_params.clahe_mask_lo_mad, g_params.clahe_mask_hi_mad);
-   fprintf(stdout, "  clahe.large: r=%d slope=%.1f amt=%.2f\n",
-           g_params.clahe_large_radius, g_params.clahe_large_slope, g_params.clahe_large_amount);
-   fprintf(stdout, "  clahe.small: r=%d slope=%.1f amt=%.2f  clahe.sat=%.2f\n",
-           g_params.clahe_small_radius, g_params.clahe_small_slope, g_params.clahe_small_amount,
-           g_params.clahe_sat);
+   fprintf(stdout, "  wavelet: scales=%d gains=[%.1f, %.1f, %.1f, %.1f, %.1f]\n",
+           g_params.wavelet_scales,
+           g_params.wavelet_gain0, g_params.wavelet_gain1, g_params.wavelet_gain2,
+           g_params.wavelet_gain3, g_params.wavelet_gain4);
    fprintf(stdout, "  noise.sigma=%.1f  noise.mask=[%.1f,%.1f]mad\n",
            g_params.noise_sigma, g_params.noise_mask_lo_mad, g_params.noise_mask_hi_mad);
    fprintf(stdout, "  star: dim=%.2f r=%d excess=%.2f bright=%.2f\n",
@@ -518,6 +495,105 @@ static ChannelStats compute_channel_stats(const pcl::Image& image, int channel)
    s.mad = deviations[deviations.size() / 2];
 
    return s;
+}
+
+// ============================================================================
+// Starlet (à trous) wavelet transform
+// ============================================================================
+
+static const float s_atrousKernel[5] = { 1, 4, 6, 4, 1 }; // B3 spline, sum=16
+
+// À trous convolution on a flat float buffer (single channel)
+static void convolve_atrous_1d(
+   const std::vector<float>& in,
+   std::vector<float>& out,
+   int W, int H,
+   int scale ) // 0,1,2,... (step = 2^scale)
+{
+   int step = 1 << scale;
+   const float norm = 1.0f / 16.0f;
+
+   std::vector<float> tmp( W * H );
+
+   // Horizontal pass
+   for ( int y = 0; y < H; y++ )
+      for ( int x = 0; x < W; x++ )
+      {
+         float acc = 0;
+         for ( int k = -2; k <= 2; k++ )
+         {
+            int xx = x + k * step;
+            xx = std::min( std::max( xx, 0 ), W - 1 );
+            acc += s_atrousKernel[k+2] * in[y * W + xx];
+         }
+         tmp[y * W + x] = acc * norm;
+      }
+
+   // Vertical pass
+   for ( int y = 0; y < H; y++ )
+      for ( int x = 0; x < W; x++ )
+      {
+         float acc = 0;
+         for ( int k = -2; k <= 2; k++ )
+         {
+            int yy = y + k * step;
+            yy = std::min( std::max( yy, 0 ), H - 1 );
+            acc += s_atrousKernel[k+2] * tmp[yy * W + x];
+         }
+         out[y * W + x] = acc * norm;
+      }
+}
+
+struct WaveletLayers1D
+{
+   std::vector<std::vector<float>> detail; // w0, w1, ...
+   std::vector<float> residual;            // last smooth
+   int W, H;
+};
+
+static WaveletLayers1D starlet_decompose_1d( const std::vector<float>& input, int W, int H, int nScales )
+{
+   WaveletLayers1D w;
+   w.W = W;
+   w.H = H;
+   std::vector<float> current = input;
+
+   for ( int s = 0; s < nScales; s++ )
+   {
+      std::vector<float> smooth( W * H );
+      convolve_atrous_1d( current, smooth, W, H, s );
+
+      std::vector<float> detail( W * H );
+      for ( int i = 0; i < W * H; i++ )
+         detail[i] = current[i] - smooth[i];
+
+      w.detail.push_back( detail );
+      current = smooth;
+   }
+
+   w.residual = current;
+   return w;
+}
+
+static std::vector<float> starlet_reconstruct_1d(
+   const WaveletLayers1D& w,
+   const std::vector<float>& gain ) // one per scale
+{
+   std::vector<float> out = w.residual;
+   int N = w.W * w.H;
+
+   for ( size_t s = 0; s < w.detail.size(); s++ )
+   {
+      float g = (s < gain.size()) ? gain[s] : 1.0f;
+      for ( int i = 0; i < N; i++ )
+         out[i] += g * w.detail[s][i];
+   }
+
+   // Clamp to [0,1]
+   for ( int i = 0; i < N; i++ )
+      out[i] = std::min( 1.0f, std::max( 0.0f, out[i] ) );
+
+   return out;
 }
 
 // ============================================================================
@@ -893,254 +969,60 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    // Works on CIE L* channel for color images, preserving chrominance.
    fprintf(stdout, "    Applying Local Histogram Equalization...\n");
 
-   result.lhe = result.stretched;
-
-   // Inline multi-scale CLAHE with pre-smoothing, background masking, and blending.
-   // The PCL LHE engine produces zero output in the mock environment, so we
-   // implement the algorithm directly.
+   // ===================================================================
+   // Starlet wavelet decomposition — replaces CLAHE
+   // ===================================================================
    {
-      int lheW = result.lhe.Width(), lheH = result.lhe.Height();
-      int histSize = 256; // 8-bit histogram bins
+      fprintf(stdout, "    Starlet wavelet decomposition (%d scales, luminance only)...\n",
+              g_params.wavelet_scales);
 
-      // ----------------------------------------------------------------
-      // Step 1: Compute luminance and pre-smooth with Gaussian (σ=1.0)
-      // Reduces noise sensitivity without killing structure.
-      // ----------------------------------------------------------------
-      std::vector<float> lum( lheW * lheH );
-      for ( int y = 0; y < lheH; y++ )
-         for ( int x = 0; x < lheW; x++ )
-            lum[y * lheW + x] = 0.2126f * result.lhe( x, y, 0 )
-                               + 0.7152f * result.lhe( x, y, 1 )
-                               + 0.0722f * result.lhe( x, y, 2 );
+      int wW = result.stretched.Width(), wH = result.stretched.Height();
 
-      // Gaussian blur σ=1.0, kernel radius=2 (5×5)
-      const float sigma = float( g_params.clahe_presmooth_sigma );
-      const int gR = 2;
-      float gKernel[5][5];
-      float gSum = 0;
-      for ( int ky = -gR; ky <= gR; ky++ )
-         for ( int kx = -gR; kx <= gR; kx++ )
-         {
-            float v = std::exp( -(kx*kx + ky*ky) / (2.0f * sigma * sigma) );
-            gKernel[ky+gR][kx+gR] = v;
-            gSum += v;
-         }
-      for ( int ky = 0; ky < 5; ky++ )
-         for ( int kx = 0; kx < 5; kx++ )
-            gKernel[ky][kx] /= gSum;
+      // Extract perceptual luminance (BT.709)
+      std::vector<float> lum( wW * wH );
+      for ( int y = 0; y < wH; y++ )
+         for ( int x = 0; x < wW; x++ )
+            lum[y * wW + x] = 0.2126f * result.stretched( x, y, 0 )
+                             + 0.7152f * result.stretched( x, y, 1 )
+                             + 0.0722f * result.stretched( x, y, 2 );
 
-      std::vector<float> smoothLum( lheW * lheH );
-      for ( int y = 0; y < lheH; y++ )
-         for ( int x = 0; x < lheW; x++ )
-         {
-            float acc = 0;
-            for ( int ky = -gR; ky <= gR; ky++ )
-               for ( int kx = -gR; kx <= gR; kx++ )
-               {
-                  int yy = std::min( std::max( y + ky, 0 ), lheH - 1 );
-                  int xx = std::min( std::max( x + kx, 0 ), lheW - 1 );
-                  acc += lum[yy * lheW + xx] * gKernel[ky+gR][kx+gR];
-               }
-            smoothLum[y * lheW + x] = acc;
-         }
-      fprintf(stdout, "    Pre-smooth: Gaussian sigma=%.1f applied\n", sigma);
-
-      // ----------------------------------------------------------------
-      // Step 2: Build intensity mask to protect background from noise
-      // amplification. Smooth threshold based on luminance percentiles.
-      // ----------------------------------------------------------------
-      {
-         auto [medLum, madLum] = sampled_median_mad( lum );
-         float maskLo = medLum + float( g_params.clahe_mask_lo_mad ) * madLum;
-         float maskHi = medLum + float( g_params.clahe_mask_hi_mad ) * madLum;
-         fprintf(stdout, "    Mask: medLum=%.4f MAD=%.4f transition=[%.4f, %.4f]\n",
-                 medLum, madLum, maskLo, maskHi);
-      // (maskLo, maskHi used below in same scope)
-
-      // Extra noise stabilisation in low-SNR regions
-      for ( int y = 0; y < lheH; y++ )
-         for ( int x = 0; x < lheW; x++ )
-         {
-            float L = smoothLum[y * lheW + x];
-            // Below ~2 sigma -> suppress local contrast seeds
-            if ( L < maskLo )
-            {
-               // pull toward neighbourhood mean slightly
-               smoothLum[y * lheW + x] = 0.7f * smoothLum[y * lheW + x]
-                                        + 0.3f * lum[y * lheW + x];
-            }
-         }
-
-      std::vector<float> mask( lheW * lheH );
-      for ( int y = 0; y < lheH; y++ )
-         for ( int x = 0; x < lheW; x++ )
-         {
-            float L = smoothLum[y * lheW + x];
-            if ( L <= maskLo )
-               mask[y * lheW + x] = 0.0f;
-            else if ( L >= maskHi )
-               mask[y * lheW + x] = 1.0f;
-            else
-               mask[y * lheW + x] = (L - maskLo) / (maskHi - maskLo);
-         }
-
-      // ----------------------------------------------------------------
-      // Step 3: Two-scale CLAHE on smoothed luminance
-      //   Large scale: radius=100, slopeLimit=2.0, amount=0.2
-      //   Small scale: radius=16,  slopeLimit=2.5, amount=0.1
-      // ----------------------------------------------------------------
-
-      // Helper lambda: run one CLAHE pass, returns new luminance
-      auto runCLAHE = [&]( const std::vector<float>& inLum,
-                           int claheRadius, double slopeLimit, double amount,
-                           const char* label ) -> std::vector<float>
-      {
-         std::vector<float> outLum( lheW * lheH );
-         double factor = double( histSize - 1 );
-         int r = claheRadius - 1;
-         std::vector<uint32_t> hist( histSize );
-         std::vector<uint32_t> clippedHist( histSize );
-
-         for ( int y = 0; y < lheH; y++ )
-         {
-            for ( int x = 0; x < lheW; x++ )
-            {
-               // Build histogram for kernel around (x,y)
-               std::fill( hist.begin(), hist.end(), 0 );
-               uint32_t valuesInHist = 0;
-
-               for ( int ky = -r; ky <= r; ky++ )
-               {
-                  int yy = y + ky;
-                  if ( yy < 0 ) yy = -yy;
-                  if ( yy >= lheH ) yy = 2 * lheH - 2 - yy;
-                  if ( yy < 0 || yy >= lheH ) continue;
-
-                  for ( int kx = -r; kx <= r; kx++ )
-                  {
-                     int xx = x + kx;
-                     if ( xx < 0 ) xx = -xx;
-                     if ( xx >= lheW ) xx = 2 * lheW - 2 - xx;
-                     if ( xx < 0 || xx >= lheW ) continue;
-
-                     float L = inLum[yy * lheW + xx];
-                     uint32_t bin = std::min( uint32_t( L * factor ), uint32_t( histSize - 1 ) );
-                     hist[bin]++;
-                     valuesInHist++;
-                  }
-               }
-
-               // Clip histogram
-               std::copy( hist.begin(), hist.end(), clippedHist.begin() );
-               int histLimit = int( slopeLimit * valuesInHist / ( histSize - 1 ) + 0.5 );
-               if ( histLimit < 1 ) histLimit = 1;
-
-               int clippedValues = 0, clippedBefore;
-               int iter = 0;
-               do {
-                  clippedBefore = clippedValues;
-                  clippedValues = 0;
-                  for ( int i = 0; i < histSize; i++ )
-                  {
-                     int32_t d = int32_t(clippedHist[i]) - histLimit;
-                     if ( d > 0 ) { clippedValues += d; clippedHist[i] = histLimit; }
-                  }
-                  if ( iter == 0 || clippedValues < clippedBefore )
-                  {
-                     int32_t d = clippedValues / histSize;
-                     int32_t m = clippedValues % histSize;
-                     if ( d != 0 )
-                        for ( int i = 0; i < histSize; i++ )
-                           clippedHist[i] += d;
-                     if ( m != 0 )
-                     {
-                        int s = std::max( 1, ( histSize - 1 ) / m );
-                        for ( int i = 0; i < histSize; i += s )
-                           clippedHist[i]++;
-                     }
-                  }
-                  iter++;
-               } while ( iter == 1 || clippedValues < clippedBefore );
-
-               // CDF
-               float L = inLum[y * lheW + x];
-               uint32_t value = std::min( uint32_t( L * factor ), uint32_t( histSize - 1 ) );
-
-               uint32_t cdfMin = 0;
-               for ( int i = 0; i < histSize; i++ )
-                  if ( clippedHist[i] != 0 ) { cdfMin = clippedHist[i]; break; }
-
-               uint32_t cdf = 0;
-               for ( uint32_t i = 0; i <= value; i++ )
-                  cdf += clippedHist[i];
-
-               uint32_t cdfMax = cdf;
-               for ( int i = value + 1; i < histSize; i++ )
-                  cdfMax += clippedHist[i];
-
-               float eqL = (cdfMax != cdfMin) ? float(cdf - cdfMin) / float(cdfMax - cdfMin) : L;
-               // Blend with original at this scale's amount
-               outLum[y * lheW + x] = float(amount) * eqL + float(1.0 - amount) * L;
-            }
-         }
-         fprintf(stdout, "    CLAHE %s: radius=%d slope=%.1f amount=%.2f done\n",
-                 label, claheRadius, slopeLimit, amount);
-         return outLum;
+      std::vector<float> gain = {
+         float( g_params.wavelet_gain0 ),
+         float( g_params.wavelet_gain1 ),
+         float( g_params.wavelet_gain2 ),
+         float( g_params.wavelet_gain3 ),
+         float( g_params.wavelet_gain4 )
       };
+      gain.resize( g_params.wavelet_scales, 1.0f );
 
-      // Large scale: enhances galaxy-level structure
-      std::vector<float> largeLum = runCLAHE( smoothLum,
-         g_params.clahe_large_radius, g_params.clahe_large_slope, g_params.clahe_large_amount, "large" );
+      auto w = starlet_decompose_1d( lum, wW, wH, g_params.wavelet_scales );
 
-      // Small scale: enhances fine detail (applied on top of large-scale result)
-      std::vector<float> finalLum = runCLAHE( largeLum,
-         g_params.clahe_small_radius, g_params.clahe_small_slope, g_params.clahe_small_amount, "small" );
+      for ( int s = 0; s < g_params.wavelet_scales; s++ )
+         fprintf(stdout, "    scale %d: gain=%.2f\n", s, gain[s]);
 
-      // ----------------------------------------------------------------
-      // Step 4: Masked blend with perceptual luminance scaling
-      // and mild chroma boost on bright structures.
-      // ----------------------------------------------------------------
-      for ( int y = 0; y < lheH; y++ )
-         for ( int x = 0; x < lheW; x++ )
+      std::vector<float> newLum = starlet_reconstruct_1d( w, gain );
+
+      // Rescale RGB by newL/oldL to preserve colour ratios
+      result.lhe = result.stretched;
+      for ( int y = 0; y < wH; y++ )
+         for ( int x = 0; x < wW; x++ )
          {
-            float R = result.lhe( x, y, 0 );
-            float G = result.lhe( x, y, 1 );
-            float B = result.lhe( x, y, 2 );
-
-            float oldL2 = 0.2126f * R + 0.7152f * G + 0.0722f * B;
-            float newL2 = finalLum[y * lheW + x];
-            float m2    = mask[y * lheW + x];
-
-            // Blend luminance
-            float blendL = (1.0f - m2) * oldL2 + m2 * newL2;
-
-            // --- Scale RGB to preserve original colour ratios ---
-            if ( oldL2 > 1e-6f )
+            float oldL = lum[y * wW + x];
+            float newL = newLum[y * wW + x];
+            if ( oldL > 1e-6f )
             {
-               float scale = blendL / oldL2;
-
-               float newR = R * scale;
-               float newG = G * scale;
-               float newB = B * scale;
-
-               // --- Mild chroma boost (only where signal exists) ---
-               if ( oldL2 > maskLo )
-               {
-                  const float sat = float( g_params.clahe_sat );
-                  float L = blendL;
-
-                  newR = L + sat * (newR - L);
-                  newG = L + sat * (newG - L);
-                  newB = L + sat * (newB - L);
-               }
-
-               result.lhe( x, y, 0 ) = std::min( 1.0f, std::max( 0.0f, newR ) );
-               result.lhe( x, y, 1 ) = std::min( 1.0f, std::max( 0.0f, newG ) );
-               result.lhe( x, y, 2 ) = std::min( 1.0f, std::max( 0.0f, newB ) );
+               float scale = newL / oldL;
+               for ( int c = 0; c < 3; c++ )
+                  result.lhe( x, y, c ) = std::min( 1.0f,
+                     std::max( 0.0f, result.stretched( x, y, c ) * scale ) );
+            }
+            else
+            {
+               // Near-black: set to new luminance as gray
+               for ( int c = 0; c < 3; c++ )
+                  result.lhe( x, y, c ) = newL;
             }
          }
-
-      } // end mask scope
    }
 
    for ( int c = 0; c < 3; c++ )
