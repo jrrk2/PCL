@@ -34,10 +34,12 @@
 
 #include <png.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <random>
 #include <string>
 #include <vector>
 #include <sys/stat.h>
@@ -102,8 +104,8 @@ struct PipelineParams
    double clahe_presmooth_sigma = 1.0;
 
    // CLAHE background mask
-   double clahe_mask_lo_mad = 1.0;   // mask starts at median + lo*MAD
-   double clahe_mask_hi_mad = 4.0;   // mask fully active at median + hi*MAD
+   double clahe_mask_lo_mad = 2.0;   // mask starts at median + lo*MAD
+   double clahe_mask_hi_mad = 6.0;   // mask fully active at median + hi*MAD
 
    // CLAHE large scale
    int    clahe_large_radius = 100;
@@ -111,9 +113,9 @@ struct PipelineParams
    double clahe_large_amount = 0.2;
 
    // CLAHE small scale
-   int    clahe_small_radius = 16;
+   int    clahe_small_radius = 32;
    double clahe_small_slope  = 2.5;
-   double clahe_small_amount = 0.1;
+   double clahe_small_amount = 0.03;
 
    // CLAHE chroma boost (in masked blend)
    double clahe_sat         = 1.25;
@@ -126,18 +128,21 @@ struct PipelineParams
    // Star reduction
    double star_dim          = 0.85;  // reduce to this fraction
    int    star_radius       = 3;
-   double star_excess       = 0.05;  // excess over ring median
+   double star_excess       = 3.0;   // excess in units of local ring MAD
    double star_min_bright   = 0.35;  // minimum absolute brightness
 
    // Black point
    double black_mad         = 2.5;   // median - N*MAD
 
-   // Second stretch (gamma)
+   // Adaptive gamma (smoothstep from 1.0 to gamma based on luminance)
    double gamma             = 0.5;
+   double gamma_lo_mad      = 1.0;   // smoothstep starts at median + N*MAD
+   double gamma_hi_mad      = 5.0;   // smoothstep ends at median + N*MAD
 
-   // Final saturation boost
+   // Smoothstep saturation boost
    double sat_boost         = 1.4;
-   double sat_threshold_mad = 1.0;   // median + N*MAD
+   double sat_lo_mad        = 1.0;   // smoothstep starts at median + N*MAD
+   double sat_hi_mad        = 6.0;   // smoothstep ends at median + N*MAD
 };
 
 static PipelineParams g_params;
@@ -196,9 +201,12 @@ static void parse_param( const char* arg )
    else if ( key == "black.mad" )             g_params.black_mad = val;
    // Gamma
    else if ( key == "gamma" )                 g_params.gamma = val;
+   else if ( key == "gamma.lo" )              g_params.gamma_lo_mad = val;
+   else if ( key == "gamma.hi" )              g_params.gamma_hi_mad = val;
    // Saturation
    else if ( key == "sat.boost" )             g_params.sat_boost = val;
-   else if ( key == "sat.threshold" )         g_params.sat_threshold_mad = val;
+   else if ( key == "sat.lo" )                g_params.sat_lo_mad = val;
+   else if ( key == "sat.hi" )                g_params.sat_hi_mad = val;
    else
       fprintf(stderr, "WARNING: unknown parameter --%s\n", key.c_str());
 }
@@ -223,8 +231,10 @@ static void print_params()
            g_params.noise_sigma, g_params.noise_mask_lo_mad, g_params.noise_mask_hi_mad);
    fprintf(stdout, "  star: dim=%.2f r=%d excess=%.2f bright=%.2f\n",
            g_params.star_dim, g_params.star_radius, g_params.star_excess, g_params.star_min_bright);
-   fprintf(stdout, "  black.mad=%.1f  gamma=%.2f  sat.boost=%.1f  sat.threshold=%.1fmad\n",
-           g_params.black_mad, g_params.gamma, g_params.sat_boost, g_params.sat_threshold_mad);
+   fprintf(stdout, "  black.mad=%.1f  gamma=%.2f  gamma.[lo,hi]=[%.1f,%.1f]mad\n",
+           g_params.black_mad, g_params.gamma, g_params.gamma_lo_mad, g_params.gamma_hi_mad);
+   fprintf(stdout, "  sat.boost=%.1f  sat.[lo,hi]=[%.1f,%.1f]mad\n",
+           g_params.sat_boost, g_params.sat_lo_mad, g_params.sat_hi_mad);
    fprintf(stdout, "\n");
 }
 
@@ -257,6 +267,40 @@ static void run_test(const char* name, bool (*test_fn)())
    } else {
       fprintf(stdout, "FAILED\n");
    }
+}
+
+// ============================================================================
+// Sampled median/MAD — O(N_samples log N_samples) instead of O(N log N)
+// Uses deterministic pseudo-random sampling (fixed seed) for reproducibility.
+// ============================================================================
+
+struct MedianMAD { float median; float mad; };
+
+static MedianMAD sampled_median_mad( const std::vector<float>& data, int nSamples = 100000 )
+{
+   const int N = int( data.size() );
+   if ( N == 0 )
+      return { 0.0f, 0.0f };
+
+   nSamples = std::min( nSamples, N );
+
+   std::mt19937 rng( 12345 ); // deterministic seed
+   std::uniform_int_distribution<int> dist( 0, N - 1 );
+
+   std::vector<float> samples( nSamples );
+   for ( int i = 0; i < nSamples; i++ )
+      samples[i] = data[dist( rng )];
+
+   std::sort( samples.begin(), samples.end() );
+   float med = samples[nSamples / 2];
+
+   std::vector<float> devs( nSamples );
+   for ( int i = 0; i < nSamples; i++ )
+      devs[i] = std::abs( samples[i] - med );
+   std::sort( devs.begin(), devs.end() );
+   float mad = devs[nSamples / 2];
+
+   return { med, mad };
 }
 
 // ============================================================================
@@ -865,7 +909,9 @@ static PipelineResult run_pipeline(const TargetInfo& target)
       std::vector<float> lum( lheW * lheH );
       for ( int y = 0; y < lheH; y++ )
          for ( int x = 0; x < lheW; x++ )
-            lum[y * lheW + x] = (result.lhe( x, y, 0 ) + result.lhe( x, y, 1 ) + result.lhe( x, y, 2 )) / 3.0f;
+            lum[y * lheW + x] = 0.2126f * result.lhe( x, y, 0 )
+                               + 0.7152f * result.lhe( x, y, 1 )
+                               + 0.0722f * result.lhe( x, y, 2 );
 
       // Gaussian blur σ=1.0, kernel radius=2 (5×5)
       const float sigma = float( g_params.clahe_presmooth_sigma );
@@ -903,21 +949,27 @@ static PipelineResult run_pipeline(const TargetInfo& target)
       // Step 2: Build intensity mask to protect background from noise
       // amplification. Smooth threshold based on luminance percentiles.
       // ----------------------------------------------------------------
-      // Use median + 1.5*MAD as the transition point
       {
-         std::vector<float> sortedLum( smoothLum );
-         std::sort( sortedLum.begin(), sortedLum.end() );
-         float medLum = sortedLum[sortedLum.size() / 2];
-         std::vector<float> devs( sortedLum.size() );
-         for ( size_t i = 0; i < sortedLum.size(); i++ )
-            devs[i] = std::abs( sortedLum[i] - medLum );
-         std::sort( devs.begin(), devs.end() );
-         float madLum = devs[devs.size() / 2];
+         auto [medLum, madLum] = sampled_median_mad( lum );
          float maskLo = medLum + float( g_params.clahe_mask_lo_mad ) * madLum;
          float maskHi = medLum + float( g_params.clahe_mask_hi_mad ) * madLum;
          fprintf(stdout, "    Mask: medLum=%.4f MAD=%.4f transition=[%.4f, %.4f]\n",
                  medLum, madLum, maskLo, maskHi);
       // (maskLo, maskHi used below in same scope)
+
+      // Extra noise stabilisation in low-SNR regions
+      for ( int y = 0; y < lheH; y++ )
+         for ( int x = 0; x < lheW; x++ )
+         {
+            float L = smoothLum[y * lheW + x];
+            // Below ~2 sigma -> suppress local contrast seeds
+            if ( L < maskLo )
+            {
+               // pull toward neighbourhood mean slightly
+               smoothLum[y * lheW + x] = 0.7f * smoothLum[y * lheW + x]
+                                        + 0.3f * lum[y * lheW + x];
+            }
+         }
 
       std::vector<float> mask( lheW * lheH );
       for ( int y = 0; y < lheH; y++ )
@@ -1106,78 +1158,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    int finW = result.final_.Width(), finH = result.final_.Height();
 
    // ----------------------------------------------------------------
-   // Step 5: Light background noise suppression (Gaussian σ=0.7)
-   // Only applied where luminance is below the background/signal
-   // transition. Leaves galaxy arms untouched.
-   // ----------------------------------------------------------------
-   {
-      fprintf(stdout, "    Post-LHE noise suppression...\n");
-      const float nsSigma = float( g_params.noise_sigma );
-      const int nsR = 2; // 5×5 kernel
-      float nsK[5][5];
-      float nsSum = 0;
-      for ( int ky = -nsR; ky <= nsR; ky++ )
-         for ( int kx = -nsR; kx <= nsR; kx++ )
-         {
-            float v = std::exp( -(kx*kx + ky*ky) / (2.0f * nsSigma * nsSigma) );
-            nsK[ky+nsR][kx+nsR] = v;
-            nsSum += v;
-         }
-      for ( int ky = 0; ky < 5; ky++ )
-         for ( int kx = 0; kx < 5; kx++ )
-            nsK[ky][kx] /= nsSum;
-
-      // Compute luminance for masking
-      std::vector<float> finLum( finW * finH );
-      for ( int y = 0; y < finH; y++ )
-         for ( int x = 0; x < finW; x++ )
-            finLum[y * finW + x] = (result.final_( x, y, 0 ) + result.final_( x, y, 1 ) + result.final_( x, y, 2 )) / 3.0f;
-
-      // Background threshold: median + 2*MAD
-      std::vector<float> sortL( finLum );
-      std::sort( sortL.begin(), sortL.end() );
-      float medL = sortL[sortL.size() / 2];
-      std::vector<float> absDevs( sortL.size() );
-      for ( size_t i = 0; i < sortL.size(); i++ )
-         absDevs[i] = std::abs( sortL[i] - medL );
-      std::sort( absDevs.begin(), absDevs.end() );
-      float madL = absDevs[absDevs.size() / 2];
-      float nsLo = medL + float( g_params.noise_mask_lo_mad ) * madL;
-      float nsHi = medL + float( g_params.noise_mask_hi_mad ) * madL;
-
-      // Apply Gaussian blur per channel, masked to background
-      pcl::Image smoothed( finW, finH, pcl::ColorSpace::RGB );
-      for ( int c = 0; c < 3; c++ )
-         for ( int y = 0; y < finH; y++ )
-            for ( int x = 0; x < finW; x++ )
-            {
-               float acc = 0;
-               for ( int ky = -nsR; ky <= nsR; ky++ )
-                  for ( int kx = -nsR; kx <= nsR; kx++ )
-                  {
-                     int yy = std::min( std::max( y + ky, 0 ), finH - 1 );
-                     int xx = std::min( std::max( x + kx, 0 ), finW - 1 );
-                     acc += result.final_( xx, yy, c ) * nsK[ky+nsR][kx+nsR];
-                  }
-               smoothed( x, y, c ) = acc;
-            }
-
-      for ( int y = 0; y < finH; y++ )
-         for ( int x = 0; x < finW; x++ )
-         {
-            float L = finLum[y * finW + x];
-            // Smooth blend: full blur in background, none in bright areas
-            float w = (L <= nsLo) ? 1.0f
-                    : (L >= nsHi) ? 0.0f
-                    : 1.0f - (L - nsLo) / (nsHi - nsLo);
-            for ( int c = 0; c < 3; c++ )
-               result.final_( x, y, c ) = w * smoothed( x, y, c )
-                                         + (1.0f - w) * result.final_( x, y, c );
-         }
-   }
-
-   // ----------------------------------------------------------------
-   // Step 6: Star reduction — detect stars by local peak brightness
+   // Step 5: Star reduction — detect stars by local peak brightness
    // and reduce their intensity by ~15%. Uses morphological approach:
    // if a pixel is much brighter than its surroundings, it's a star.
    // ----------------------------------------------------------------
@@ -1220,9 +1201,17 @@ static PipelineResult run_pipeline(const TargetInfo& target)
             std::sort( ring, ring + rCount );
             float ringMedian = ring[rCount / 2];
 
-            // Star criterion: center much brighter than ring, and absolutely bright
+            // Compute local MAD of ring
+            float ringDevs[24];
+            for ( int i = 0; i < rCount; i++ )
+               ringDevs[i] = std::abs( ring[i] - ringMedian );
+            std::sort( ringDevs, ringDevs + rCount );
+            float ringMAD = ringDevs[rCount / 2];
+            if ( ringMAD < 1e-6f ) ringMAD = 1e-6f;
+
+            // Star criterion: excess relative to local MAD, and absolutely bright
             float excess = centerL - ringMedian;
-            float starExcess = float( g_params.star_excess );
+            float starExcess = float( g_params.star_excess ) * ringMAD;
             if ( excess > starExcess && centerL > float( g_params.star_min_bright ) )
                starMask[y * finW + x] = std::min( 1.0f, (excess - starExcess) / (4.0f * starExcess) );
          }
@@ -1258,7 +1247,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    }
 
    // ----------------------------------------------------------------
-   // Step 7: Black point subtraction.
+   // Step 6: Black point subtraction.
    // Clips the pedestal at median - 2.5*MAD per channel, then rescales.
    // ----------------------------------------------------------------
    {
@@ -1267,6 +1256,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
       {
          ChannelStats cs = compute_channel_stats( result.final_, c );
          float black = float( cs.median - g_params.black_mad * cs.mad );
+         black = std::min( black, 0.95f );
          float scale = 1.0f / (1.0f - black);
          fprintf(stdout, "    ch%d: black=%.6f scale=%.4f\n", c, black, scale);
          for ( int y = 0; y < finH; y++ )
@@ -1280,68 +1270,154 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    }
 
    // ----------------------------------------------------------------
-   // Step 8: Second stretch — gamma < 1 brightens midtones.
-   // Applied per-channel to lift faint galaxy detail.
+   // Step 7: Luminance-adaptive gamma. Bright structures get stronger
+   // gamma (0.5) via smoothstep; background stays at gamma=1.0.
    // ----------------------------------------------------------------
    {
-      fprintf(stdout, "    Second stretch (gamma)...\n");
-      const float stretch = float( g_params.gamma );
+      fprintf(stdout, "    Adaptive gamma...\n");
+      const float gammaMin = float( g_params.gamma );
+
+      // Compute perceptual luminance and stats for thresholds
+      std::vector<float> gammaLum( finW * finH );
+      for ( int y = 0; y < finH; y++ )
+         for ( int x = 0; x < finW; x++ )
+            gammaLum[y * finW + x] = 0.2126f * result.final_( x, y, 0 )
+                                   + 0.7152f * result.final_( x, y, 1 )
+                                   + 0.0722f * result.final_( x, y, 2 );
+
+      auto [medGL, madGL] = sampled_median_mad( gammaLum );
+
+      float stretchLo = medGL + float( g_params.gamma_lo_mad ) * madGL;
+      float stretchHi = medGL + float( g_params.gamma_hi_mad ) * madGL;
+      fprintf(stdout, "    gamma range [%.2f, %.2f]  stretchLo=%.4f stretchHi=%.4f\n",
+              gammaMin, 1.0f, stretchLo, stretchHi);
 
       for ( int c = 0; c < 3; c++ )
          for ( int y = 0; y < finH; y++ )
             for ( int x = 0; x < finW; x++ )
             {
+               float L = gammaLum[y * finW + x];
+               float t = (stretchHi > stretchLo)
+                       ? std::min( 1.0f, std::max( 0.0f, (L - stretchLo) / (stretchHi - stretchLo) ) )
+                       : 0.0f;
+               t = t * t * (3.0f - 2.0f * t); // smoothstep
+               float gamma = 1.0f - t * (1.0f - gammaMin);
                float v = result.final_( x, y, c );
-               result.final_( x, y, c ) = std::pow( v, stretch );
+               result.final_( x, y, c ) = std::pow( v, gamma );
             }
    }
 
    // ----------------------------------------------------------------
-   // Step 9: Saturation boost on bright structures (L > threshold).
-   // Uses perceptual luminance to push chroma away from gray.
+   // Step 8: Light background noise suppression (Gaussian σ=0.7)
+   // Only applied where luminance is below the background/signal
+   // transition. Leaves galaxy arms untouched.
+   // Applied after gamma so the brightness scale is final.
    // ----------------------------------------------------------------
    {
-      fprintf(stdout, "    Saturation boost...\n");
+      fprintf(stdout, "    Post-gamma noise suppression...\n");
+      const float nsSigma = float( g_params.noise_sigma );
+      const int nsR = 2; // 5×5 kernel
+      float nsK[5][5];
+      float nsSum = 0;
+      for ( int ky = -nsR; ky <= nsR; ky++ )
+         for ( int kx = -nsR; kx <= nsR; kx++ )
+         {
+            float v = std::exp( -(kx*kx + ky*ky) / (2.0f * nsSigma * nsSigma) );
+            nsK[ky+nsR][kx+nsR] = v;
+            nsSum += v;
+         }
+      for ( int ky = 0; ky < 5; ky++ )
+         for ( int kx = 0; kx < 5; kx++ )
+            nsK[ky][kx] /= nsSum;
 
-      // Compute luminance stats for threshold
+      // Compute luminance for masking
+      std::vector<float> finLum( finW * finH );
+      for ( int y = 0; y < finH; y++ )
+         for ( int x = 0; x < finW; x++ )
+            finLum[y * finW + x] = (result.final_( x, y, 0 ) + result.final_( x, y, 1 ) + result.final_( x, y, 2 )) / 3.0f;
+
+      // Background threshold: median + N*MAD
+      auto [medL, madL] = sampled_median_mad( finLum );
+      float nsLo = medL + float( g_params.noise_mask_lo_mad ) * madL;
+      float nsHi = medL + float( g_params.noise_mask_hi_mad ) * madL;
+
+      // Apply Gaussian blur per channel, masked to background
+      pcl::Image smoothed( finW, finH, pcl::ColorSpace::RGB );
+      for ( int c = 0; c < 3; c++ )
+         for ( int y = 0; y < finH; y++ )
+            for ( int x = 0; x < finW; x++ )
+            {
+               float acc = 0;
+               for ( int ky = -nsR; ky <= nsR; ky++ )
+                  for ( int kx = -nsR; kx <= nsR; kx++ )
+                  {
+                     int yy = std::min( std::max( y + ky, 0 ), finH - 1 );
+                     int xx = std::min( std::max( x + kx, 0 ), finW - 1 );
+                     acc += result.final_( xx, yy, c ) * nsK[ky+nsR][kx+nsR];
+                  }
+               smoothed( x, y, c ) = acc;
+            }
+
+      for ( int y = 0; y < finH; y++ )
+         for ( int x = 0; x < finW; x++ )
+         {
+            float L = finLum[y * finW + x];
+            // Smooth blend: full blur in background, none in bright areas
+            float w = (L <= nsLo) ? 1.0f
+                    : (L >= nsHi) ? 0.0f
+                    : 1.0f - (L - nsLo) / (nsHi - nsLo);
+            for ( int c = 0; c < 3; c++ )
+               result.final_( x, y, c ) = w * smoothed( x, y, c )
+                                         + (1.0f - w) * result.final_( x, y, c );
+         }
+   }
+
+   // ----------------------------------------------------------------
+   // Step 9: Smoothstep saturation boost. Smoothly ramps sat from
+   // 1.0 to sat_boost based on luminance (satLo..satHi).
+   // ----------------------------------------------------------------
+   {
+      fprintf(stdout, "    Smoothstep saturation boost...\n");
+
+      // Compute luminance stats for thresholds
       std::vector<float> postLum( finW * finH );
       for ( int y = 0; y < finH; y++ )
          for ( int x = 0; x < finW; x++ )
             postLum[y * finW + x] = 0.2126f * result.final_( x, y, 0 )
                                   + 0.7152f * result.final_( x, y, 1 )
                                   + 0.0722f * result.final_( x, y, 2 );
-      std::vector<float> srtLum( postLum );
-      std::sort( srtLum.begin(), srtLum.end() );
-      float medLum = srtLum[srtLum.size() / 2];
-      std::vector<float> devLum( srtLum.size() );
-      for ( size_t i = 0; i < srtLum.size(); i++ )
-         devLum[i] = std::abs( srtLum[i] - medLum );
-      std::sort( devLum.begin(), devLum.end() );
-      float madLum = devLum[devLum.size() / 2];
-      float satThreshold = medLum + float( g_params.sat_threshold_mad ) * madLum;
+      auto [medLum, madLum] = sampled_median_mad( postLum );
 
-      const float satBoost = float( g_params.sat_boost );
+      float satLo = medLum + float( g_params.sat_lo_mad ) * madLum;
+      float satHi = medLum + float( g_params.sat_hi_mad ) * madLum;
+      const float satBoostMax = float( g_params.sat_boost );
+      fprintf(stdout, "    satLo=%.4f satHi=%.4f boost=%.2f\n", satLo, satHi, satBoostMax);
 
       for ( int y = 0; y < finH; y++ )
          for ( int x = 0; x < finW; x++ )
          {
             float L = postLum[y * finW + x];
-            if ( L > satThreshold )
+            float t = (satHi > satLo)
+                    ? std::min( 1.0f, std::max( 0.0f, (L - satLo) / (satHi - satLo) ) )
+                    : 0.0f;
+            t = t * t * (3.0f - 2.0f * t); // smoothstep
+            float sat = 1.0f + t * (satBoostMax - 1.0f);
+
+            if ( sat > 1.0f )
             {
                float R = result.final_( x, y, 0 );
                float G = result.final_( x, y, 1 );
                float B = result.final_( x, y, 2 );
 
-               R = L + satBoost * (R - L);
-               G = L + satBoost * (G - L);
-               B = L + satBoost * (B - L);
+               R = L + sat * (R - L);
+               G = L + sat * (G - L);
+               B = L + sat * (B - L);
 
                result.final_( x, y, 0 ) = std::max( 0.0f, std::min( 1.0f, R ) );
                result.final_( x, y, 1 ) = std::max( 0.0f, std::min( 1.0f, G ) );
                result.final_( x, y, 2 ) = std::max( 0.0f, std::min( 1.0f, B ) );
             }
          }
-      fprintf(stdout, "    Saturation threshold=%.4f boost=%.2f\n", satThreshold, satBoost);
    }
 
    for ( int c = 0; c < 3; c++ )
