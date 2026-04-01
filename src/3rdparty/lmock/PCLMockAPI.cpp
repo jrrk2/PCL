@@ -3627,33 +3627,98 @@ api_bool ViewListContext::SetViewListViewSelectedEventRoutine(
 }
 
 // =============================================================
-// NumericalContext
+// NumericalContext - Float FFT via FFTW (single-precision)
 // =============================================================
+
+// Float FFT wrapper using double-precision FFTW internally
+// PCL's fcomplex is Complex<float> = struct { float real, imag; }
+// We convert to/from double for FFTW since fftw3f requires separate linking
+
+struct FFTWFloatPlanWrapper {
+    int size;
+    bool forward;
+    fftw_plan plan;
+    fftw_complex* in;
+    fftw_complex* out;
+
+    FFTWFloatPlanWrapper(int n, bool fwd) : size(n), forward(fwd) {
+        in  = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * n);
+        out = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * n);
+        plan = fftw_plan_dft_1d(n, in, out,
+                                fwd ? FFTW_FORWARD : FFTW_BACKWARD,
+                                FFTW_ESTIMATE);
+    }
+    ~FFTWFloatPlanWrapper() {
+        fftw_destroy_plan(plan);
+        fftw_free(in);
+        fftw_free(out);
+    }
+};
+
+static std::map<void*, FFTWFloatPlanWrapper*> g_fftw_float_plans;
+static std::mutex g_fftw_float_mutex;
 
 void* NumericalContext::FFTCreateComplexTransformF(size_t length)
 {
-    // Return a dummy FFT handle
-    static int dummyFFT = 0;
-    return &dummyFFT;
+    fprintf(stderr, "[FFT] FFTCreateComplexTransformF(%zu) entering\n", length);
+    InitializeFFTW();
+    fprintf(stderr, "[FFT] FFTW initialized, acquiring mutex\n");
+    std::lock_guard<std::mutex> lock(g_fftw_float_mutex);
+    fprintf(stderr, "[FFT] Creating plan wrapper\n");
+    auto* wrapper = new FFTWFloatPlanWrapper(int(length), true);
+    fprintf(stderr, "[FFT] Plan wrapper created\n");
+    void* handle = (void*)wrapper;
+    g_fftw_float_plans[handle] = wrapper;
+    return handle;
 }
 
 void* NumericalContext::FFTCreateComplexInverseTransformF(size_t length)
 {
-    // Return a dummy inverse FFT handle
-    static int dummyIFFT = 0;
-    return &dummyIFFT;
+    InitializeFFTW();
+    std::lock_guard<std::mutex> lock(g_fftw_float_mutex);
+    auto* wrapper = new FFTWFloatPlanWrapper(int(length), false);
+    void* handle = (void*)wrapper;
+    g_fftw_float_plans[handle] = wrapper;
+    return handle;
 }
 
-api_bool NumericalContext::FFTComplexTransformF(void* handle, void* out, const void* in)
+api_bool NumericalContext::FFTComplexTransformF(void* handle, void* y, const void* x)
 {
-    // No-op in mock - FFT not actually performed
+    if (!handle || !y || !x) return api_false;
+
+    FFTWFloatPlanWrapper* wrapper = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(g_fftw_float_mutex);
+        auto it = g_fftw_float_plans.find(handle);
+        if (it == g_fftw_float_plans.end()) return api_false;
+        wrapper = it->second;
+    }
+
+    int n = wrapper->size;
+    const float* src = (const float*)x;  // interleaved real,imag pairs
+    float* dst = (float*)y;
+
+    // Copy float input to double FFTW buffer
+    for (int i = 0; i < n; i++) {
+        wrapper->in[i][0] = (double)src[2*i];
+        wrapper->in[i][1] = (double)src[2*i+1];
+    }
+
+    fftw_execute(wrapper->plan);
+
+    // Copy double output back to float
+    for (int i = 0; i < n; i++) {
+        dst[2*i]   = (float)wrapper->out[i][0];
+        dst[2*i+1] = (float)wrapper->out[i][1];
+    }
+
     return api_true;
 }
 
-api_bool NumericalContext::FFTComplexInverseTransformF(void* handle, void* out, const void* in)
+api_bool NumericalContext::FFTComplexInverseTransformF(void* handle, void* y, const void* x)
 {
-    // No-op in mock - inverse FFT not actually performed
-    return api_true;
+    // Same implementation - the plan direction determines forward/inverse
+    return FFTComplexTransformF(handle, y, x);
 }
 
 size_t NumericalContext::FFTComplexOptimizedLengthD(size_t length)
@@ -11343,6 +11408,9 @@ static void preload_default_global_settings()
 
     if (!g_settings_global.count("Workspace/PrimaryScreenCenterY"))
         g_settings_global["Workspace/PrimaryScreenCenterY"] = 300;
+
+    if (!g_settings_global.count("System/NumberOfProcessors"))
+        g_settings_global["System/NumberOfProcessors"] = 1;
 }
 
 api_bool GlobalContext::ReadSettingsInteger( api_handle module,

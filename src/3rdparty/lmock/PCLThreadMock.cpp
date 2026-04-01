@@ -133,77 +133,37 @@ api_bool SetThreadExecRoutine(thread_handle thread_handle, pcl::thread_exec_rout
 // Mock for StartThread
 int StartThread(void* thread_handle, int priority) {
     LogThreadCall("StartThread", thread_handle);
-    
+
     ThreadData* data = get_thread_data(thread_handle);
     if (!data) {
         std::cerr << "Error: No thread data found for handle" << std::endl;
         return api_false;
     }
-    
+
     pthread_mutex_lock(&data->mutex);
-    
-    // Check if thread is already started
+
+    // If thread was previously started and finished, detach old thread and allow restart
     if (data->started) {
-        pthread_mutex_unlock(&data->mutex);
-        return api_false;
+        // The old thread should have finished (caller should have called WaitThread)
+        pthread_detach(data->thread);
+        data->status = 0;
+        data->active = false;
     }
-    
+
     data->priority = priority;
     data->started = true;
-    
-    // Set up thread attributes if needed (stack size)
+
+    // Set up thread attributes
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    
-    if (data->stack_size > 0) {
-        pthread_attr_setstacksize(&attr, data->stack_size);
-    }
-    
+    pthread_attr_setstacksize(&attr, 16 * 1024 * 1024); // 16MB stack
+
     // Create the actual thread
     int result = pthread_create(&data->thread, &attr, thread_wrapper, data);
-    
-    // Clean up attributes
     pthread_attr_destroy(&attr);
-    
-    // Set thread priority if supported by the platform
-    #if defined(__linux__) || defined(__APPLE__)
-    // Map PCL priorities to POSIX priorities
-    int policy;
-    struct sched_param param;
-    pthread_getschedparam(data->thread, &policy, &param);
-    
-    switch (priority) {
-        case ThreadPriorityIdle:
-            param.sched_priority = sched_get_priority_min(policy);
-            break;
-        case ThreadPriorityLowest:
-            param.sched_priority = sched_get_priority_min(policy) + 1;
-            break;
-        case ThreadPriorityLow:
-            param.sched_priority = (sched_get_priority_min(policy) + sched_get_priority_max(policy)) / 4;
-            break;
-        case ThreadPriorityNormal:
-            param.sched_priority = (sched_get_priority_min(policy) + sched_get_priority_max(policy)) / 2;
-            break;
-        case ThreadPriorityHigh:
-            param.sched_priority = (sched_get_priority_min(policy) + sched_get_priority_max(policy)) * 3 / 4;
-            break;
-        case ThreadPriorityHighest:
-            param.sched_priority = sched_get_priority_max(policy) - 1;
-            break;
-        case ThreadPriorityTimeCritical:
-            param.sched_priority = sched_get_priority_max(policy);
-            break;
-        default:
-            // Leave priority unchanged
-            break;
-    }
-    
-    pthread_setschedparam(data->thread, policy, &param);
-    #endif
-    
+
     pthread_mutex_unlock(&data->mutex);
-    
+
     return (result == 0) ? api_true : api_false;
 }
 

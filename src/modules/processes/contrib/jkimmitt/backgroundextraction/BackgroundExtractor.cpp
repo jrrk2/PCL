@@ -326,44 +326,46 @@ void BackgroundExtractor::FitBackground()
 
 void BackgroundExtractor::FitLinear()
 {
-   // Fit plane: z = a*x + b*y + c
-   
+   // Fit plane: z = a*x + b*y + c using centered least squares.
+   // Centering improves numerical stability for large coordinate values.
+
    int n = m_samples.Length();
    m_coefficients = Vector( 3 );
-   
-   // Use simple least squares approach
-   double sumX = 0, sumY = 0, sumZ = 0;
-   double sumX2 = 0, sumY2 = 0, sumXY = 0;
-   double sumXZ = 0, sumYZ = 0;
-   
+
+   // Compute means
+   double meanX = 0, meanY = 0, meanZ = 0;
    for ( int i = 0; i < n; ++i )
    {
-      double x = m_samples[i].position.x;
-      double y = m_samples[i].position.y;
-      double z = m_samples[i].value;
-      sumX += x;
-      sumY += y;
-      sumZ += z;
-      sumX2 += x*x;
-      sumY2 += y*y;
-      sumXY += x*y;
-      sumXZ += x*z;
-      sumYZ += y*z;
+      meanX += m_samples[i].position.x;
+      meanY += m_samples[i].position.y;
+      meanZ += m_samples[i].value;
    }
-   
-   // Solve normal equations for plane fitting
-   // n*a*x^2 + n*b*xy + n*c*x = n*xz
-   // n*a*xy + n*b*y^2 + n*c*y = n*yz  
-   // n*a*x + n*b*y + n*c = n*z
-   
-   double det = n*(sumX2*sumY2 - sumXY*sumXY) - sumX*(sumX*sumY2 - sumY*sumXY) + sumY*(sumX*sumXY - sumY*sumX2);
-   
-   if ( Abs(det) > 1e-10 )
+   meanX /= n;
+   meanY /= n;
+   meanZ /= n;
+
+   // Compute centered sums
+   double Sxx = 0, Syy = 0, Sxy = 0, Sxz = 0, Syz = 0;
+   for ( int i = 0; i < n; ++i )
    {
-      double a = (n*(sumXZ*sumY2 - sumYZ*sumXY) - sumX*(sumXZ*sumY - sumYZ*sumX) + sumY*(sumXZ*sumXY - sumYZ*sumX2)) / det;
-      double b = (n*(sumX2*sumYZ - sumXY*sumXZ) - sumX*(sumX*sumYZ - sumY*sumXZ) + sumY*(sumX*sumXY - sumY*sumX2)) / det;
-      double c = (sumZ - a*sumX - b*sumY) / n;
-      
+      double dx = m_samples[i].position.x - meanX;
+      double dy = m_samples[i].position.y - meanY;
+      double dz = m_samples[i].value - meanZ;
+      Sxx += dx * dx;
+      Syy += dy * dy;
+      Sxy += dx * dy;
+      Sxz += dx * dz;
+      Syz += dy * dz;
+   }
+
+   double det = Sxx * Syy - Sxy * Sxy;
+
+   if ( Abs( det ) > 1e-30 )
+   {
+      double a = (Sxz * Syy - Syz * Sxy) / det;
+      double b = (Syz * Sxx - Sxz * Sxy) / det;
+      double c = meanZ - a * meanX - b * meanY;
+
       m_coefficients[0] = a;
       m_coefficients[1] = b;
       m_coefficients[2] = c;
@@ -373,7 +375,7 @@ void BackgroundExtractor::FitLinear()
       // Degenerate case - use mean
       m_coefficients[0] = 0;
       m_coefficients[1] = 0;
-      m_coefficients[2] = sumZ / n;
+      m_coefficients[2] = meanZ;
    }
 }
 

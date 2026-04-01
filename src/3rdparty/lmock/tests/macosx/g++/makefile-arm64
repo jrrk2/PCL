@@ -1,0 +1,143 @@
+######################################################################
+# PCL Mock Test Suite
+# Platform: MacOSX/g++ ARM64
+######################################################################
+
+DEVELOPER_ID="Developer ID Application: Mr Jonathan Kimmitt (Y53675G8V9)"
+
+OBJ_DIR=$(PCLSRCDIR)/3rdparty/lmock/tests/macosx/g++/arm64/Release
+
+# BackgroundExtraction module object directory
+BG_OBJ_DIR=$(PCLSRCDIR)/modules/processes/contrib/jkimmitt/backgroundextraction/macosx/g++/arm64/Release
+BG_SRC_DIR=$(PCLSRCDIR)/modules/processes/contrib/jkimmitt/backgroundextraction
+
+# LocalHistogramEqualization module
+LHE_OBJ_DIR=$(PCLSRCDIR)/modules/processes/contrib/zvrastil/LocalHistogramEqualization/macosx/g++/arm64/Release
+LHE_SRC_DIR=$(PCLSRCDIR)/modules/processes/contrib/zvrastil/LocalHistogramEqualization
+
+.PHONY: all
+all: $(OBJ_DIR)/test_fft $(OBJ_DIR)/test_bgextraction $(OBJ_DIR)/test_stretch $(OBJ_DIR)/test_realdata
+
+#
+# Compiler/linker flags
+#
+
+CXX = clang++
+ARCH = -arch arm64
+SYSROOT = -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+QT_BASE = /opt/homebrew/Cellar/qt@5/5.15.18
+
+CXXFLAGS = -c -pipe -pthread $(ARCH) -fPIC $(SYSROOT) -mmacosx-version-min=15 \
+	-D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES \
+	-I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" \
+	-I/opt/homebrew/include \
+	-I$(QT_BASE)/lib/QtCore.framework/Versions/5/Headers \
+	-I$(QT_BASE)/lib/QtWidgets.framework/Versions/5/Headers \
+	-I$(QT_BASE)/lib/QtGui.framework/Versions/5/Headers \
+	-I$(QT_BASE)/lib/QtSvg.framework/Versions/5/Headers \
+	-I$(QT_BASE)/include \
+	-O2 -ffunction-sections -fdata-sections -fvisibility=default \
+	-std=c++17 -stdlib=libc++ \
+	-Wall -Wno-parentheses -Wno-extern-c-compat \
+	-MMD -MP
+
+LDFLAGS = $(ARCH) -fsanitize=address -fPIC -headerpad_max_install_names \
+	-Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk \
+	-mmacosx-version-min=15 -stdlib=libc++ \
+	-Wl,-export_dynamic -Wl,-dead_strip \
+	-L"$(PCLLIBDIR64)" \
+	-L/opt/homebrew/lib
+
+LIBS = -framework AppKit -lpthread \
+	-lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi \
+	-llcms-pxi -lcminpack-pxi -lMock-pxi -lXISF-pxm -lFITS-pxm -lTIFF-pxm \
+	-lfftw3 -lfftw3_threads \
+	-F$(QT_BASE)/lib \
+	-framework QtCore -framework QtWidgets -framework QtGui -framework QtSvg
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./arm64/Release/test_fft.d \
+./arm64/Release/test_bgextraction.d \
+./arm64/Release/test_stretch.d \
+./arm64/Release/test_realdata.d
+
+-include $(DEP_FILES)
+
+#
+# FFT test
+#
+
+$(OBJ_DIR)/test_fft: ./arm64/Release/test_fft.o
+	$(CXX) $(LDFLAGS) -o $@ $< $(LIBS)
+	@echo "Built: $@"
+
+#
+# Background Extraction test
+# Links against pre-built BackgroundExtraction module .o files
+#
+
+BG_OBJS = \
+	$(BG_OBJ_DIR)/BackgroundExtractor.o \
+	$(BG_OBJ_DIR)/BackgroundExtractionInstance.o \
+	$(BG_OBJ_DIR)/BackgroundExtractionInterface.o \
+	$(BG_OBJ_DIR)/BackgroundExtractionParameters.o \
+	$(BG_OBJ_DIR)/BackgroundExtractionProcess.o
+
+$(OBJ_DIR)/test_bgextraction: ./arm64/Release/test_bgextraction.o $(BG_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $< $(BG_OBJS) $(LIBS)
+	@echo "Built: $@"
+
+#
+# Stretch test
+#
+
+$(OBJ_DIR)/test_stretch: ./arm64/Release/test_stretch.o
+	$(CXX) $(LDFLAGS) -o $@ $< $(LIBS)
+	@echo "Built: $@"
+
+#
+# Real data regression test
+# Links against BackgroundExtraction module .o files
+# Needs FITS module headers for FITSReader
+#
+
+LHE_OBJS = \
+	$(LHE_OBJ_DIR)/LocalHistogramEqualizationInstance.o \
+	$(LHE_OBJ_DIR)/LocalHistogramEqualizationInterface.o \
+	$(LHE_OBJ_DIR)/LocalHistogramEqualizationParameters.o \
+	$(LHE_OBJ_DIR)/LocalHistogramEqualizationProcess.o
+
+$(OBJ_DIR)/test_realdata: ./arm64/Release/test_realdata.o $(BG_OBJS) $(LHE_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $< $(BG_OBJS) $(LHE_OBJS) $(LIBS) -lpng
+	@echo "Built: $@"
+
+#
+# Common rules
+#
+
+.PHONY: clean
+clean:
+	rm -f ./arm64/Release/test_fft.o ./arm64/Release/test_fft.d $(OBJ_DIR)/test_fft
+	rm -f ./arm64/Release/test_bgextraction.o ./arm64/Release/test_bgextraction.d $(OBJ_DIR)/test_bgextraction
+	rm -f ./arm64/Release/test_stretch.o ./arm64/Release/test_stretch.d $(OBJ_DIR)/test_stretch
+	rm -f ./arm64/Release/test_realdata.o ./arm64/Release/test_realdata.d $(OBJ_DIR)/test_realdata
+
+.PHONY: solve
+solve:
+	cd ../.. && bash solve_and_cache.sh
+
+.PHONY: run
+run: all
+	$(OBJ_DIR)/test_fft
+	$(OBJ_DIR)/test_bgextraction
+	$(OBJ_DIR)/test_stretch
+	$(OBJ_DIR)/test_realdata --save-reference
+
+./arm64/Release/%.o: ../../%.cpp
+	@mkdir -p ./arm64/Release
+	$(CXX) $(CXXFLAGS) -I"$(BG_SRC_DIR)" -I"$(LHE_SRC_DIR)" -I"$(PCLSRCDIR)/modules/file-formats" -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
