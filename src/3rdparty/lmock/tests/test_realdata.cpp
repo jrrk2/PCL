@@ -94,7 +94,7 @@ struct PipelineParams
 
    // Auto-stretch
    double stretch_clip      = -2.80;
-   double stretch_target_bg = 0.25;
+   double stretch_target_bg = 0.12;
 
    // Chrominance noise reduction
    double chroma_sigma      = 1.5;
@@ -102,14 +102,17 @@ struct PipelineParams
 
    // Starlet wavelet decomposition (5 scales)
    int    wavelet_scales    = 5;
-   double wavelet_gain0     = 0.0;   // scale 0: noise — kill
-   double wavelet_gain1     = 0.5;   // scale 1: small detail
-   double wavelet_gain2     = 1.5;   // scale 2: galaxy structure
-   double wavelet_gain3     = 2.0;   // scale 3: large structure
-   double wavelet_gain4     = 1.0;   // scale 4: very large
+   double wavelet_gain0     = 0.0;   // scale 0: kill noise
+   double wavelet_gain1     = 0.6;   // scale 1: slight detail
+   double wavelet_gain2     = 1.8;   // scale 2: MAIN boost (arms)
+   double wavelet_gain3     = 1.5;   // scale 3: structure
+   double wavelet_gain4     = 0.6;   // scale 4: suppress halo
+   double wavelet_residual  = 0.95;   // residual (smooth) scale factor
+   double wavelet_mask_lo_mad = 1.5; // mask starts at median + N*MAD
+   double wavelet_mask_hi_mad = 4.0; // mask fully active at median + N*MAD
 
-   // Post-LHE noise suppression
-   double noise_sigma       = 0.7;
+   // Post-wavelet noise suppression
+   double noise_sigma       = 0.5;
    double noise_mask_lo_mad = 1.5;
    double noise_mask_hi_mad = 4.0;
 
@@ -123,12 +126,12 @@ struct PipelineParams
    double black_mad         = 2.5;   // median - N*MAD
 
    // Adaptive gamma (smoothstep from 1.0 to gamma based on luminance)
-   double gamma             = 0.5;
+   double gamma             = 0.7;
    double gamma_lo_mad      = 1.0;   // smoothstep starts at median + N*MAD
    double gamma_hi_mad      = 5.0;   // smoothstep ends at median + N*MAD
 
    // Smoothstep saturation boost
-   double sat_boost         = 1.4;
+   double sat_boost         = 1.8;
    double sat_lo_mad        = 1.0;   // smoothstep starts at median + N*MAD
    double sat_hi_mad        = 6.0;   // smoothstep ends at median + N*MAD
 };
@@ -168,6 +171,9 @@ static void parse_param( const char* arg )
    else if ( key == "wavelet.gain2" )         g_params.wavelet_gain2 = val;
    else if ( key == "wavelet.gain3" )         g_params.wavelet_gain3 = val;
    else if ( key == "wavelet.gain4" )         g_params.wavelet_gain4 = val;
+   else if ( key == "wavelet.residual" )      g_params.wavelet_residual = val;
+   else if ( key == "wavelet.mask.lo" )       g_params.wavelet_mask_lo_mad = val;
+   else if ( key == "wavelet.mask.hi" )       g_params.wavelet_mask_hi_mad = val;
    // Noise
    else if ( key == "noise.sigma" )           g_params.noise_sigma = val;
    else if ( key == "noise.mask.lo" )         g_params.noise_mask_lo_mad = val;
@@ -200,10 +206,12 @@ static void print_params()
            g_params.stretch_clip, g_params.stretch_target_bg);
    fprintf(stdout, "  chroma.sigma=%.1f  chroma.radius=%d\n",
            g_params.chroma_sigma, g_params.chroma_radius);
-   fprintf(stdout, "  wavelet: scales=%d gains=[%.1f, %.1f, %.1f, %.1f, %.1f]\n",
+   fprintf(stdout, "  wavelet: scales=%d gains=[%.1f, %.1f, %.1f, %.1f, %.1f] residual=%.1f\n",
            g_params.wavelet_scales,
            g_params.wavelet_gain0, g_params.wavelet_gain1, g_params.wavelet_gain2,
-           g_params.wavelet_gain3, g_params.wavelet_gain4);
+           g_params.wavelet_gain3, g_params.wavelet_gain4, g_params.wavelet_residual);
+   fprintf(stdout, "  wavelet.mask=[%.1f,%.1f]mad\n",
+           g_params.wavelet_mask_lo_mad, g_params.wavelet_mask_hi_mad);
    fprintf(stdout, "  noise.sigma=%.1f  noise.mask=[%.1f,%.1f]mad\n",
            g_params.noise_sigma, g_params.noise_mask_lo_mad, g_params.noise_mask_hi_mad);
    fprintf(stdout, "  star: dim=%.2f r=%d excess=%.2f bright=%.2f\n",
@@ -577,10 +585,15 @@ static WaveletLayers1D starlet_decompose_1d( const std::vector<float>& input, in
 
 static std::vector<float> starlet_reconstruct_1d(
    const WaveletLayers1D& w,
-   const std::vector<float>& gain ) // one per scale
+   const std::vector<float>& gain, // one per scale
+   float residualScale = 1.0f )
 {
-   std::vector<float> out = w.residual;
    int N = w.W * w.H;
+   std::vector<float> out( N );
+
+   // Scale residual (smooth base)
+   for ( int i = 0; i < N; i++ )
+      out[i] = w.residual[i] * residualScale;
 
    for ( size_t s = 0; s < w.detail.size(); s++ )
    {
@@ -997,10 +1010,30 @@ static PipelineResult run_pipeline(const TargetInfo& target)
 
       auto w = starlet_decompose_1d( lum, wW, wH, g_params.wavelet_scales );
 
-      for ( int s = 0; s < g_params.wavelet_scales; s++ )
-         fprintf(stdout, "    scale %d: gain=%.2f\n", s, gain[s]);
+      // Spatial mask: suppress detail in background, boost in signal
+      auto [wMed, wMAD] = sampled_median_mad( lum );
+      float wMaskLo = wMed + float( g_params.wavelet_mask_lo_mad ) * wMAD;
+      float wMaskHi = wMed + float( g_params.wavelet_mask_hi_mad ) * wMAD;
+      fprintf(stdout, "    Wavelet mask: med=%.4f MAD=%.4f transition=[%.4f, %.4f]\n",
+              wMed, wMAD, wMaskLo, wMaskHi);
 
-      std::vector<float> newLum = starlet_reconstruct_1d( w, gain );
+      for ( int s = 0; s < g_params.wavelet_scales; s++ )
+      {
+         for ( int y = 0; y < wH; y++ )
+            for ( int x = 0; x < wW; x++ )
+            {
+               float L = lum[y * wW + x];
+               float t = (wMaskHi > wMaskLo)
+                       ? std::min( 1.0f, std::max( 0.0f, (L - wMaskLo) / (wMaskHi - wMaskLo) ) )
+                       : 0.0f;
+               t = t * t * (3.0f - 2.0f * t); // smoothstep
+               w.detail[s][y * wW + x] *= t;
+            }
+         fprintf(stdout, "    scale %d: gain=%.2f (masked)\n", s, gain[s]);
+      }
+
+      std::vector<float> newLum = starlet_reconstruct_1d( w, gain,
+         float( g_params.wavelet_residual ) );
 
       // Rescale RGB by newL/oldL to preserve colour ratios
       result.lhe = result.stretched;
