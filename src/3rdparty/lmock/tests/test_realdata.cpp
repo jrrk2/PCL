@@ -76,6 +76,158 @@ static bool g_save_reference = false;
 // Output directory for reference data and results
 static const char* g_output_dir = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference";
 
+// ============================================================================
+// Pipeline parameters — all tweakable from command line via --key=value
+// Convention: group.subgroup.param (e.g. --clahe.large.radius=100)
+// ============================================================================
+
+struct PipelineParams
+{
+   // Crop
+   double m51_crop_margin   = 2.0;
+   double m101_crop_margin  = 1.5;
+
+   // Background extraction
+   int    bg_grid_spacing   = 200;
+
+   // Auto-stretch
+   double stretch_clip      = -2.80;
+   double stretch_target_bg = 0.25;
+
+   // Chrominance noise reduction
+   double chroma_sigma      = 1.5;
+   int    chroma_radius     = 3;
+
+   // CLAHE pre-smooth
+   double clahe_presmooth_sigma = 1.0;
+
+   // CLAHE background mask
+   double clahe_mask_lo_mad = 1.0;   // mask starts at median + lo*MAD
+   double clahe_mask_hi_mad = 4.0;   // mask fully active at median + hi*MAD
+
+   // CLAHE large scale
+   int    clahe_large_radius = 100;
+   double clahe_large_slope  = 2.0;
+   double clahe_large_amount = 0.2;
+
+   // CLAHE small scale
+   int    clahe_small_radius = 16;
+   double clahe_small_slope  = 2.5;
+   double clahe_small_amount = 0.1;
+
+   // CLAHE chroma boost (in masked blend)
+   double clahe_sat         = 1.25;
+
+   // Post-LHE noise suppression
+   double noise_sigma       = 0.7;
+   double noise_mask_lo_mad = 1.5;
+   double noise_mask_hi_mad = 4.0;
+
+   // Star reduction
+   double star_dim          = 0.85;  // reduce to this fraction
+   int    star_radius       = 3;
+   double star_excess       = 0.05;  // excess over ring median
+   double star_min_bright   = 0.35;  // minimum absolute brightness
+
+   // Black point
+   double black_mad         = 2.5;   // median - N*MAD
+
+   // Second stretch (gamma)
+   double gamma             = 0.5;
+
+   // Final saturation boost
+   double sat_boost         = 1.4;
+   double sat_threshold_mad = 1.0;   // median + N*MAD
+};
+
+static PipelineParams g_params;
+
+// Parse --key=value into PipelineParams
+static void parse_param( const char* arg )
+{
+   // Skip leading --
+   if ( arg[0] == '-' && arg[1] == '-' )
+      arg += 2;
+   else
+      return;
+
+   const char* eq = strchr( arg, '=' );
+   if ( !eq ) return;
+
+   std::string key( arg, eq - arg );
+   double val = atof( eq + 1 );
+
+   // Crop
+   if      ( key == "m51.crop"  )             g_params.m51_crop_margin = val;
+   else if ( key == "m101.crop" )             g_params.m101_crop_margin = val;
+   // Background
+   else if ( key == "bg.grid" )               g_params.bg_grid_spacing = int(val);
+   // Stretch
+   else if ( key == "stretch.clip" )          g_params.stretch_clip = val;
+   else if ( key == "stretch.target" )        g_params.stretch_target_bg = val;
+   // Chrominance
+   else if ( key == "chroma.sigma" )          g_params.chroma_sigma = val;
+   else if ( key == "chroma.radius" )         g_params.chroma_radius = int(val);
+   // CLAHE pre-smooth
+   else if ( key == "clahe.presmooth" )       g_params.clahe_presmooth_sigma = val;
+   // CLAHE mask
+   else if ( key == "clahe.mask.lo" )         g_params.clahe_mask_lo_mad = val;
+   else if ( key == "clahe.mask.hi" )         g_params.clahe_mask_hi_mad = val;
+   // CLAHE large
+   else if ( key == "clahe.large.radius" )    g_params.clahe_large_radius = int(val);
+   else if ( key == "clahe.large.slope" )     g_params.clahe_large_slope = val;
+   else if ( key == "clahe.large.amount" )    g_params.clahe_large_amount = val;
+   // CLAHE small
+   else if ( key == "clahe.small.radius" )    g_params.clahe_small_radius = int(val);
+   else if ( key == "clahe.small.slope" )     g_params.clahe_small_slope = val;
+   else if ( key == "clahe.small.amount" )    g_params.clahe_small_amount = val;
+   // CLAHE sat
+   else if ( key == "clahe.sat" )             g_params.clahe_sat = val;
+   // Noise
+   else if ( key == "noise.sigma" )           g_params.noise_sigma = val;
+   else if ( key == "noise.mask.lo" )         g_params.noise_mask_lo_mad = val;
+   else if ( key == "noise.mask.hi" )         g_params.noise_mask_hi_mad = val;
+   // Stars
+   else if ( key == "star.dim" )              g_params.star_dim = val;
+   else if ( key == "star.radius" )           g_params.star_radius = int(val);
+   else if ( key == "star.excess" )           g_params.star_excess = val;
+   else if ( key == "star.bright" )           g_params.star_min_bright = val;
+   // Black point
+   else if ( key == "black.mad" )             g_params.black_mad = val;
+   // Gamma
+   else if ( key == "gamma" )                 g_params.gamma = val;
+   // Saturation
+   else if ( key == "sat.boost" )             g_params.sat_boost = val;
+   else if ( key == "sat.threshold" )         g_params.sat_threshold_mad = val;
+   else
+      fprintf(stderr, "WARNING: unknown parameter --%s\n", key.c_str());
+}
+
+static void print_params()
+{
+   fprintf(stdout, "Parameters:\n");
+   fprintf(stdout, "  m51.crop=%.1f  m101.crop=%.1f  bg.grid=%d\n",
+           g_params.m51_crop_margin, g_params.m101_crop_margin, g_params.bg_grid_spacing);
+   fprintf(stdout, "  stretch.clip=%.2f  stretch.target=%.2f\n",
+           g_params.stretch_clip, g_params.stretch_target_bg);
+   fprintf(stdout, "  chroma.sigma=%.1f  chroma.radius=%d\n",
+           g_params.chroma_sigma, g_params.chroma_radius);
+   fprintf(stdout, "  clahe.presmooth=%.1f  clahe.mask=[%.1f,%.1f]mad\n",
+           g_params.clahe_presmooth_sigma, g_params.clahe_mask_lo_mad, g_params.clahe_mask_hi_mad);
+   fprintf(stdout, "  clahe.large: r=%d slope=%.1f amt=%.2f\n",
+           g_params.clahe_large_radius, g_params.clahe_large_slope, g_params.clahe_large_amount);
+   fprintf(stdout, "  clahe.small: r=%d slope=%.1f amt=%.2f  clahe.sat=%.2f\n",
+           g_params.clahe_small_radius, g_params.clahe_small_slope, g_params.clahe_small_amount,
+           g_params.clahe_sat);
+   fprintf(stdout, "  noise.sigma=%.1f  noise.mask=[%.1f,%.1f]mad\n",
+           g_params.noise_sigma, g_params.noise_mask_lo_mad, g_params.noise_mask_hi_mad);
+   fprintf(stdout, "  star: dim=%.2f r=%d excess=%.2f bright=%.2f\n",
+           g_params.star_dim, g_params.star_radius, g_params.star_excess, g_params.star_min_bright);
+   fprintf(stdout, "  black.mad=%.1f  gamma=%.2f  sat.boost=%.1f  sat.threshold=%.1fmad\n",
+           g_params.black_mad, g_params.gamma, g_params.sat_boost, g_params.sat_threshold_mad);
+   fprintf(stdout, "\n");
+}
+
 #define TEST_ASSERT(cond, msg) do { \
    if (!(cond)) { \
       fprintf(stderr, "  FAIL: %s\n    at %s:%d\n", msg, __FILE__, __LINE__); \
@@ -494,8 +646,8 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    // Access private members through LockParameter() which returns void* to each field.
    *static_cast<pcl::pcl_enum*>( bgInstance.LockParameter( pcl::TheBGSampleGenerationModeParameter, 0 ) )
       = pcl::BGSampleGenerationMode::Grid;
-   *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingXParameter, 0 ) ) = 200;
-   *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingYParameter, 0 ) ) = 200;
+   *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingXParameter, 0 ) ) = g_params.bg_grid_spacing;
+   *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingYParameter, 0 ) ) = g_params.bg_grid_spacing;
 
    for ( int c = 0; c < 3; c++ )
    {
@@ -549,8 +701,8 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    // midtones balance (same gain) so color ratios are preserved.
    fprintf(stdout, "    Computing auto-stretch...\n");
 
-   double clip = -2.80;  // default auto-stretch clipping point
-   double targetBg = 0.25;
+   double clip = g_params.stretch_clip;
+   double targetBg = g_params.stretch_target_bg;
    double shadows[3], midtones[3];
    double midtonesSum = 0;
 
@@ -600,6 +752,98 @@ static PipelineResult run_pipeline(const TargetInfo& target)
               result.output_stats[c].min, result.output_stats[c].max);
    }
 
+   // --- Step 2b: Chrominance noise reduction ---
+   // Smooth only the colour channels in CIE Lab space, preserving luminance detail.
+   fprintf(stdout, "    Applying chrominance noise reduction...\n");
+   {
+      int cW = result.stretched.Width(), cH = result.stretched.Height();
+      const int cR = g_params.chroma_radius;
+      const float cSigma = float( g_params.chroma_sigma );
+
+      // Precompute Gaussian kernel
+      int cKSize = 2 * cR + 1;
+      std::vector<float> cKernel( cKSize * cKSize );
+      float cKSum = 0;
+      for ( int ky = -cR; ky <= cR; ky++ )
+         for ( int kx = -cR; kx <= cR; kx++ )
+         {
+            float v = std::exp( -(kx*kx + ky*ky) / (2.0f * cSigma * cSigma) );
+            cKernel[(ky+cR) * cKSize + (kx+cR)] = v;
+            cKSum += v;
+         }
+      for ( auto& v : cKernel ) v /= cKSum;
+
+      auto toLinear = []( float v ) {
+         return v <= 0.04045f ? v / 12.92f : std::pow( (v + 0.055f) / 1.055f, 2.4f );
+      };
+      auto labF = []( float t ) {
+         return t > 0.008856f ? std::cbrt( t ) : 7.787f * t + 16.0f / 116.0f;
+      };
+      auto labFinv = []( float t ) {
+         return t > 0.2069f ? t * t * t : (t - 16.0f / 116.0f) / 7.787f;
+      };
+      auto toGamma = []( float v ) {
+         v = std::max( 0.0f, v );
+         return v <= 0.0031308f ? 12.92f * v : 1.055f * std::pow( v, 1.0f / 2.4f ) - 0.055f;
+      };
+
+      // Convert entire image to Lab a*/b* for efficient kernel access
+      std::vector<float> labA( cW * cH ), labB( cW * cH ), labL( cW * cH );
+      for ( int y = 0; y < cH; y++ )
+         for ( int x = 0; x < cW; x++ )
+         {
+            float r = toLinear( result.stretched( x, y, 0 ) );
+            float g = toLinear( result.stretched( x, y, 1 ) );
+            float b = toLinear( result.stretched( x, y, 2 ) );
+            float X = r*0.4124f + g*0.3576f + b*0.1805f;
+            float Y = r*0.2126f + g*0.7152f + b*0.0722f;
+            float Z = r*0.0193f + g*0.1192f + b*0.9505f;
+            float fx = labF( X / 0.9505f ), fy = labF( Y ), fz = labF( Z / 1.0890f );
+            labL[y * cW + x] = 116.0f * fy - 16.0f;
+            labA[y * cW + x] = 500.0f * (fx - fy);
+            labB[y * cW + x] = 200.0f * (fy - fz);
+         }
+
+      // Blur only a* and b* channels
+      std::vector<float> smoothA( cW * cH ), smoothB( cW * cH );
+      for ( int y = 0; y < cH; y++ )
+         for ( int x = 0; x < cW; x++ )
+         {
+            float aAcc = 0, bAcc = 0;
+            for ( int ky = -cR; ky <= cR; ky++ )
+               for ( int kx = -cR; kx <= cR; kx++ )
+               {
+                  int yy = std::min( std::max( y + ky, 0 ), cH - 1 );
+                  int xx = std::min( std::max( x + kx, 0 ), cW - 1 );
+                  float w = cKernel[(ky+cR) * cKSize + (kx+cR)];
+                  aAcc += w * labA[yy * cW + xx];
+                  bAcc += w * labB[yy * cW + xx];
+               }
+            smoothA[y * cW + x] = aAcc;
+            smoothB[y * cW + x] = bAcc;
+         }
+
+      // Reconstruct with blurred chrominance, original L
+      for ( int y = 0; y < cH; y++ )
+         for ( int x = 0; x < cW; x++ )
+         {
+            float L = labL[y * cW + x];
+            float fy2 = (L + 16.0f) / 116.0f;
+            float fx2 = smoothA[y * cW + x] / 500.0f + fy2;
+            float fz2 = fy2 - smoothB[y * cW + x] / 200.0f;
+            float Xo = labFinv( fx2 ) * 0.9505f;
+            float Yo = labFinv( fy2 );
+            float Zo = labFinv( fz2 ) * 1.0890f;
+            result.stretched( x, y, 0 ) = std::min( 1.0f, std::max( 0.0f,
+               toGamma(  3.2406f * Xo - 1.5372f * Yo - 0.4986f * Zo ) ) );
+            result.stretched( x, y, 1 ) = std::min( 1.0f, std::max( 0.0f,
+               toGamma( -0.9689f * Xo + 1.8758f * Yo + 0.0415f * Zo ) ) );
+            result.stretched( x, y, 2 ) = std::min( 1.0f, std::max( 0.0f,
+               toGamma(  0.0557f * Xo - 0.2040f * Yo + 1.0570f * Zo ) ) );
+         }
+      fprintf(stdout, "    Chrominance smoothing applied (sigma=%.1f, radius=%d)\n", cSigma, cR);
+   }
+
    // --- Step 3: Local Histogram Equalization (CLAHE) ---
    // Enhances local contrast in the stretched image.
    // Works on CIE L* channel for color images, preserving chrominance.
@@ -624,7 +868,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
             lum[y * lheW + x] = (result.lhe( x, y, 0 ) + result.lhe( x, y, 1 ) + result.lhe( x, y, 2 )) / 3.0f;
 
       // Gaussian blur σ=1.0, kernel radius=2 (5×5)
-      const float sigma = 1.0f;
+      const float sigma = float( g_params.clahe_presmooth_sigma );
       const int gR = 2;
       float gKernel[5][5];
       float gSum = 0;
@@ -669,8 +913,8 @@ static PipelineResult run_pipeline(const TargetInfo& target)
             devs[i] = std::abs( sortedLum[i] - medLum );
          std::sort( devs.begin(), devs.end() );
          float madLum = devs[devs.size() / 2];
-         float maskLo = medLum + 1.0f * madLum;  // start fading in
-         float maskHi = medLum + 4.0f * madLum;  // fully active
+         float maskLo = medLum + float( g_params.clahe_mask_lo_mad ) * madLum;
+         float maskHi = medLum + float( g_params.clahe_mask_hi_mad ) * madLum;
          fprintf(stdout, "    Mask: medLum=%.4f MAD=%.4f transition=[%.4f, %.4f]\n",
                  medLum, madLum, maskLo, maskHi);
       // (maskLo, maskHi used below in same scope)
@@ -793,10 +1037,12 @@ static PipelineResult run_pipeline(const TargetInfo& target)
       };
 
       // Large scale: enhances galaxy-level structure
-      std::vector<float> largeLum = runCLAHE( smoothLum, 100, 2.0, 0.2, "large" );
+      std::vector<float> largeLum = runCLAHE( smoothLum,
+         g_params.clahe_large_radius, g_params.clahe_large_slope, g_params.clahe_large_amount, "large" );
 
       // Small scale: enhances fine detail (applied on top of large-scale result)
-      std::vector<float> finalLum = runCLAHE( largeLum, 16, 2.5, 0.1, "small" );
+      std::vector<float> finalLum = runCLAHE( largeLum,
+         g_params.clahe_small_radius, g_params.clahe_small_slope, g_params.clahe_small_amount, "small" );
 
       // ----------------------------------------------------------------
       // Step 4: Masked blend with perceptual luminance scaling
@@ -828,7 +1074,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
                // --- Mild chroma boost (only where signal exists) ---
                if ( oldL2 > maskLo )
                {
-                  const float sat = 1.25f;
+                  const float sat = float( g_params.clahe_sat );
                   float L = blendL;
 
                   newR = L + sat * (newR - L);
@@ -866,7 +1112,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    // ----------------------------------------------------------------
    {
       fprintf(stdout, "    Post-LHE noise suppression...\n");
-      const float nsSigma = 0.7f;
+      const float nsSigma = float( g_params.noise_sigma );
       const int nsR = 2; // 5×5 kernel
       float nsK[5][5];
       float nsSum = 0;
@@ -896,8 +1142,8 @@ static PipelineResult run_pipeline(const TargetInfo& target)
          absDevs[i] = std::abs( sortL[i] - medL );
       std::sort( absDevs.begin(), absDevs.end() );
       float madL = absDevs[absDevs.size() / 2];
-      float nsLo = medL + 1.5f * madL;
-      float nsHi = medL + 4.0f * madL;
+      float nsLo = medL + float( g_params.noise_mask_lo_mad ) * madL;
+      float nsHi = medL + float( g_params.noise_mask_hi_mad ) * madL;
 
       // Apply Gaussian blur per channel, masked to background
       pcl::Image smoothed( finW, finH, pcl::ColorSpace::RGB );
@@ -937,8 +1183,8 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    // ----------------------------------------------------------------
    {
       fprintf(stdout, "    Star reduction...\n");
-      const float starDimFactor = 0.85f;  // reduce stars to 85% intensity
-      const int starR = 3;                // detection radius
+      const float starDimFactor = float( g_params.star_dim );
+      const int starR = g_params.star_radius;
 
       // Compute luminance
       std::vector<float> finLum( finW * finH );
@@ -976,8 +1222,9 @@ static PipelineResult run_pipeline(const TargetInfo& target)
 
             // Star criterion: center much brighter than ring, and absolutely bright
             float excess = centerL - ringMedian;
-            if ( excess > 0.05f && centerL > 0.35f )
-               starMask[y * finW + x] = std::min( 1.0f, (excess - 0.05f) / 0.2f );
+            float starExcess = float( g_params.star_excess );
+            if ( excess > starExcess && centerL > float( g_params.star_min_bright ) )
+               starMask[y * finW + x] = std::min( 1.0f, (excess - starExcess) / (4.0f * starExcess) );
          }
 
       // Dilate the star mask slightly (3×3) to cover star halos
@@ -1019,7 +1266,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
       for ( int c = 0; c < 3; c++ )
       {
          ChannelStats cs = compute_channel_stats( result.final_, c );
-         float black = float( cs.median - 2.5 * cs.mad );
+         float black = float( cs.median - g_params.black_mad * cs.mad );
          float scale = 1.0f / (1.0f - black);
          fprintf(stdout, "    ch%d: black=%.6f scale=%.4f\n", c, black, scale);
          for ( int y = 0; y < finH; y++ )
@@ -1038,7 +1285,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    // ----------------------------------------------------------------
    {
       fprintf(stdout, "    Second stretch (gamma)...\n");
-      const float stretch = 0.5f;  // gamma < 1 brightens midtones
+      const float stretch = float( g_params.gamma );
 
       for ( int c = 0; c < 3; c++ )
          for ( int y = 0; y < finH; y++ )
@@ -1071,9 +1318,9 @@ static PipelineResult run_pipeline(const TargetInfo& target)
          devLum[i] = std::abs( srtLum[i] - medLum );
       std::sort( devLum.begin(), devLum.end() );
       float madLum = devLum[devLum.size() / 2];
-      float satThreshold = medLum + 1.0f * madLum;
+      float satThreshold = medLum + float( g_params.sat_threshold_mad ) * madLum;
 
-      const float satBoost = 1.4f;
+      const float satBoost = float( g_params.sat_boost );
 
       for ( int y = 0; y < finH; y++ )
          for ( int x = 0; x < finW; x++ )
@@ -1120,7 +1367,7 @@ static bool test_m51()
    target.fits_path = "/Users/jonathan/Downloads/M51_NGC5194-RGB-session_1.fits";
    target.ref_path = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m51_reference.txt";
    target.crop_cache = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m51_crop.txt";
-   target.crop_margin = 2.0;  // 2× galaxy diameter
+   target.crop_margin = g_params.m51_crop_margin;
 
    const char* ref_path_buf = target.ref_path;
 
@@ -1218,7 +1465,7 @@ static bool test_m101()
    target.fits_path = "/Users/jonathan/Downloads/M101_stacked.fits";
    target.ref_path = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m101_reference.txt";
    target.crop_cache = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m101_crop.txt";
-   target.crop_margin = 1.5;  // 1.5× galaxy diameter (M101 is large, 29')
+   target.crop_margin = g_params.m101_crop_margin;
 
    const char* ref_path_buf = target.ref_path;
 
@@ -1314,8 +1561,18 @@ int main(int argc, char** argv)
 
    // Parse args
    for ( int i = 1; i < argc; i++ )
+   {
       if ( strcmp(argv[i], "--save-reference") == 0 )
          g_save_reference = true;
+      else if ( strncmp(argv[i], "--", 2) == 0 && strchr(argv[i], '=') )
+         parse_param( argv[i] );
+      else if ( strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 )
+      {
+         fprintf(stdout, "Usage: %s [--save-reference] [--key=value ...]\n\n", argv[0]);
+         print_params();
+         return 0;
+      }
+   }
 
    fprintf(stdout, "===========================================\n");
    fprintf(stdout, "PCL Mock Real Data Regression Suite\n");
@@ -1364,7 +1621,8 @@ int main(int argc, char** argv)
    fprintf(stdout, "Mock API initialized.\n");
    if ( g_save_reference )
       fprintf(stdout, "Mode: SAVING REFERENCE VALUES\n");
-   fprintf(stdout, "\n--- Real Data Regression Tests ---\n\n");
+   print_params();
+   fprintf(stdout, "--- Real Data Regression Tests ---\n\n");
 
    run_test("M51 (NGC 5194) pipeline",   test_m51);
    run_test("M101 (Pinwheel) pipeline",   test_m101);
