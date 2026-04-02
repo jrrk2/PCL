@@ -2,7 +2,7 @@
 // test_realdata_veralux.cpp - Real astronomical data regression tests
 //
 // VeraLux HyperMetric Stretch edition.
-// Pipeline: background extraction → VeraLux HyperMetric Stretch (ready_to_use)
+// Pipeline: read calibrated XISF → VeraLux HyperMetric Stretch → starlet wavelet
 //
 // GHS stretch, Richardson-Lucy deconvolution, chrominance noise reduction,
 // starlet wavelet, adaptive gamma, noise suppression, saturation boost and
@@ -24,19 +24,8 @@
 #include <pcl/HistogramTransformation.h>
 #include <pcl/DisplayFunction.h>
 #include <pcl/XISF.h>
-// FITS support removed — all inputs are now pre-calibrated XISF
 
 #include "../PCLMockAPI.h"
-
-#include "BackgroundExtractor.h"
-#include "BackgroundExtractionInstance.h"
-#include "BackgroundExtractionParameters.h"
-#include "BackgroundExtractionProcess.h"
-
-// LocalHistogramEqualization kept for potential future use
-#include "LocalHistogramEqualizationInstance.h"
-#include "LocalHistogramEqualizationParameters.h"
-#include "LocalHistogramEqualizationProcess.h"
 
 #include <png.h>
 
@@ -113,7 +102,7 @@ struct PipelineParams
    double vl_shadow_conv    = 0.0;
 
    // Target background level for ready_to_use adaptive scaling (0.08-0.15 typical).
-   double vl_target_bg      = 0.12;
+   double vl_target_bg      = 0.10;
 
    // Use adaptive histogram anchor (slower but more accurate for complex gradients).
    bool   vl_adaptive       = false;
@@ -145,7 +134,7 @@ struct PipelineParams
    double wavelet_gain2     = 0.9;
    double wavelet_gain3     = 1.1;
    double wavelet_gain4     = 0.5;
-   double wavelet_residual  = 1.2;
+   double wavelet_residual  = 1.0;
    double wavelet_mask_lo_mad = 1.0;
    double wavelet_mask_hi_mad = 3.0;
 
@@ -501,13 +490,6 @@ static ChannelStats compute_channel_stats(const pcl::Image& image, int channel)
 
 struct ReferenceValues
 {
-   // Background model — only populated for raw FITS pipeline (not calibrated XISF)
-   bool   has_bg_ref = false;
-   double bg_coeff_a[3] = {};
-   double bg_coeff_b[3] = {};
-   double bg_coeff_c[3] = {};
-
-   // VeraLux stretch diagnostics
    double vl_anchor  = 0;
    double vl_log_d   = 0;
    double stretched_median[3] = {};
@@ -518,10 +500,6 @@ static bool save_reference(const char* path, const ReferenceValues& ref)
    FILE* f = fopen(path, "w");
    if ( !f ) return false;
    fprintf(f, "# VeraLux Real Data Reference Values\n");
-   if ( ref.has_bg_ref )
-      for ( int c = 0; c < 3; c++ )
-         fprintf(f, "bg_coeff %d %.15e %.15e %.15e\n", c,
-                 ref.bg_coeff_a[c], ref.bg_coeff_b[c], ref.bg_coeff_c[c]);
    fprintf(f, "vl_anchor %.15e\n", ref.vl_anchor);
    fprintf(f, "vl_log_d %.15e\n",  ref.vl_log_d);
    for ( int c = 0; c < 3; c++ )
@@ -538,9 +516,7 @@ static bool load_reference(const char* path, ReferenceValues& ref)
    while ( fgets(line, sizeof(line), f) )
    {
       if ( line[0] == '#' ) continue;
-      int c; double v1, v2, v3;
-      if ( sscanf(line, "bg_coeff %d %le %le %le", &c, &v1, &v2, &v3) == 4 && c >= 0 && c < 3 )
-         { ref.bg_coeff_a[c]=v1; ref.bg_coeff_b[c]=v2; ref.bg_coeff_c[c]=v3; ref.has_bg_ref=true; continue; }
+      int c; double v1;
       if ( sscanf(line, "vl_anchor %le", &v1) == 1 )
          { ref.vl_anchor = v1; continue; }
       if ( sscanf(line, "vl_log_d %le", &v1) == 1 )
@@ -909,11 +885,8 @@ static double vl_stretch( pcl::Image& img, const PipelineParams& p )
 struct PipelineResult
 {
    ReferenceValues ref;
-   pcl::Image background;
-   pcl::Image subtracted;
-   pcl::Image stretched;  // VeraLux output (= final image in this pipeline)
-   pcl::Image lhe;        // unused; alias of stretched for output convenience
-   pcl::Image final_;     // unused; alias of stretched for output convenience
+   pcl::Image stretched;  // VeraLux output (pre-wavelet)
+   pcl::Image final_;     // wavelet-enhanced output — use this for display/export
    ChannelStats input_stats[3];
    ChannelStats output_stats[3];
    bool ok;
@@ -948,21 +921,18 @@ static PipelineResult run_pipeline(const TargetInfo& target)
                  result.input_stats[c].min, result.input_stats[c].max);
       }
 
-      result.background = pcl::Image( W, H, pcl::ColorSpace::RGB ); // zero
-      result.subtracted = image;
-      result.ref.has_bg_ref = false;
    }
 
    // ==========================================================================
    // VeraLux HyperMetric Stretch
    // ==========================================================================
    fprintf(stdout, "    Applying VeraLux HyperMetric Stretch...\n");
-   result.stretched = result.subtracted;
+   result.stretched = image;
    double solvedLogD = vl_stretch( result.stretched, g_params );
 
    result.ref.vl_anchor = g_params.vl_adaptive
-                        ? double( vl_anchor_adaptive( result.subtracted, g_params.vl_weights ) )
-                        : double( vl_anchor_stats(    result.subtracted, g_params.vl_weights ) );
+                        ? double( vl_anchor_adaptive( result.stretched, g_params.vl_weights ) )
+                        : double( vl_anchor_stats(    result.stretched, g_params.vl_weights ) );
    result.ref.vl_log_d  = solvedLogD;
 
    for ( int c = 0; c < 3; c++ )
@@ -1057,7 +1027,7 @@ static PipelineResult run_pipeline(const TargetInfo& target)
          float( g_params.wavelet_residual ) );
 
       // Rescale RGB by pow(newL/oldL, 0.6) to preserve colour ratios
-      result.lhe = result.stretched;
+      result.final_ = result.stretched;
       for ( int y = 0; y < wH; y++ )
          for ( int x = 0; x < wW; x++ )
          {
@@ -1067,25 +1037,23 @@ static PipelineResult run_pipeline(const TargetInfo& target)
             {
                float scale = std::pow( newL / oldL, 0.6f );
                for ( int c = 0; c < 3; c++ )
-                  result.lhe( x, y, c ) = std::min( 1.0f,
+                  result.final_( x, y, c ) = std::min( 1.0f,
                      std::max( 0.0f, result.stretched( x, y, c ) * scale ) );
             }
             else
             {
                for ( int c = 0; c < 3; c++ )
-                  result.lhe( x, y, c ) = newL;
+                  result.final_( x, y, c ) = newL;
             }
          }
    }
 
    for ( int c = 0; c < 3; c++ )
    {
-      ChannelStats cs = compute_channel_stats( result.lhe, c );
-      fprintf(stdout, "    LHE ch%d: median=%.6f min=%.6f max=%.6f\n",
+      ChannelStats cs = compute_channel_stats( result.final_, c );
+      fprintf(stdout, "    Wavelet ch%d: median=%.6f min=%.6f max=%.6f\n",
               c, cs.median, cs.min, cs.max);
    }
-
-   result.final_ = result.lhe;
 
    result.ok = true;
    return result;
@@ -1113,9 +1081,9 @@ static bool test_m51()
 
    char path[512];
    snprintf(path, sizeof(path), "%s/m51_vl_stretched.xisf", g_output_dir);
-   write_xisf(path, result.stretched, "M51_vl_stretched");
+   write_xisf(path, result.final_, "M51_vl_stretched");
    snprintf(path, sizeof(path), "%s/m51_vl_stretched.png", g_output_dir);
-   write_png(path, result.stretched);
+   write_png(path, result.final_);
    fprintf(stdout, "    Output written to %s/\n", g_output_dir);
 
    if ( g_save_reference )
@@ -1185,9 +1153,9 @@ static bool test_m101()
 
    char path[512];
    snprintf(path, sizeof(path), "%s/m101_vl_stretched.xisf", g_output_dir);
-   write_xisf(path, result.stretched, "M101_vl_stretched");
+   write_xisf(path, result.final_, "M101_vl_stretched");
    snprintf(path, sizeof(path), "%s/m101_vl_stretched.png", g_output_dir);
-   write_png(path, result.stretched);
+   write_png(path, result.final_);
    fprintf(stdout, "    Output written to %s/\n", g_output_dir);
 
    if ( g_save_reference )
@@ -1201,19 +1169,6 @@ static bool test_m101()
    if ( load_reference(target.ref_path, ref) )
    {
       fprintf(stdout, "    Comparing against reference...\n");
-      if ( result.ref.has_bg_ref && ref.has_bg_ref )
-      {
-         for ( int c = 0; c < 3; c++ )
-         {
-            char msg[128];
-            snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_a", c);
-            TEST_ASSERT_NEAR(result.ref.bg_coeff_a[c], ref.bg_coeff_a[c], 1e-8, msg);
-            snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_b", c);
-            TEST_ASSERT_NEAR(result.ref.bg_coeff_b[c], ref.bg_coeff_b[c], 1e-8, msg);
-            snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_c", c);
-            TEST_ASSERT_NEAR(result.ref.bg_coeff_c[c], ref.bg_coeff_c[c], 1e-6, msg);
-         }
-      }
       TEST_ASSERT_NEAR(result.ref.vl_anchor, ref.vl_anchor, 1e-5, "M101 vl_anchor");
       TEST_ASSERT_NEAR(result.ref.vl_log_d,  ref.vl_log_d,  1e-3, "M101 vl_log_d");
       for ( int c = 0; c < 3; c++ )
@@ -1281,31 +1236,6 @@ int main(int argc, char** argv)
    pcl::Module = new pcl::TestModule();
    InitializePixInsightModule(
       pcl::Module, GetMockFunctionResolver(), PCL_API_Version, nullptr );
-
-   pcl::BackgroundExtractionProcess* bgProcess = new pcl::BackgroundExtractionProcess();
-   new pcl::BGModelType( bgProcess );
-   new pcl::BGSampleGenerationMode( bgProcess );
-   new pcl::BGSampleSize( bgProcess );
-   new pcl::BGSampleTolerance( bgProcess );
-   new pcl::BGMinSamples( bgProcess );
-   new pcl::BGMaxSamples( bgProcess );
-   new pcl::BGGridSpacingX( bgProcess );
-   new pcl::BGGridSpacingY( bgProcess );
-   new pcl::BGEnableOutlierRejection( bgProcess );
-   new pcl::BGOutlierRejectionThreshold( bgProcess );
-   new pcl::BGOutlierRejectionIterations( bgProcess );
-   new pcl::BGRBFSmoothness( bgProcess );
-   new pcl::BGReplaceTarget( bgProcess );
-   new pcl::BGOutputBackgroundModel( bgProcess );
-   new pcl::BGApplySTFToBackground( bgProcess );
-
-   // LHE process kept registered in case post-processing steps are re-enabled
-   pcl::LocalHistogramEqualizationProcess* lheProcess = new pcl::LocalHistogramEqualizationProcess();
-   new pcl::LHERadius( lheProcess );
-   new pcl::LHEHistogramBins( lheProcess );
-   new pcl::LHESlopeLimit( lheProcess );
-   new pcl::LHEAmount( lheProcess );
-   new pcl::LHECircularKernel( lheProcess );
 
    fprintf(stdout, "Mock API initialized.\n");
    if ( g_save_reference )
