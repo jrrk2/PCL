@@ -24,7 +24,7 @@
 #include <pcl/HistogramTransformation.h>
 #include <pcl/DisplayFunction.h>
 #include <pcl/XISF.h>
-#include <FITS/FITS.h>
+// FITS support removed — all inputs are now pre-calibrated XISF
 
 #include "../PCLMockAPI.h"
 
@@ -89,13 +89,6 @@ static const char* g_output_dir = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/
 
 struct PipelineParams
 {
-   // Crop
-   double m51_crop_margin   = 2.0;
-   double m101_crop_margin  = 1.5;
-
-   // Background extraction
-   int    bg_grid_spacing   = 200;
-
    // VeraLux HyperMetric Stretch
    // Sensor luminance weights — default Rec.709.
    // See SENSOR_PROFILES in veralux.js for per-sensor values.
@@ -145,16 +138,16 @@ struct PipelineParams
    // double chroma_sigma      = 1.5;
    // int    chroma_radius     = 3;
 
-   // --- Reference: Starlet wavelet ---
-   // int    wavelet_scales    = 5;
-   // double wavelet_gain0     = 0.0;
-   // double wavelet_gain1     = 0.4;
-   // double wavelet_gain2     = 0.9;
-   // double wavelet_gain3     = 1.1;
-   // double wavelet_gain4     = 0.5;
-   // double wavelet_residual  = 1.2;
-   // double wavelet_mask_lo_mad = 1.0;
-   // double wavelet_mask_hi_mad = 3.0;
+   // Starlet wavelet
+   int    wavelet_scales    = 5;
+   double wavelet_gain0     = 0.0;
+   double wavelet_gain1     = 0.4;
+   double wavelet_gain2     = 0.9;
+   double wavelet_gain3     = 1.1;
+   double wavelet_gain4     = 0.5;
+   double wavelet_residual  = 1.2;
+   double wavelet_mask_lo_mad = 1.0;
+   double wavelet_mask_hi_mad = 3.0;
 
    // --- Reference: Post-wavelet noise suppression ---
    // double noise_sigma       = 0.5;
@@ -196,11 +189,8 @@ static void parse_param( const char* arg )
    std::string key( arg, eq - arg );
    double val = atof( eq + 1 );
 
-   if      ( key == "m51.crop" )     g_params.m51_crop_margin = val;
-   else if ( key == "m101.crop" )    g_params.m101_crop_margin = val;
-   else if ( key == "bg.grid" )      g_params.bg_grid_spacing = int(val);
    // VeraLux params
-   else if ( key == "vl.logD" )      g_params.vl_log_d = val;
+   if ( key == "vl.logD" )      g_params.vl_log_d = val;
    else if ( key == "vl.b" )         g_params.vl_protect_b = val;
    else if ( key == "vl.conv" )      g_params.vl_convergence = val;
    else if ( key == "vl.grip" )      g_params.vl_color_grip = val;
@@ -217,8 +207,6 @@ static void parse_param( const char* arg )
 static void print_params()
 {
    fprintf(stdout, "Parameters:\n");
-   fprintf(stdout, "  m51.crop=%.1f  m101.crop=%.1f  bg.grid=%d\n",
-           g_params.m51_crop_margin, g_params.m101_crop_margin, g_params.bg_grid_spacing);
    fprintf(stdout, "  VeraLux: logD=%.2f b=%.1f conv=%.1f grip=%.2f shconv=%.1f target=%.3f\n",
            g_params.vl_log_d, g_params.vl_protect_b, g_params.vl_convergence,
            g_params.vl_color_grip, g_params.vl_shadow_conv, g_params.vl_target_bg);
@@ -272,19 +260,105 @@ static float sorted_percentile( const std::vector<float>& sorted, float p )
 }
 
 // ============================================================================
+// Starlet (à trous) wavelet decomposition — luminance only, 1D separable
+// ============================================================================
+
+static void convolve_atrous_1d(
+   const std::vector<float>& in,
+   std::vector<float>& out,
+   int W, int H, int scale )
+{
+   // B3 spline kernel [1,4,6,4,1]/16, separable, spacing = 2^scale
+   static const float k[5] = { 1.0f/16, 4.0f/16, 6.0f/16, 4.0f/16, 1.0f/16 };
+   int step = 1 << scale;
+
+   std::vector<float> tmp( W * H );
+
+   // Horizontal pass
+   for ( int y = 0; y < H; y++ )
+      for ( int x = 0; x < W; x++ )
+      {
+         float acc = 0;
+         for ( int i = -2; i <= 2; i++ )
+         {
+            int xx = std::min( std::max( x + i * step, 0 ), W - 1 );
+            acc += in[y * W + xx] * k[i + 2];
+         }
+         tmp[y * W + x] = acc;
+      }
+
+   // Vertical pass
+   for ( int y = 0; y < H; y++ )
+      for ( int x = 0; x < W; x++ )
+      {
+         float acc = 0;
+         for ( int i = -2; i <= 2; i++ )
+         {
+            int yy = std::min( std::max( y + i * step, 0 ), H - 1 );
+            acc += tmp[yy * W + x] * k[i + 2];
+         }
+         out[y * W + x] = acc;
+      }
+}
+
+struct WaveletLayers1D
+{
+   std::vector<std::vector<float>> detail;
+   std::vector<float> residual;
+};
+
+static WaveletLayers1D starlet_decompose_1d(
+   const std::vector<float>& input,
+   int W, int H, int nScales )
+{
+   WaveletLayers1D result;
+   result.detail.resize( nScales );
+
+   std::vector<float> current = input;
+   std::vector<float> smoothed( W * H );
+
+   for ( int s = 0; s < nScales; s++ )
+   {
+      convolve_atrous_1d( current, smoothed, W, H, s );
+      result.detail[s].resize( W * H );
+      for ( int i = 0; i < W * H; i++ )
+         result.detail[s][i] = current[i] - smoothed[i];
+      current = smoothed;
+   }
+
+   result.residual = current;
+   return result;
+}
+
+static std::vector<float> starlet_reconstruct_1d(
+   const WaveletLayers1D& w,
+   const std::vector<float>& gain,
+   float residualScale )
+{
+   std::vector<float> out = w.residual;
+   int N = int( out.size() );
+   for ( int i = 0; i < N; i++ )
+      out[i] *= residualScale;
+
+   int nScales = int( w.detail.size() );
+   for ( int s = 0; s < nScales; s++ )
+   {
+      float g = (s < int( gain.size() )) ? gain[s] : 1.0f;
+      for ( int i = 0; i < N; i++ )
+         out[i] += g * w.detail[s][i];
+   }
+   return out;
+}
+
+// ============================================================================
 // Target/crop infrastructure
 // ============================================================================
 
 struct TargetInfo
 {
    const char* name;
-   const char* fits_path;      // raw FITS input (requires crop + background extraction)
    const char* xisf_path;      // pre-calibrated XISF input (MGC + SPCC already applied)
    const char* ref_path;
-   const char* crop_cache;     // ignored when xisf_path is used
-   double      crop_margin;    // ignored when xisf_path is used
-
-   bool is_calibrated() const { return xisf_path != nullptr && xisf_path[0] != '\0'; }
 };
 
 static bool file_exists(const char* path)
@@ -293,58 +367,9 @@ static bool file_exists(const char* path)
    return stat(path, &st) == 0;
 }
 
-struct CropParams
-{
-   double center_x;
-   double center_y;
-   double arcsec_per_pixel;
-   double diameter_arcmin;
-   bool valid;
-};
-
-static CropParams load_crop_cache(const char* path)
-{
-   CropParams p = {};
-   p.valid = false;
-   FILE* f = fopen(path, "r");
-   if ( !f ) return p;
-   char line[256];
-   while ( fgets(line, sizeof(line), f) )
-   {
-      if ( line[0] == '#' ) continue;
-      double v;
-      if ( sscanf(line, "center_x %le", &v) == 1 )         { p.center_x = v; continue; }
-      if ( sscanf(line, "center_y %le", &v) == 1 )         { p.center_y = v; continue; }
-      if ( sscanf(line, "arcsec_per_pixel %le", &v) == 1 ) { p.arcsec_per_pixel = v; continue; }
-      if ( sscanf(line, "diameter_arcmin %le", &v) == 1 )  { p.diameter_arcmin = v; continue; }
-   }
-   fclose(f);
-   if ( p.arcsec_per_pixel > 0 && p.diameter_arcmin > 0 )
-      p.valid = true;
-   return p;
-}
-
 // ============================================================================
 // I/O helpers
 // ============================================================================
-
-static bool read_fits(const char* path, pcl::Image& image)
-{
-   try
-   {
-      pcl::FITSReader reader;
-      reader.Open( pcl::String( path ) );
-      reader.SetIndex( 0 );
-      reader.ReadImage( image );
-      reader.Close();
-      return true;
-   }
-   catch ( const pcl::Exception& e )
-   {
-      fprintf(stderr, "    Error reading FITS: %s\n", pcl::IsoString( e.Message() ).c_str());
-      return false;
-   }
-}
 
 static bool read_xisf(const char* path, pcl::Image& image)
 {
@@ -905,16 +930,11 @@ static PipelineResult run_pipeline(const TargetInfo& target)
 
    pcl::Image image;
 
-   if ( target.is_calibrated() )
-   {
-      // =======================================================================
-      // Calibrated XISF path: MGC + SPCC already applied in PixInsight.
-      // Skip crop and background extraction — go straight to VeraLux stretch.
-      // =======================================================================
-      fprintf(stdout, "\n    Reading calibrated XISF: %s ...\n", target.xisf_path);
-      if ( !read_xisf(target.xisf_path, image) )
-         return result;
+   fprintf(stdout, "\n    Reading calibrated XISF: %s ...\n", target.xisf_path);
+   if ( !read_xisf(target.xisf_path, image) )
+      return result;
 
+   {
       int W = image.Width(), H = image.Height();
       int C = image.NumberOfChannels();
       fprintf(stdout, "    Image: %dx%d, %d channels (pre-calibrated)\n", W, H, C);
@@ -928,112 +948,13 @@ static PipelineResult run_pipeline(const TargetInfo& target)
                  result.input_stats[c].min, result.input_stats[c].max);
       }
 
-      // No background model — fill result images for output consistency
       result.background = pcl::Image( W, H, pcl::ColorSpace::RGB ); // zero
       result.subtracted = image;
       result.ref.has_bg_ref = false;
    }
-   else
-   {
-      // =======================================================================
-      // Raw FITS path: crop → background extraction → VeraLux stretch.
-      // =======================================================================
-      fprintf(stdout, "\n    Reading FITS: %s ...\n", target.fits_path);
-      if ( !read_fits(target.fits_path, image) )
-         return result;
-
-      int W = image.Width(), H = image.Height();
-      int C = image.NumberOfChannels();
-      fprintf(stdout, "    Image: %dx%d, %d channels\n", W, H, C);
-      if ( C < 3 ) { fprintf(stderr, "    Error: expected RGB image\n"); return result; }
-
-      // --- Crop ---
-      if ( target.crop_cache )
-      {
-         CropParams cp = load_crop_cache( target.crop_cache );
-         if ( cp.valid )
-         {
-            double radius = (cp.diameter_arcmin * 60.0 * target.crop_margin)
-                           / (2.0 * cp.arcsec_per_pixel);
-            int x0 = std::max( 0, int(cp.center_x - radius) );
-            int y0 = std::max( 0, int(cp.center_y - radius) );
-            int x1 = std::min( W, int(cp.center_x + radius) );
-            int y1 = std::min( H, int(cp.center_y + radius) );
-            int cropW = x1 - x0, cropH = y1 - y0;
-            fprintf(stdout, "    WCS crop: (%.1f,%.1f) %.3f\"/px → [%d,%d]-[%d,%d] (%dx%d)\n",
-                    cp.center_x, cp.center_y, cp.arcsec_per_pixel,
-                    x0, y0, x1, y1, cropW, cropH);
-            pcl::Image cropped( cropW, cropH, pcl::ColorSpace::RGB );
-            for ( int c = 0; c < 3; c++ )
-               for ( int y = 0; y < cropH; y++ )
-                  for ( int x = 0; x < cropW; x++ )
-                     cropped(x,y,c) = image(x+x0, y+y0, c);
-            image = cropped;
-            W = cropW; H = cropH;
-         }
-         else
-         {
-            fprintf(stdout, "    WARNING: no crop cache — using full frame\n");
-         }
-      }
-
-      for ( int c = 0; c < 3; c++ )
-      {
-         result.input_stats[c] = compute_channel_stats(image, c);
-         fprintf(stdout, "    Input ch%d: median=%.6f MAD=%.6f min=%.6f max=%.6f\n",
-                 c, result.input_stats[c].median, result.input_stats[c].mad,
-                 result.input_stats[c].min, result.input_stats[c].max);
-      }
-
-      // --- Background extraction ---
-      fprintf(stdout, "    Background extraction...\n");
-      W = image.Width(); H = image.Height();
-      result.background = pcl::Image( W, H, pcl::ColorSpace::RGB );
-      result.subtracted = pcl::Image( W, H, pcl::ColorSpace::RGB );
-
-      pcl::BackgroundExtractionInstance bgInstance( pcl::TheBackgroundExtractionProcess );
-      *static_cast<pcl::pcl_enum*>( bgInstance.LockParameter( pcl::TheBGSampleGenerationModeParameter, 0 ) )
-         = pcl::BGSampleGenerationMode::Grid;
-      *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingXParameter, 0 ) ) = g_params.bg_grid_spacing;
-      *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingYParameter, 0 ) ) = g_params.bg_grid_spacing;
-
-      for ( int c = 0; c < 3; c++ )
-      {
-         pcl::DImage ch( W, H );
-         for ( int y = 0; y < H; y++ )
-            for ( int x = 0; x < W; x++ )
-               ch(x,y) = image(x,y,c);
-
-         pcl::BackgroundExtractor extractor( ch, bgInstance );
-         extractor.GenerateSamples();
-         extractor.FitBackground();
-         const pcl::DImage& bg = extractor.Background();
-
-         double v00 = bg(0,0), v10 = bg(W-1,0), v01 = bg(0,H-1);
-         double a = (v10 - v00) / (W - 1);
-         double b = (v01 - v00) / (H - 1);
-         double off = v00;
-         result.ref.bg_coeff_a[c] = a;
-         result.ref.bg_coeff_b[c] = b;
-         result.ref.bg_coeff_c[c] = off;
-
-         for ( int y = 0; y < H; y++ )
-            for ( int x = 0; x < W; x++ )
-            {
-               result.background(x,y,c) = float( bg(x,y) );
-               float sub = image(x,y,c) - float( a*x + b*y );
-               result.subtracted(x,y,c) = std::max( 0.0f, sub );
-            }
-
-         fprintf(stdout, "    ch%d: %zu samples  a=%.3e b=%.3e c=%.3e\n",
-                 c, extractor.SampleCount(),
-                 result.ref.bg_coeff_a[c], result.ref.bg_coeff_b[c], result.ref.bg_coeff_c[c]);
-      }
-      result.ref.has_bg_ref = true;
-   }
 
    // ==========================================================================
-   // VeraLux HyperMetric Stretch (both paths converge here)
+   // VeraLux HyperMetric Stretch
    // ==========================================================================
    fprintf(stdout, "    Applying VeraLux HyperMetric Stretch...\n");
    result.stretched = result.subtracted;
@@ -1053,10 +974,118 @@ static PipelineResult run_pipeline(const TargetInfo& target)
               result.output_stats[c].min, result.output_stats[c].max);
    }
 
-   result.lhe    = result.stretched;
-   result.final_ = result.stretched;
+   // ===================================================================
+   // Starlet wavelet decomposition — luminance-only detail enhancement
+   // ===================================================================
+   {
+      fprintf(stdout, "    Starlet wavelet decomposition (%d scales, luminance only)...\n",
+              g_params.wavelet_scales);
 
-   // Reference: commented-out post-processing steps preserved in test_realdata_veralux.cpp
+      int wW = result.stretched.Width(), wH = result.stretched.Height();
+
+      // Extract perceptual luminance (BT.709)
+      std::vector<float> lum( wW * wH );
+      for ( int y = 0; y < wH; y++ )
+         for ( int x = 0; x < wW; x++ )
+            lum[y * wW + x] = 0.2126f * result.stretched( x, y, 0 )
+                             + 0.7152f * result.stretched( x, y, 1 )
+                             + 0.0722f * result.stretched( x, y, 2 );
+
+      std::vector<float> gain = {
+         float( g_params.wavelet_gain0 ),
+         float( g_params.wavelet_gain1 ),
+         float( g_params.wavelet_gain2 ),
+         float( g_params.wavelet_gain3 ),
+         float( g_params.wavelet_gain4 )
+      };
+      gain.resize( g_params.wavelet_scales, 1.0f );
+
+      auto w = starlet_decompose_1d( lum, wW, wH, g_params.wavelet_scales );
+
+      // Spatial mask: suppress detail in background, boost in signal
+      // Compute luminance stats for mask thresholds
+      std::vector<float> sortedLum = lum;
+      std::sort( sortedLum.begin(), sortedLum.end() );
+      float wMed = sorted_percentile( sortedLum, 50.0f );
+      // MAD
+      std::vector<float> devs( wW * wH );
+      for ( int i = 0; i < wW * wH; i++ )
+         devs[i] = std::abs( lum[i] - wMed );
+      std::sort( devs.begin(), devs.end() );
+      float wMAD = sorted_percentile( devs, 50.0f );
+
+      float wMaskLo = wMed + float( g_params.wavelet_mask_lo_mad ) * wMAD;
+      float wMaskHi = wMed + float( g_params.wavelet_mask_hi_mad ) * wMAD;
+      fprintf(stdout, "    Wavelet mask: med=%.4f MAD=%.4f transition=[%.4f, %.4f]\n",
+              wMed, wMAD, wMaskLo, wMaskHi);
+
+      for ( int s = 0; s < g_params.wavelet_scales; s++ )
+      {
+         for ( int y = 0; y < wH; y++ )
+            for ( int x = 0; x < wW; x++ )
+            {
+               float L = lum[y * wW + x];
+
+               // Structure mask: ramps up from background into signal
+               float ts = (wMaskHi > wMaskLo)
+                        ? std::min( 1.0f, std::max( 0.0f, (L - wMaskLo) / (wMaskHi - wMaskLo) ) )
+                        : 0.0f;
+               ts = ts * ts * (3.0f - 2.0f * ts); // smoothstep
+
+               // Star suppression: detect sharp peaks via 3x3 local mean
+               float localMean = 0;
+               int cnt = 0;
+               for ( int ky2 = -1; ky2 <= 1; ky2++ )
+                  for ( int kx2 = -1; kx2 <= 1; kx2++ )
+                  {
+                     int yy2 = std::min( std::max( y + ky2, 0 ), wH - 1 );
+                     int xx2 = std::min( std::max( x + kx2, 0 ), wW - 1 );
+                     localMean += lum[yy2 * wW + xx2];
+                     cnt++;
+                  }
+               localMean /= cnt;
+               float peakness = L - localMean;
+               float starSuppress = std::exp( -peakness * 20.0f );
+
+               float mask = ts * starSuppress;
+               w.detail[s][y * wW + x] *= mask;
+            }
+         fprintf(stdout, "    scale %d: gain=%.2f (masked)\n", s, gain[s]);
+      }
+
+      std::vector<float> newLum = starlet_reconstruct_1d( w, gain,
+         float( g_params.wavelet_residual ) );
+
+      // Rescale RGB by pow(newL/oldL, 0.6) to preserve colour ratios
+      result.lhe = result.stretched;
+      for ( int y = 0; y < wH; y++ )
+         for ( int x = 0; x < wW; x++ )
+         {
+            float oldL = lum[y * wW + x];
+            float newL = newLum[y * wW + x];
+            if ( oldL > 1e-6f )
+            {
+               float scale = std::pow( newL / oldL, 0.6f );
+               for ( int c = 0; c < 3; c++ )
+                  result.lhe( x, y, c ) = std::min( 1.0f,
+                     std::max( 0.0f, result.stretched( x, y, c ) * scale ) );
+            }
+            else
+            {
+               for ( int c = 0; c < 3; c++ )
+                  result.lhe( x, y, c ) = newL;
+            }
+         }
+   }
+
+   for ( int c = 0; c < 3; c++ )
+   {
+      ChannelStats cs = compute_channel_stats( result.lhe, c );
+      fprintf(stdout, "    LHE ch%d: median=%.6f min=%.6f max=%.6f\n",
+              c, cs.median, cs.min, cs.max);
+   }
+
+   result.final_ = result.lhe;
 
    result.ok = true;
    return result;
@@ -1071,10 +1100,7 @@ static bool test_m51()
    TargetInfo target;
    target.name        = "M51";
    target.xisf_path   = "/Users/jonathan/Downloads/M51_NGC5194-RGB-session_1_crop3_cal.xisf";
-   target.fits_path   = nullptr;
    target.ref_path    = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m51_vl_reference.txt";
-   target.crop_cache  = nullptr;
-   target.crop_margin = 0;
 
    if ( !file_exists(target.xisf_path) )
    {
@@ -1145,16 +1171,12 @@ static bool test_m101()
 {
    TargetInfo target;
    target.name        = "M101";
-   target.xisf_path   = nullptr; // update to calibrated XISF when available
-   target.fits_path   = "/Users/jonathan/Downloads/M101_stacked.fits";
+   target.xisf_path   = "/Users/jonathan/Downloads/M101_stacked_cal.xisf";
    target.ref_path    = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m101_vl_reference.txt";
-   target.crop_cache  = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m101_crop.txt";
-   target.crop_margin = g_params.m101_crop_margin;
 
-   const char* check_path = target.is_calibrated() ? target.xisf_path : target.fits_path;
-   if ( !file_exists(check_path) )
+   if ( !file_exists(target.xisf_path) )
    {
-      fprintf(stdout, "\n    SKIP: %s not found\n", check_path);
+      fprintf(stdout, "\n    SKIP: %s not found\n", target.xisf_path);
       return true;
    }
 
