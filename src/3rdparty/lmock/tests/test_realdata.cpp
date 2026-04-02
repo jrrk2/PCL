@@ -278,10 +278,13 @@ static float sorted_percentile( const std::vector<float>& sorted, float p )
 struct TargetInfo
 {
    const char* name;
-   const char* fits_path;
+   const char* fits_path;      // raw FITS input (requires crop + background extraction)
+   const char* xisf_path;      // pre-calibrated XISF input (MGC + SPCC already applied)
    const char* ref_path;
-   const char* crop_cache;
-   double crop_margin;
+   const char* crop_cache;     // ignored when xisf_path is used
+   double      crop_margin;    // ignored when xisf_path is used
+
+   bool is_calibrated() const { return xisf_path != nullptr && xisf_path[0] != '\0'; }
 };
 
 static bool file_exists(const char* path)
@@ -339,6 +342,24 @@ static bool read_fits(const char* path, pcl::Image& image)
    catch ( const pcl::Exception& e )
    {
       fprintf(stderr, "    Error reading FITS: %s\n", pcl::IsoString( e.Message() ).c_str());
+      return false;
+   }
+}
+
+static bool read_xisf(const char* path, pcl::Image& image)
+{
+   try
+   {
+      pcl::XISFReader reader;
+      reader.Open( pcl::String( path ) );
+      reader.SelectImage( 0 );
+      reader.ReadImage( image );
+      reader.Close();
+      return true;
+   }
+   catch ( const pcl::Exception& e )
+   {
+      fprintf(stderr, "    Error reading XISF: %s\n", pcl::IsoString( e.Message() ).c_str());
       return false;
    }
 }
@@ -455,19 +476,16 @@ static ChannelStats compute_channel_stats(const pcl::Image& image, int channel)
 
 struct ReferenceValues
 {
-   // Background model (per-channel linear gradient coefficients)
-   double bg_coeff_a[3];
-   double bg_coeff_b[3];
-   double bg_coeff_c[3];
+   // Background model — only populated for raw FITS pipeline (not calibrated XISF)
+   bool   has_bg_ref = false;
+   double bg_coeff_a[3] = {};
+   double bg_coeff_b[3] = {};
+   double bg_coeff_c[3] = {};
 
    // VeraLux stretch diagnostics
-   double vl_anchor;           // Luminance anchor (black point)
-   double vl_log_d;            // Solved logD value (log10 scale)
-   double stretched_median[3]; // Post-stretch median per channel
-
-   // --- Reference: GHS diagnostics (not used in VeraLux pipeline) ---
-   // double stf_shadows[3];
-   // double stf_midtones[3];
+   double vl_anchor  = 0;
+   double vl_log_d   = 0;
+   double stretched_median[3] = {};
 };
 
 static bool save_reference(const char* path, const ReferenceValues& ref)
@@ -475,9 +493,10 @@ static bool save_reference(const char* path, const ReferenceValues& ref)
    FILE* f = fopen(path, "w");
    if ( !f ) return false;
    fprintf(f, "# VeraLux Real Data Reference Values\n");
-   for ( int c = 0; c < 3; c++ )
-      fprintf(f, "bg_coeff %d %.15e %.15e %.15e\n", c,
-              ref.bg_coeff_a[c], ref.bg_coeff_b[c], ref.bg_coeff_c[c]);
+   if ( ref.has_bg_ref )
+      for ( int c = 0; c < 3; c++ )
+         fprintf(f, "bg_coeff %d %.15e %.15e %.15e\n", c,
+                 ref.bg_coeff_a[c], ref.bg_coeff_b[c], ref.bg_coeff_c[c]);
    fprintf(f, "vl_anchor %.15e\n", ref.vl_anchor);
    fprintf(f, "vl_log_d %.15e\n",  ref.vl_log_d);
    for ( int c = 0; c < 3; c++ )
@@ -496,7 +515,7 @@ static bool load_reference(const char* path, ReferenceValues& ref)
       if ( line[0] == '#' ) continue;
       int c; double v1, v2, v3;
       if ( sscanf(line, "bg_coeff %d %le %le %le", &c, &v1, &v2, &v3) == 4 && c >= 0 && c < 3 )
-         { ref.bg_coeff_a[c]=v1; ref.bg_coeff_b[c]=v2; ref.bg_coeff_c[c]=v3; continue; }
+         { ref.bg_coeff_a[c]=v1; ref.bg_coeff_b[c]=v2; ref.bg_coeff_c[c]=v3; ref.has_bg_ref=true; continue; }
       if ( sscanf(line, "vl_anchor %le", &v1) == 1 )
          { ref.vl_anchor = v1; continue; }
       if ( sscanf(line, "vl_log_d %le", &v1) == 1 )
@@ -884,101 +903,138 @@ static PipelineResult run_pipeline(const TargetInfo& target)
    PipelineResult result;
    result.ok = false;
 
-   // Read FITS
    pcl::Image image;
-   fprintf(stdout, "\n    Reading %s ...\n", target.fits_path);
-   if ( !read_fits(target.fits_path, image) )
-      return result;
 
-   int W = image.Width(), H = image.Height();
-   int C = image.NumberOfChannels();
-   fprintf(stdout, "    Image: %dx%d, %d channels\n", W, H, C);
-   if ( C < 3 ) { fprintf(stderr, "    Error: expected RGB image\n"); return result; }
-
-   // --- Crop ---
-   if ( target.crop_cache )
+   if ( target.is_calibrated() )
    {
-      CropParams cp = load_crop_cache( target.crop_cache );
-      if ( cp.valid )
+      // =======================================================================
+      // Calibrated XISF path: MGC + SPCC already applied in PixInsight.
+      // Skip crop and background extraction — go straight to VeraLux stretch.
+      // =======================================================================
+      fprintf(stdout, "\n    Reading calibrated XISF: %s ...\n", target.xisf_path);
+      if ( !read_xisf(target.xisf_path, image) )
+         return result;
+
+      int W = image.Width(), H = image.Height();
+      int C = image.NumberOfChannels();
+      fprintf(stdout, "    Image: %dx%d, %d channels (pre-calibrated)\n", W, H, C);
+      if ( C < 3 ) { fprintf(stderr, "    Error: expected RGB image\n"); return result; }
+
+      for ( int c = 0; c < 3; c++ )
       {
-         double radius = (cp.diameter_arcmin * 60.0 * target.crop_margin)
-                        / (2.0 * cp.arcsec_per_pixel);
-         int x0 = std::max( 0, int(cp.center_x - radius) );
-         int y0 = std::max( 0, int(cp.center_y - radius) );
-         int x1 = std::min( W, int(cp.center_x + radius) );
-         int y1 = std::min( H, int(cp.center_y + radius) );
-         int cropW = x1 - x0, cropH = y1 - y0;
-         fprintf(stdout, "    WCS crop: (%.1f,%.1f) %.3f\"/px → [%d,%d]-[%d,%d] (%dx%d)\n",
-                 cp.center_x, cp.center_y, cp.arcsec_per_pixel,
-                 x0, y0, x1, y1, cropW, cropH);
-         pcl::Image cropped( cropW, cropH, pcl::ColorSpace::RGB );
-         for ( int c = 0; c < 3; c++ )
-            for ( int y = 0; y < cropH; y++ )
-               for ( int x = 0; x < cropW; x++ )
-                  cropped(x,y,c) = image(x+x0, y+y0, c);
-         image = cropped;
-         W = cropW; H = cropH;
+         result.input_stats[c] = compute_channel_stats(image, c);
+         fprintf(stdout, "    Input ch%d: median=%.6f MAD=%.6f min=%.6f max=%.6f\n",
+                 c, result.input_stats[c].median, result.input_stats[c].mad,
+                 result.input_stats[c].min, result.input_stats[c].max);
       }
-      else
+
+      // No background model — fill result images for output consistency
+      result.background = pcl::Image( W, H, pcl::ColorSpace::RGB ); // zero
+      result.subtracted = image;
+      result.ref.has_bg_ref = false;
+   }
+   else
+   {
+      // =======================================================================
+      // Raw FITS path: crop → background extraction → VeraLux stretch.
+      // =======================================================================
+      fprintf(stdout, "\n    Reading FITS: %s ...\n", target.fits_path);
+      if ( !read_fits(target.fits_path, image) )
+         return result;
+
+      int W = image.Width(), H = image.Height();
+      int C = image.NumberOfChannels();
+      fprintf(stdout, "    Image: %dx%d, %d channels\n", W, H, C);
+      if ( C < 3 ) { fprintf(stderr, "    Error: expected RGB image\n"); return result; }
+
+      // --- Crop ---
+      if ( target.crop_cache )
       {
-         fprintf(stdout, "    WARNING: no crop cache — using full frame\n");
-      }
-   }
-
-   // Input statistics
-   for ( int c = 0; c < 3; c++ )
-   {
-      result.input_stats[c] = compute_channel_stats(image, c);
-      fprintf(stdout, "    Input ch%d: median=%.6f MAD=%.6f min=%.6f max=%.6f\n",
-              c, result.input_stats[c].median, result.input_stats[c].mad,
-              result.input_stats[c].min, result.input_stats[c].max);
-   }
-
-   // --- Step 1: Background extraction (per channel, linear gradient) ---
-   fprintf(stdout, "    Background extraction...\n");
-   result.background = pcl::Image( W, H, pcl::ColorSpace::RGB );
-   result.subtracted = pcl::Image( W, H, pcl::ColorSpace::RGB );
-
-   pcl::BackgroundExtractionInstance bgInstance( pcl::TheBackgroundExtractionProcess );
-   *static_cast<pcl::pcl_enum*>( bgInstance.LockParameter( pcl::TheBGSampleGenerationModeParameter, 0 ) )
-      = pcl::BGSampleGenerationMode::Grid;
-   *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingXParameter, 0 ) ) = g_params.bg_grid_spacing;
-   *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingYParameter, 0 ) ) = g_params.bg_grid_spacing;
-
-   for ( int c = 0; c < 3; c++ )
-   {
-      pcl::DImage ch( W, H );
-      for ( int y = 0; y < H; y++ )
-         for ( int x = 0; x < W; x++ )
-            ch(x,y) = image(x,y,c);
-
-      pcl::BackgroundExtractor extractor( ch, bgInstance );
-      extractor.GenerateSamples();
-      extractor.FitBackground();
-      const pcl::DImage& bg = extractor.Background();
-
-      double v00 = bg(0,0), v10 = bg(W-1,0), v01 = bg(0,H-1);
-      double a = (v10 - v00) / (W - 1);
-      double b = (v01 - v00) / (H - 1);
-      double off = v00;
-      result.ref.bg_coeff_a[c] = a;
-      result.ref.bg_coeff_b[c] = b;
-      result.ref.bg_coeff_c[c] = off;
-
-      for ( int y = 0; y < H; y++ )
-         for ( int x = 0; x < W; x++ )
+         CropParams cp = load_crop_cache( target.crop_cache );
+         if ( cp.valid )
          {
-            result.background(x,y,c) = float( bg(x,y) );
-            float sub = image(x,y,c) - float( a*x + b*y );
-            result.subtracted(x,y,c) = std::max( 0.0f, sub );
+            double radius = (cp.diameter_arcmin * 60.0 * target.crop_margin)
+                           / (2.0 * cp.arcsec_per_pixel);
+            int x0 = std::max( 0, int(cp.center_x - radius) );
+            int y0 = std::max( 0, int(cp.center_y - radius) );
+            int x1 = std::min( W, int(cp.center_x + radius) );
+            int y1 = std::min( H, int(cp.center_y + radius) );
+            int cropW = x1 - x0, cropH = y1 - y0;
+            fprintf(stdout, "    WCS crop: (%.1f,%.1f) %.3f\"/px → [%d,%d]-[%d,%d] (%dx%d)\n",
+                    cp.center_x, cp.center_y, cp.arcsec_per_pixel,
+                    x0, y0, x1, y1, cropW, cropH);
+            pcl::Image cropped( cropW, cropH, pcl::ColorSpace::RGB );
+            for ( int c = 0; c < 3; c++ )
+               for ( int y = 0; y < cropH; y++ )
+                  for ( int x = 0; x < cropW; x++ )
+                     cropped(x,y,c) = image(x+x0, y+y0, c);
+            image = cropped;
+            W = cropW; H = cropH;
          }
+         else
+         {
+            fprintf(stdout, "    WARNING: no crop cache — using full frame\n");
+         }
+      }
 
-      fprintf(stdout, "    ch%d: %zu samples  a=%.3e b=%.3e c=%.3e\n",
-              c, extractor.SampleCount(),
-              result.ref.bg_coeff_a[c], result.ref.bg_coeff_b[c], result.ref.bg_coeff_c[c]);
+      for ( int c = 0; c < 3; c++ )
+      {
+         result.input_stats[c] = compute_channel_stats(image, c);
+         fprintf(stdout, "    Input ch%d: median=%.6f MAD=%.6f min=%.6f max=%.6f\n",
+                 c, result.input_stats[c].median, result.input_stats[c].mad,
+                 result.input_stats[c].min, result.input_stats[c].max);
+      }
+
+      // --- Background extraction ---
+      fprintf(stdout, "    Background extraction...\n");
+      W = image.Width(); H = image.Height();
+      result.background = pcl::Image( W, H, pcl::ColorSpace::RGB );
+      result.subtracted = pcl::Image( W, H, pcl::ColorSpace::RGB );
+
+      pcl::BackgroundExtractionInstance bgInstance( pcl::TheBackgroundExtractionProcess );
+      *static_cast<pcl::pcl_enum*>( bgInstance.LockParameter( pcl::TheBGSampleGenerationModeParameter, 0 ) )
+         = pcl::BGSampleGenerationMode::Grid;
+      *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingXParameter, 0 ) ) = g_params.bg_grid_spacing;
+      *static_cast<pcl::int32*>( bgInstance.LockParameter( pcl::TheBGGridSpacingYParameter, 0 ) ) = g_params.bg_grid_spacing;
+
+      for ( int c = 0; c < 3; c++ )
+      {
+         pcl::DImage ch( W, H );
+         for ( int y = 0; y < H; y++ )
+            for ( int x = 0; x < W; x++ )
+               ch(x,y) = image(x,y,c);
+
+         pcl::BackgroundExtractor extractor( ch, bgInstance );
+         extractor.GenerateSamples();
+         extractor.FitBackground();
+         const pcl::DImage& bg = extractor.Background();
+
+         double v00 = bg(0,0), v10 = bg(W-1,0), v01 = bg(0,H-1);
+         double a = (v10 - v00) / (W - 1);
+         double b = (v01 - v00) / (H - 1);
+         double off = v00;
+         result.ref.bg_coeff_a[c] = a;
+         result.ref.bg_coeff_b[c] = b;
+         result.ref.bg_coeff_c[c] = off;
+
+         for ( int y = 0; y < H; y++ )
+            for ( int x = 0; x < W; x++ )
+            {
+               result.background(x,y,c) = float( bg(x,y) );
+               float sub = image(x,y,c) - float( a*x + b*y );
+               result.subtracted(x,y,c) = std::max( 0.0f, sub );
+            }
+
+         fprintf(stdout, "    ch%d: %zu samples  a=%.3e b=%.3e c=%.3e\n",
+                 c, extractor.SampleCount(),
+                 result.ref.bg_coeff_a[c], result.ref.bg_coeff_b[c], result.ref.bg_coeff_c[c]);
+      }
+      result.ref.has_bg_ref = true;
    }
 
-   // --- Step 2: VeraLux HyperMetric Stretch ---
+   // ==========================================================================
+   // VeraLux HyperMetric Stretch (both paths converge here)
+   // ==========================================================================
    fprintf(stdout, "    Applying VeraLux HyperMetric Stretch...\n");
    result.stretched = result.subtracted;
    double solvedLogD = vl_stretch( result.stretched, g_params );
@@ -997,53 +1053,10 @@ static PipelineResult run_pipeline(const TargetInfo& target)
               result.output_stats[c].min, result.output_stats[c].max);
    }
 
-   // Alias lhe and final_ to stretched (post-processing steps below are commented out)
    result.lhe    = result.stretched;
    result.final_ = result.stretched;
 
-   // =========================================================================
-   // REFERENCE: Post-processing pipeline (commented out, preserved for future use)
-   //
-   // The steps below were part of the original GHS-based pipeline.
-   // Re-enable selectively if needed after VeraLux stretch.
-   // =========================================================================
-
-   // --- Reference: GHS stretch (replaced by VeraLux above) ---
-   // [See original test_realdata.cpp lines 973-1092]
-   // ghs_stretch(), binary-search for D, per-channel shadow clipping.
-
-   // --- Reference: Richardson-Lucy deconvolution (luminance only) ---
-   // [See original test_realdata.cpp lines 1104-1141]
-   // make_gaussian_psf(), convolve_2d(), richardson_lucy()
-   // Applied after stretch; rescales RGB by newL/oldL.
-
-   // --- Reference: Chrominance noise reduction (Lab a*/b* smoothing) ---
-   // [See original test_realdata.cpp lines 1143-1233]
-   // Gaussian blur on CIE a* and b* channels, preserving L*.
-
-   // --- Reference: Starlet wavelet decomposition + contrast ---
-   // [See original test_realdata.cpp lines 1243-1338]
-   // à trous B3 spline, masked per-scale gain, luminance rescale.
-
-   // --- Reference: Black point subtraction ---
-   // [See original test_realdata.cpp lines 1354-1375]
-   // Per-channel median - N*MAD clip and rescale.
-
-   // --- Reference: Adaptive gamma ---
-   // [See original test_realdata.cpp lines 1381-1413]
-   // Smoothstep from gamma=1 to gamma_min based on luminance.
-
-   // --- Reference: Post-gamma noise suppression ---
-   // [See original test_realdata.cpp lines 1420-1478]
-   // Gaussian blur masked to background (luminance < nsLo).
-
-   // --- Reference: Smoothstep saturation boost ---
-   // [See original test_realdata.cpp lines 1480-1526]
-   // HSL-space sat scaled by luminance-weighted smoothstep.
-
-   // --- Reference: Star reduction ---
-   // [See original test_realdata.cpp lines 1532-1623]
-   // Gaussian neighbourhood, local MAD, sqrt falloff dimming.
+   // Reference: commented-out post-processing steps preserved in test_realdata_veralux.cpp
 
    result.ok = true;
    return result;
@@ -1056,27 +1069,23 @@ static PipelineResult run_pipeline(const TargetInfo& target)
 static bool test_m51()
 {
    TargetInfo target;
-   target.name       = "M51";
-   target.fits_path  = "/Users/jonathan/Downloads/M51_NGC5194-RGB-session_1.fits";
-   target.ref_path   = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m51_vl_reference.txt";
-   target.crop_cache = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m51_crop.txt";
-   target.crop_margin = g_params.m51_crop_margin;
+   target.name        = "M51";
+   target.xisf_path   = "/Users/jonathan/Downloads/M51_NGC5194-RGB-session_1_crop3_cal.xisf";
+   target.fits_path   = nullptr;
+   target.ref_path    = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m51_vl_reference.txt";
+   target.crop_cache  = nullptr;
+   target.crop_margin = 0;
 
-   if ( !file_exists(target.fits_path) )
+   if ( !file_exists(target.xisf_path) )
    {
-      fprintf(stdout, "\n    SKIP: %s not found\n", target.fits_path);
+      fprintf(stdout, "\n    SKIP: %s not found\n", target.xisf_path);
       return true;
    }
 
    PipelineResult result = run_pipeline(target);
    TEST_ASSERT(result.ok, "Pipeline failed for M51");
 
-   // Save outputs
    char path[512];
-   snprintf(path, sizeof(path), "%s/m51_vl_background.xisf", g_output_dir);
-   write_xisf(path, result.background, "M51_background");
-   snprintf(path, sizeof(path), "%s/m51_vl_subtracted.xisf", g_output_dir);
-   write_xisf(path, result.subtracted, "M51_subtracted");
    snprintf(path, sizeof(path), "%s/m51_vl_stretched.xisf", g_output_dir);
    write_xisf(path, result.stretched, "M51_vl_stretched");
    snprintf(path, sizeof(path), "%s/m51_vl_stretched.png", g_output_dir);
@@ -1090,24 +1099,15 @@ static bool test_m51()
       return true;
    }
 
-   // Regression against saved reference
    ReferenceValues ref = {};
    if ( load_reference(target.ref_path, ref) )
    {
       fprintf(stdout, "    Comparing against reference...\n");
+      TEST_ASSERT_NEAR(result.ref.vl_anchor, ref.vl_anchor, 1e-5, "M51 vl_anchor");
+      TEST_ASSERT_NEAR(result.ref.vl_log_d,  ref.vl_log_d,  1e-3, "M51 vl_log_d");
       for ( int c = 0; c < 3; c++ )
       {
          char msg[128];
-         snprintf(msg, sizeof(msg), "M51 ch%d bg_coeff_a", c);
-         TEST_ASSERT_NEAR(result.ref.bg_coeff_a[c], ref.bg_coeff_a[c], 1e-8, msg);
-         snprintf(msg, sizeof(msg), "M51 ch%d bg_coeff_b", c);
-         TEST_ASSERT_NEAR(result.ref.bg_coeff_b[c], ref.bg_coeff_b[c], 1e-8, msg);
-         snprintf(msg, sizeof(msg), "M51 ch%d bg_coeff_c", c);
-         TEST_ASSERT_NEAR(result.ref.bg_coeff_c[c], ref.bg_coeff_c[c], 1e-6, msg);
-         snprintf(msg, sizeof(msg), "M51 vl_anchor");
-         TEST_ASSERT_NEAR(result.ref.vl_anchor, ref.vl_anchor, 1e-5, msg);
-         snprintf(msg, sizeof(msg), "M51 vl_log_d");
-         TEST_ASSERT_NEAR(result.ref.vl_log_d, ref.vl_log_d, 1e-3, msg);
          snprintf(msg, sizeof(msg), "M51 ch%d stretched_median", c);
          TEST_ASSERT_NEAR(result.ref.stretched_median[c], ref.stretched_median[c], 0.02, msg);
       }
@@ -1118,30 +1118,20 @@ static bool test_m51()
       fprintf(stdout, "    No reference file — run with --save-reference to create one.\n");
    }
 
-   // Sanity checks:
-   // VeraLux ready_to_use targets a background of ~vl_target_bg.
-   // All channels should land near target (within ±0.06 to allow for colour differences).
    for ( int c = 0; c < 3; c++ )
    {
       char msg[128];
-      snprintf(msg, sizeof(msg), "M51 ch%d stretched median should be near target bg", c);
+      snprintf(msg, sizeof(msg), "M51 ch%d median near target bg", c);
       TEST_ASSERT(result.output_stats[c].median > float(g_params.vl_target_bg) - 0.06f, msg);
       TEST_ASSERT(result.output_stats[c].median < float(g_params.vl_target_bg) + 0.10f, msg);
-
-      snprintf(msg, sizeof(msg), "M51 ch%d max should not exceed 1.0", c);
+      snprintf(msg, sizeof(msg), "M51 ch%d max <= 1.0", c);
       TEST_ASSERT(result.output_stats[c].max <= 1.0 + 1e-6, msg);
-
-      snprintf(msg, sizeof(msg), "M51 ch%d min should be ≥ 0", c);
+      snprintf(msg, sizeof(msg), "M51 ch%d min >= 0", c);
       TEST_ASSERT(result.output_stats[c].min >= -1e-6, msg);
    }
-
-   // Colour physics check: VeraLux preserves colour ratios in luminance-preserving
-   // mode (grip=1). At grip=1, all channels share the same stretch, so medians
-   // should not diverge wildly — verify no single channel is blown out.
    bool anyVisible = false;
    for ( int c = 0; c < 3; c++ )
-      if ( result.output_stats[c].median > 0.05 )
-         anyVisible = true;
+      if ( result.output_stats[c].median > 0.05 ) anyVisible = true;
    TEST_ASSERT(anyVisible, "At least one channel should have visible signal");
 
    return true;
@@ -1154,15 +1144,17 @@ static bool test_m51()
 static bool test_m101()
 {
    TargetInfo target;
-   target.name       = "M101";
-   target.fits_path  = "/Users/jonathan/Downloads/M101_stacked.fits";
-   target.ref_path   = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m101_vl_reference.txt";
-   target.crop_cache = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m101_crop.txt";
+   target.name        = "M101";
+   target.xisf_path   = nullptr; // update to calibrated XISF when available
+   target.fits_path   = "/Users/jonathan/Downloads/M101_stacked.fits";
+   target.ref_path    = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m101_vl_reference.txt";
+   target.crop_cache  = "/Users/jonathan/PCL/src/3rdparty/lmock/tests/reference/m101_crop.txt";
    target.crop_margin = g_params.m101_crop_margin;
 
-   if ( !file_exists(target.fits_path) )
+   const char* check_path = target.is_calibrated() ? target.xisf_path : target.fits_path;
+   if ( !file_exists(check_path) )
    {
-      fprintf(stdout, "\n    SKIP: %s not found\n", target.fits_path);
+      fprintf(stdout, "\n    SKIP: %s not found\n", check_path);
       return true;
    }
 
@@ -1170,10 +1162,6 @@ static bool test_m101()
    TEST_ASSERT(result.ok, "Pipeline failed for M101");
 
    char path[512];
-   snprintf(path, sizeof(path), "%s/m101_vl_background.xisf", g_output_dir);
-   write_xisf(path, result.background, "M101_background");
-   snprintf(path, sizeof(path), "%s/m101_vl_subtracted.xisf", g_output_dir);
-   write_xisf(path, result.subtracted, "M101_subtracted");
    snprintf(path, sizeof(path), "%s/m101_vl_stretched.xisf", g_output_dir);
    write_xisf(path, result.stretched, "M101_vl_stretched");
    snprintf(path, sizeof(path), "%s/m101_vl_stretched.png", g_output_dir);
@@ -1191,19 +1179,24 @@ static bool test_m101()
    if ( load_reference(target.ref_path, ref) )
    {
       fprintf(stdout, "    Comparing against reference...\n");
+      if ( result.ref.has_bg_ref && ref.has_bg_ref )
+      {
+         for ( int c = 0; c < 3; c++ )
+         {
+            char msg[128];
+            snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_a", c);
+            TEST_ASSERT_NEAR(result.ref.bg_coeff_a[c], ref.bg_coeff_a[c], 1e-8, msg);
+            snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_b", c);
+            TEST_ASSERT_NEAR(result.ref.bg_coeff_b[c], ref.bg_coeff_b[c], 1e-8, msg);
+            snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_c", c);
+            TEST_ASSERT_NEAR(result.ref.bg_coeff_c[c], ref.bg_coeff_c[c], 1e-6, msg);
+         }
+      }
+      TEST_ASSERT_NEAR(result.ref.vl_anchor, ref.vl_anchor, 1e-5, "M101 vl_anchor");
+      TEST_ASSERT_NEAR(result.ref.vl_log_d,  ref.vl_log_d,  1e-3, "M101 vl_log_d");
       for ( int c = 0; c < 3; c++ )
       {
          char msg[128];
-         snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_a", c);
-         TEST_ASSERT_NEAR(result.ref.bg_coeff_a[c], ref.bg_coeff_a[c], 1e-8, msg);
-         snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_b", c);
-         TEST_ASSERT_NEAR(result.ref.bg_coeff_b[c], ref.bg_coeff_b[c], 1e-8, msg);
-         snprintf(msg, sizeof(msg), "M101 ch%d bg_coeff_c", c);
-         TEST_ASSERT_NEAR(result.ref.bg_coeff_c[c], ref.bg_coeff_c[c], 1e-6, msg);
-         snprintf(msg, sizeof(msg), "M101 vl_anchor");
-         TEST_ASSERT_NEAR(result.ref.vl_anchor, ref.vl_anchor, 1e-5, msg);
-         snprintf(msg, sizeof(msg), "M101 vl_log_d");
-         TEST_ASSERT_NEAR(result.ref.vl_log_d, ref.vl_log_d, 1e-3, msg);
          snprintf(msg, sizeof(msg), "M101 ch%d stretched_median", c);
          TEST_ASSERT_NEAR(result.ref.stretched_median[c], ref.stretched_median[c], 0.02, msg);
       }
@@ -1217,15 +1210,16 @@ static bool test_m101()
    for ( int c = 0; c < 3; c++ )
    {
       char msg[128];
-      snprintf(msg, sizeof(msg), "M101 ch%d stretched median near target", c);
+      snprintf(msg, sizeof(msg), "M101 ch%d median near target", c);
       TEST_ASSERT(result.output_stats[c].median > float(g_params.vl_target_bg) - 0.06f, msg);
       TEST_ASSERT(result.output_stats[c].median < float(g_params.vl_target_bg) + 0.10f, msg);
-      snprintf(msg, sizeof(msg), "M101 ch%d max ≤ 1.0", c);
+      snprintf(msg, sizeof(msg), "M101 ch%d max <= 1.0", c);
       TEST_ASSERT(result.output_stats[c].max <= 1.0 + 1e-6, msg);
    }
 
    return true;
 }
+
 
 // ============================================================================
 // Main
