@@ -92,9 +92,12 @@ struct PipelineParams
    // Background extraction
    int    bg_grid_spacing   = 200;
 
-   // Auto-stretch
-   double stretch_clip      = -2.80;
-   double stretch_target_bg = 0.12;
+   // GHS (Generalised Hyperbolic Stretch)
+   double ghs_D             = 0.15;   // target median (auto-D); >1.0 = fixed D
+   double ghs_b             = 0.0;    // shape: 0=asinh-like, >0 towards log
+   double ghs_SP            = 0.0;    // symmetry point (0 = auto from data)
+   double ghs_LP            = 0.0;    // local intensity protect (0 = auto)
+   double ghs_clip          = -2.80;  // shadows clip in sigma units
 
    // Chrominance noise reduction
    double chroma_sigma      = 1.5;
@@ -104,36 +107,36 @@ struct PipelineParams
    int    wavelet_scales    = 5;
    double wavelet_gain0     = 0.0;   // scale 0: kill noise
    double wavelet_gain1     = 0.6;   // scale 1: slight detail
-   double wavelet_gain2     = 1.8;   // scale 2: MAIN boost (arms)
-   double wavelet_gain3     = 1.5;   // scale 3: structure
-   double wavelet_gain4     = 0.6;   // scale 4: suppress halo
-   double wavelet_residual  = 0.95;   // residual (smooth) scale factor
-   double wavelet_mask_lo_mad = 1.5; // mask starts at median + N*MAD
-   double wavelet_mask_hi_mad = 4.0; // mask fully active at median + N*MAD
+   double wavelet_gain2     = 1.2;   // scale 2: arm contrast
+   double wavelet_gain3     = 1.0;   // scale 3: structure depth
+   double wavelet_gain4     = 0.5;   // scale 4: larger scale separation
+   double wavelet_residual  = 1.2;   // restore smooth glow   // residual (smooth) scale factor
+   double wavelet_mask_lo_mad = 1.8; // mask starts at median + N*MAD
+   double wavelet_mask_hi_mad = 4.5; // mask fully active at median + N*MAD
 
    // Post-wavelet noise suppression
-   double noise_sigma       = 0.5;
+   double noise_sigma       = 0.8;
    double noise_mask_lo_mad = 1.5;
    double noise_mask_hi_mad = 4.0;
 
    // Star reduction
-   double star_dim          = 0.85;  // reduce to this fraction
+   double star_dim          = 0.92;  // reduce to this fraction
    int    star_radius       = 3;
-   double star_excess       = 3.0;   // excess in units of local ring MAD
+   double star_excess       = 4.5;   // excess in units of local ring MAD
    double star_min_bright   = 0.35;  // minimum absolute brightness
 
    // Black point
-   double black_mad         = 2.5;   // median - N*MAD
+   double black_mad         = 2.4;   // median - N*MAD
 
    // Adaptive gamma (smoothstep from 1.0 to gamma based on luminance)
-   double gamma             = 0.7;
+   double gamma             = 0.8;
    double gamma_lo_mad      = 1.0;   // smoothstep starts at median + N*MAD
    double gamma_hi_mad      = 5.0;   // smoothstep ends at median + N*MAD
 
    // Smoothstep saturation boost
-   double sat_boost         = 1.8;
+   double sat_boost         = 1.3;
    double sat_lo_mad        = 1.0;   // smoothstep starts at median + N*MAD
-   double sat_hi_mad        = 6.0;   // smoothstep ends at median + N*MAD
+   double sat_hi_mad        = 4.0;   // smoothstep ends at median + N*MAD
 };
 
 static PipelineParams g_params;
@@ -158,9 +161,12 @@ static void parse_param( const char* arg )
    else if ( key == "m101.crop" )             g_params.m101_crop_margin = val;
    // Background
    else if ( key == "bg.grid" )               g_params.bg_grid_spacing = int(val);
-   // Stretch
-   else if ( key == "stretch.clip" )          g_params.stretch_clip = val;
-   else if ( key == "stretch.target" )        g_params.stretch_target_bg = val;
+   // GHS
+   else if ( key == "ghs.D" )                 g_params.ghs_D = val;
+   else if ( key == "ghs.b" )                 g_params.ghs_b = val;
+   else if ( key == "ghs.SP" )                g_params.ghs_SP = val;
+   else if ( key == "ghs.LP" )                g_params.ghs_LP = val;
+   else if ( key == "ghs.clip" )              g_params.ghs_clip = val;
    // Chrominance
    else if ( key == "chroma.sigma" )          g_params.chroma_sigma = val;
    else if ( key == "chroma.radius" )         g_params.chroma_radius = int(val);
@@ -202,8 +208,8 @@ static void print_params()
    fprintf(stdout, "Parameters:\n");
    fprintf(stdout, "  m51.crop=%.1f  m101.crop=%.1f  bg.grid=%d\n",
            g_params.m51_crop_margin, g_params.m101_crop_margin, g_params.bg_grid_spacing);
-   fprintf(stdout, "  stretch.clip=%.2f  stretch.target=%.2f\n",
-           g_params.stretch_clip, g_params.stretch_target_bg);
+   fprintf(stdout, "  ghs: D=%.1f b=%.1f SP=%.3f LP=%.3f clip=%.2f\n",
+           g_params.ghs_D, g_params.ghs_b, g_params.ghs_SP, g_params.ghs_LP, g_params.ghs_clip);
    fprintf(stdout, "  chroma.sigma=%.1f  chroma.radius=%d\n",
            g_params.chroma_sigma, g_params.chroma_radius);
    fprintf(stdout, "  wavelet: scales=%d gains=[%.1f, %.1f, %.1f, %.1f, %.1f] residual=%.1f\n",
@@ -503,6 +509,50 @@ static ChannelStats compute_channel_stats(const pcl::Image& image, int channel)
    s.mad = deviations[deviations.size() / 2];
 
    return s;
+}
+
+// ============================================================================
+// Generalised Hyperbolic Stretch (GHS)
+//
+// Mike Cranfield's formulation. For b=0 this is an inverse hyperbolic sine
+// (asinh) stretch; b>0 moves towards logarithmic; b<0 towards linear.
+//
+// Parameters:
+//   D  - stretch factor (higher = stronger nonlinear stretch)
+//   b  - shape parameter (0 = asinh)
+//   SP - symmetry point (where the stretch is centred)
+//   LP - local intensity protect (shadows below this are linear)
+// ============================================================================
+
+static float ghs_stretch( float x, float D, float b, float SP, float LP )
+{
+   if ( x <= 0.0f ) return 0.0f;
+   if ( x >= 1.0f ) return 1.0f;
+
+   // Shadows protection: linear below LP
+   if ( LP > 0 && x < LP )
+      return x * ghs_stretch( LP, D, b, SP, LP ) / LP;
+
+   // For b == 0: asinh-based stretch
+   // f(x) = asinh(D * (x - SP)) / asinh(D * (1 - SP))  [normalised]
+   if ( std::abs( b ) < 1e-6f )
+   {
+      float q1 = std::asinh( D * (x - SP) );
+      float q0 = std::asinh( D * (0.0f - SP) );
+      float q2 = std::asinh( D * (1.0f - SP) );
+      if ( std::abs( q2 - q0 ) < 1e-10f ) return x;
+      return (q1 - q0) / (q2 - q0);
+   }
+
+   // General case: b != 0
+   // f(x) = (exp(b * asinh(D*(x-SP))) - exp(b * asinh(D*(0-SP)))) /
+   //         (exp(b * asinh(D*(1-SP))) - exp(b * asinh(D*(0-SP))))
+   float e1 = std::exp( b * std::asinh( D * (x - SP) ) );
+   float e0 = std::exp( b * std::asinh( D * (0.0f - SP) ) );
+   float e2 = std::exp( b * std::asinh( D * (1.0f - SP) ) );
+   float denom = e2 - e0;
+   if ( std::abs( denom ) < 1e-10f ) return x;
+   return (e1 - e0) / denom;
 }
 
 // ============================================================================
@@ -829,15 +879,12 @@ static PipelineResult run_pipeline(const TargetInfo& target)
               c, result.ref.bg_coeff_a[c], result.ref.bg_coeff_b[c], result.ref.bg_coeff_c[c]);
    }
 
-   // --- Step 2: Auto-stretch the subtracted image ---
-   // Per-channel shadows clipping (each channel's own pedestal) but shared
-   // midtones balance (same gain) so color ratios are preserved.
-   fprintf(stdout, "    Computing auto-stretch...\n");
+   // --- Step 2: Generalised Hyperbolic Stretch (GHS) ---
+   // Per-channel shadows clipping, then shared GHS stretch to preserve colour.
+   fprintf(stdout, "    Computing GHS stretch...\n");
 
-   double clip = g_params.stretch_clip;
-   double targetBg = g_params.stretch_target_bg;
-   double shadows[3], midtones[3];
-   double midtonesSum = 0;
+   double clip = g_params.ghs_clip;
+   double shadows[3];
 
    for ( int c = 0; c < 3; c++ )
    {
@@ -846,34 +893,112 @@ static PipelineResult run_pipeline(const TargetInfo& target)
       double center = cs.median;
       fprintf(stdout, "    Subtracted ch%d: median=%.6f sigma=%.6f\n",
               c, center, sigma);
-
-      // Per-channel shadows clipping
       shadows[c] = (1 + sigma != 1) ? std::max( 0.0, std::min( 1.0, center + clip * sigma ) ) : 0.0;
-      // Per-channel midtones (will be averaged below)
-      midtones[c] = pcl::HistogramTransformation::MTF( targetBg, center - shadows[c] );
-      midtonesSum += midtones[c];
    }
 
-   // Shared midtones balance = average gain across channels
-   double sharedMidtones = midtonesSum / 3;
-
-   // Build DisplayFunction with per-channel shadows, shared midtones
+   // Compute shared SP from average median (after shadow subtraction)
+   double avgMedian = 0;
    for ( int c = 0; c < 3; c++ )
    {
-      result.ref.stf_shadows[c] = shadows[c];
-      result.ref.stf_midtones[c] = sharedMidtones;
-      fprintf(stdout, "    STF ch%d: shadows=%.6f midtones=%.6f\n",
-              c, shadows[c], sharedMidtones);
+      ChannelStats cs = compute_channel_stats(result.subtracted, c);
+      avgMedian += (cs.median - shadows[c]) / (1.0 - shadows[c]);
    }
-   pcl::DisplayFunction df(
-      pcl::DVector( { sharedMidtones, sharedMidtones, sharedMidtones, 0.5 } ),  // midtones
-      pcl::DVector( { shadows[0], shadows[1], shadows[2], 0.0 } ),              // shadows
-      pcl::DVector( { 1.0, 1.0, 1.0, 1.0 } )                                   // highlights
-   );
+   avgMedian /= 3;
 
-   // Apply stretch
-   result.stretched = result.subtracted;
-   df >> result.stretched;
+   float ghsB  = float( g_params.ghs_b );
+   float ghsSP = (g_params.ghs_SP > 0) ? float( g_params.ghs_SP ) : float( avgMedian );
+   float ghsLP = (g_params.ghs_LP > 0) ? float( g_params.ghs_LP ) : float( avgMedian * 0.5 );
+
+   // Binary search for D that places the stretched median at target_bg.
+   // Evaluate on the green channel median (middle channel, good proxy).
+   float targetBg = float( g_params.ghs_D ); // reuse D param as target if auto
+   if ( targetBg > 1.0f )
+   {
+      // D was specified directly — use it
+      float ghsD = targetBg;
+      fprintf(stdout, "    GHS: using fixed D=%.1f\n", ghsD);
+
+      for ( int c = 0; c < 3; c++ )
+      {
+         result.ref.stf_shadows[c] = shadows[c];
+         result.ref.stf_midtones[c] = ghsD;
+         fprintf(stdout, "    GHS ch%d: shadows=%.6f\n", c, shadows[c]);
+      }
+      fprintf(stdout, "    GHS params: D=%.1f b=%.1f SP=%.6f LP=%.6f\n",
+              ghsD, ghsB, ghsSP, ghsLP);
+
+      result.stretched = result.subtracted;
+      int sW = result.stretched.Width(), sH = result.stretched.Height();
+      for ( int c = 0; c < 3; c++ )
+      {
+         float sh = float( shadows[c] );
+         float range = 1.0f - sh;
+         if ( range < 1e-6f ) range = 1e-6f;
+         for ( int y = 0; y < sH; y++ )
+            for ( int x = 0; x < sW; x++ )
+            {
+               float v = result.stretched( x, y, c );
+               v = std::max( 0.0f, (v - sh) / range );
+               v = ghs_stretch( v, ghsD, ghsB, ghsSP, ghsLP );
+               result.stretched( x, y, c ) = std::min( 1.0f, std::max( 0.0f, v ) );
+            }
+      }
+   }
+   else
+   {
+      // D <= 1.0 means "target median luminance" — search for optimal D
+      float targetMed = targetBg;
+      if ( targetMed <= 0 ) targetMed = 0.15f;
+
+      // Binary search: what D maps avgMedian to targetMed?
+      float dLo = 1.0f, dHi = 100000.0f;
+      float bestD = 100.0f;
+
+      for ( int iter = 0; iter < 50; iter++ )
+      {
+         float dMid = (dLo + dHi) * 0.5f;
+         float stretched = ghs_stretch( float(avgMedian), dMid, ghsB, ghsSP, ghsLP );
+
+         if ( stretched < targetMed )
+            dLo = dMid;
+         else
+            dHi = dMid;
+
+         if ( std::abs( stretched - targetMed ) < 1e-5f )
+            break;
+      }
+      bestD = (dLo + dHi) * 0.5f;
+
+      fprintf(stdout, "    GHS auto-D: target median=%.3f, found D=%.1f (maps %.6f -> %.6f)\n",
+              targetMed, bestD, float(avgMedian),
+              ghs_stretch( float(avgMedian), bestD, ghsB, ghsSP, ghsLP ));
+
+      for ( int c = 0; c < 3; c++ )
+      {
+         result.ref.stf_shadows[c] = shadows[c];
+         result.ref.stf_midtones[c] = bestD;
+         fprintf(stdout, "    GHS ch%d: shadows=%.6f\n", c, shadows[c]);
+      }
+      fprintf(stdout, "    GHS params: D=%.1f b=%.1f SP=%.6f LP=%.6f\n",
+              bestD, ghsB, ghsSP, ghsLP);
+
+      result.stretched = result.subtracted;
+      int sW = result.stretched.Width(), sH = result.stretched.Height();
+      for ( int c = 0; c < 3; c++ )
+      {
+         float sh = float( shadows[c] );
+         float range = 1.0f - sh;
+         if ( range < 1e-6f ) range = 1e-6f;
+         for ( int y = 0; y < sH; y++ )
+            for ( int x = 0; x < sW; x++ )
+            {
+               float v = result.stretched( x, y, c );
+               v = std::max( 0.0f, (v - sh) / range );
+               v = ghs_stretch( v, bestD, ghsB, ghsSP, ghsLP );
+               result.stretched( x, y, c ) = std::min( 1.0f, std::max( 0.0f, v ) );
+            }
+      }
+   }
 
    // Output statistics
    for ( int c = 0; c < 3; c++ )
@@ -1023,11 +1148,19 @@ static PipelineResult run_pipeline(const TargetInfo& target)
             for ( int x = 0; x < wW; x++ )
             {
                float L = lum[y * wW + x];
-               float t = (wMaskHi > wMaskLo)
-                       ? std::min( 1.0f, std::max( 0.0f, (L - wMaskLo) / (wMaskHi - wMaskLo) ) )
-                       : 0.0f;
-               t = t * t * (3.0f - 2.0f * t); // smoothstep
-               w.detail[s][y * wW + x] *= t;
+
+               // Structure mask: ramps up from background into signal
+               float ts = (wMaskHi > wMaskLo)
+                        ? std::min( 1.0f, std::max( 0.0f, (L - wMaskLo) / (wMaskHi - wMaskLo) ) )
+                        : 0.0f;
+               ts = ts * ts * (3.0f - 2.0f * ts); // smoothstep
+
+               // Highlight rolloff: protects saturated cores from ringing
+               float th = std::min( 1.0f, std::max( 0.0f, (L - 0.5f) / (0.85f - 0.5f) ) );
+               th = th * th * (3.0f - 2.0f * th); // smoothstep
+
+               float mask = ts * (1.0f - th);
+               w.detail[s][y * wW + x] *= mask;
             }
          fprintf(stdout, "    scale %d: gain=%.2f (masked)\n", s, gain[s]);
       }
@@ -1088,47 +1221,61 @@ static PipelineResult run_pipeline(const TargetInfo& target)
          for ( int x = 0; x < finW; x++ )
             finLum[y * finW + x] = (result.final_( x, y, 0 ) + result.final_( x, y, 1 ) + result.final_( x, y, 2 )) / 3.0f;
 
-      // For each pixel, compute local minimum in an annulus (ring at radius starR)
-      // If pixel >> local min, it's likely a star peak
+      // Build Gaussian kernel for neighbourhood (sigma = starR/2)
+      const int kSize = 2 * starR + 1;
+      const float starSigma = float( starR ) / 2.0f;
+      std::vector<float> gk( kSize * kSize );
+      float gkSum = 0;
+      for ( int ky = -starR; ky <= starR; ky++ )
+         for ( int kx = -starR; kx <= starR; kx++ )
+         {
+            // Exclude center pixel from the neighbourhood estimate
+            float w = (kx == 0 && ky == 0) ? 0.0f
+                    : std::exp( -(kx*kx + ky*ky) / (2.0f * starSigma * starSigma) );
+            gk[(ky+starR) * kSize + (kx+starR)] = w;
+            gkSum += w;
+         }
+      for ( auto& w : gk ) w /= gkSum;
+
+      // Detect stars: center vs Gaussian-weighted neighbourhood
       std::vector<float> starMask( finW * finH, 0.0f );
       for ( int y = starR; y < finH - starR; y++ )
          for ( int x = starR; x < finW - starR; x++ )
          {
             float centerL = finLum[y * finW + x];
 
-            // Compute median of surrounding ring pixels
-            float ring[24]; // max ring pixels for r=3
-            int rCount = 0;
+            // Gaussian-weighted local mean (excluding center)
+            float localMean = 0;
             for ( int ky = -starR; ky <= starR; ky++ )
                for ( int kx = -starR; kx <= starR; kx++ )
-               {
-                  int dist2 = kx*kx + ky*ky;
-                  // Ring: pixels at distance ~starR (between r-1 and r+0.5)
-                  if ( dist2 >= (starR-1)*(starR-1) && dist2 <= starR*starR + starR )
-                  {
-                     int yy = y + ky, xx = x + kx;
-                     if ( yy >= 0 && yy < finH && xx >= 0 && xx < finW && rCount < 24 )
-                        ring[rCount++] = finLum[yy * finW + xx];
-                  }
-               }
+                  localMean += gk[(ky+starR) * kSize + (kx+starR)]
+                             * finLum[(y+ky) * finW + (x+kx)];
 
-            if ( rCount < 4 ) continue;
-            std::sort( ring, ring + rCount );
-            float ringMedian = ring[rCount / 2];
+            // Collect neighbourhood values for MAD estimate
+            float nbVals[49]; // max for r=3: 7x7=49
+            int nCount = 0;
+            for ( int ky = -starR; ky <= starR; ky++ )
+               for ( int kx = -starR; kx <= starR; kx++ )
+                  if ( !(kx == 0 && ky == 0) )
+                     nbVals[nCount++] = finLum[(y+ky) * finW + (x+kx)];
 
-            // Compute local MAD of ring
-            float ringDevs[24];
-            for ( int i = 0; i < rCount; i++ )
-               ringDevs[i] = std::abs( ring[i] - ringMedian );
-            std::sort( ringDevs, ringDevs + rCount );
-            float ringMAD = ringDevs[rCount / 2];
-            if ( ringMAD < 1e-6f ) ringMAD = 1e-6f;
+            // Median of neighbourhood
+            std::sort( nbVals, nbVals + nCount );
+            float nbMedian = nbVals[nCount / 2];
 
-            // Star criterion: excess relative to local MAD, and absolutely bright
-            float excess = centerL - ringMedian;
-            float starExcess = float( g_params.star_excess ) * ringMAD;
-            if ( excess > starExcess && centerL > float( g_params.star_min_bright ) )
-               starMask[y * finW + x] = std::min( 1.0f, (excess - starExcess) / (4.0f * starExcess) );
+            // MAD of neighbourhood
+            float nbDevs[49];
+            for ( int i = 0; i < nCount; i++ )
+               nbDevs[i] = std::abs( nbVals[i] - nbMedian );
+            std::sort( nbDevs, nbDevs + nCount );
+            float localMAD = nbDevs[nCount / 2];
+            if ( localMAD < 1e-6f ) localMAD = 1e-6f;
+
+            // Star criterion: excess over local mean, relative to local MAD
+            float excess = centerL - localMean;
+            float threshold = float( g_params.star_excess ) * localMAD;
+            if ( excess > threshold && centerL > float( g_params.star_min_bright ) )
+               starMask[y * finW + x] = std::min( 1.0f, (excess - threshold) / (4.0f * threshold) );
          }
 
       // Dilate the star mask slightly (3×3) to cover star halos
@@ -1143,12 +1290,12 @@ static PipelineResult run_pipeline(const TargetInfo& target)
             dilated[y * finW + x] = maxV;
          }
 
-      // Apply star dimming
+      // Apply star dimming with sqrt falloff (gentler edges)
       int starCount = 0;
       for ( int y = 0; y < finH; y++ )
          for ( int x = 0; x < finW; x++ )
          {
-            float sm = dilated[y * finW + x];
+            float sm = std::pow( dilated[y * finW + x], 0.5f );
             if ( sm > 0.0f )
             {
                float dim = 1.0f - sm * (1.0f - starDimFactor);
