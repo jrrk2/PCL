@@ -130,11 +130,11 @@ struct PipelineParams
    // Starlet wavelet
    int    wavelet_scales    = 5;
    double wavelet_gain0     = 0.0;
-   double wavelet_gain1     = 0.4;
-   double wavelet_gain2     = 0.9;
-   double wavelet_gain3     = 1.1;
+   double wavelet_gain1     = 0.7;
+   double wavelet_gain2     = 1.0;
+   double wavelet_gain3     = 1.3;
    double wavelet_gain4     = 0.5;
-   double wavelet_residual  = 1.0;
+   double wavelet_residual  = 1.3;
    double wavelet_mask_lo_mad = 1.0;
    double wavelet_mask_hi_mad = 3.0;
 
@@ -189,6 +189,16 @@ static void parse_param( const char* arg )
    else if ( key == "vl.wr" )        g_params.vl_weights[0] = val;
    else if ( key == "vl.wg" )        g_params.vl_weights[1] = val;
    else if ( key == "vl.wb" )        g_params.vl_weights[2] = val;
+   // Wavelet params
+   else if ( key == "wavelet.scales" )   g_params.wavelet_scales = int(val);
+   else if ( key == "wavelet.gain0" )    g_params.wavelet_gain0 = val;
+   else if ( key == "wavelet.gain1" )    g_params.wavelet_gain1 = val;
+   else if ( key == "wavelet.gain2" )    g_params.wavelet_gain2 = val;
+   else if ( key == "wavelet.gain3" )    g_params.wavelet_gain3 = val;
+   else if ( key == "wavelet.gain4" )    g_params.wavelet_gain4 = val;
+   else if ( key == "wavelet.residual" ) g_params.wavelet_residual = val;
+   else if ( key == "wavelet.maskLo" )   g_params.wavelet_mask_lo_mad = val;
+   else if ( key == "wavelet.maskHi" )   g_params.wavelet_mask_hi_mad = val;
    else
       fprintf(stderr, "WARNING: unknown parameter --%s\n", key.c_str());
 }
@@ -203,6 +213,12 @@ static void print_params()
            g_params.vl_weights[0], g_params.vl_weights[1], g_params.vl_weights[2],
            g_params.vl_adaptive ? "yes" : "no",
            g_params.vl_add_pedestal ? "yes" : "no");
+   fprintf(stdout, "  Wavelet: scales=%d gains=[%.2f, %.2f, %.2f, %.2f, %.2f] residual=%.2f\n",
+           g_params.wavelet_scales,
+           g_params.wavelet_gain0, g_params.wavelet_gain1, g_params.wavelet_gain2,
+           g_params.wavelet_gain3, g_params.wavelet_gain4, g_params.wavelet_residual);
+   fprintf(stdout, "  Wavelet mask: lo=%.1f hi=%.1f MAD\n",
+           g_params.wavelet_mask_lo_mad, g_params.wavelet_mask_hi_mad);
    fprintf(stdout, "\n");
 }
 
@@ -434,6 +450,171 @@ static bool write_png(const char* path, const pcl::Image& image)
    png_destroy_write_struct(&png, &info);
    fclose(f);
    return true;
+}
+
+static bool read_png(const char* path, pcl::Image& image)
+{
+   FILE* f = fopen(path, "rb");
+   if ( !f ) return false;
+
+   png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+   png_infop info = png_create_info_struct(png);
+   if ( setjmp(png_jmpbuf(png)) ) { png_destroy_read_struct(&png, &info, nullptr); fclose(f); return false; }
+
+   png_init_io(png, f);
+   png_read_info(png, info);
+
+   int W = png_get_image_width(png, info);
+   int H = png_get_image_height(png, info);
+   int bitDepth = png_get_bit_depth(png, info);
+   int colorType = png_get_color_type(png, info);
+
+   // Convert palette to RGB
+   if ( colorType == PNG_COLOR_TYPE_PALETTE ) png_set_palette_to_rgb(png);
+   // Expand gray < 8 bit
+   if ( colorType == PNG_COLOR_TYPE_GRAY && bitDepth < 8 ) png_set_expand_gray_1_2_4_to_8(png);
+   // Strip alpha
+   if ( colorType & PNG_COLOR_MASK_ALPHA ) png_set_strip_alpha(png);
+   // Convert gray to RGB
+   if ( colorType == PNG_COLOR_TYPE_GRAY || colorType == PNG_COLOR_TYPE_GRAY_ALPHA )
+      png_set_gray_to_rgb(png);
+   // Expand to 16-bit if 8-bit
+   if ( bitDepth < 16 ) png_set_expand_16(png);
+   // Byte swap for 16-bit
+   png_set_swap(png);
+
+   png_read_update_info(png, info);
+   int rowBytes = png_get_rowbytes(png, info);
+   int C = 3;
+
+   image = pcl::Image( W, H, pcl::ColorSpace::RGB );
+
+   std::vector<uint8_t> rowBuf( rowBytes );
+   for ( int y = 0; y < H; y++ )
+   {
+      png_read_row(png, rowBuf.data(), nullptr);
+      const uint16_t* row = reinterpret_cast<const uint16_t*>(rowBuf.data());
+      for ( int x = 0; x < W; x++ )
+         for ( int c = 0; c < C; c++ )
+            image(x, y, c) = float( row[x * C + c] ) / 65535.0f;
+   }
+
+   png_read_end(png, nullptr);
+   png_destroy_read_struct(&png, &info, nullptr);
+   fclose(f);
+   return true;
+}
+
+// ============================================================================
+// Histogram-based image comparison for optimization
+// ============================================================================
+
+static constexpr int HIST_BINS = 256;
+
+struct ImageHistogram
+{
+   float lum[HIST_BINS];     // luminance histogram (normalized)
+   float ch[3][HIST_BINS];   // per-channel histograms (normalized)
+   float percentiles[11];    // luminance p0,p10,p20,...,p100
+};
+
+static ImageHistogram compute_histogram(const pcl::Image& image)
+{
+   ImageHistogram h = {};
+   int W = image.Width(), H = image.Height();
+   int N = W * H;
+   if ( N == 0 ) return h;
+
+   std::vector<float> lum(N);
+   for ( int y = 0; y < H; y++ )
+      for ( int x = 0; x < W; x++ )
+      {
+         float L = 0.2126f * image(x,y,0) + 0.7152f * image(x,y,1) + 0.0722f * image(x,y,2);
+         lum[y*W+x] = L;
+         int bin = std::min(HIST_BINS-1, std::max(0, int(L * HIST_BINS)));
+         h.lum[bin] += 1.0f;
+         for ( int c = 0; c < 3; c++ )
+         {
+            int cb = std::min(HIST_BINS-1, std::max(0, int(image(x,y,c) * HIST_BINS)));
+            h.ch[c][cb] += 1.0f;
+         }
+      }
+
+   // Normalize
+   float invN = 1.0f / N;
+   for ( int i = 0; i < HIST_BINS; i++ )
+   {
+      h.lum[i] *= invN;
+      for ( int c = 0; c < 3; c++ )
+         h.ch[c][i] *= invN;
+   }
+
+   // Compute luminance percentiles
+   std::sort(lum.begin(), lum.end());
+   for ( int p = 0; p <= 10; p++ )
+   {
+      int idx = std::min(N-1, int(float(p) / 10.0f * (N-1)));
+      h.percentiles[p] = lum[idx];
+   }
+
+   return h;
+}
+
+// Score: lower = better match to reference
+static float histogram_distance(const ImageHistogram& a, const ImageHistogram& b)
+{
+   // Earth-mover distance on luminance CDF
+   float lumEMD = 0;
+   float cumA = 0, cumB = 0;
+   for ( int i = 0; i < HIST_BINS; i++ )
+   {
+      cumA += a.lum[i];
+      cumB += b.lum[i];
+      lumEMD += std::abs(cumA - cumB);
+   }
+
+   // Per-channel EMD
+   float chEMD = 0;
+   for ( int c = 0; c < 3; c++ )
+   {
+      cumA = cumB = 0;
+      for ( int i = 0; i < HIST_BINS; i++ )
+      {
+         cumA += a.ch[c][i];
+         cumB += b.ch[c][i];
+         chEMD += std::abs(cumA - cumB);
+      }
+   }
+
+   // Percentile distance — weight upper percentiles more heavily
+   // p0..p100 in steps of 10: index 0=p0, 5=p50, 7=p70, 9=p90, 10=p100
+   float pDist = 0;
+   for ( int p = 0; p <= 10; p++ )
+   {
+      float w = (p >= 7) ? 3.0f : 1.0f;  // triple weight on p70..p100 (signal region)
+      pDist += w * std::abs(a.percentiles[p] - b.percentiles[p]);
+   }
+
+   // Signal brightness penalty: if candidate upper percentiles are much dimmer
+   // than reference, add a strong penalty. This prevents the optimizer from
+   // finding "dark and flat" false minima.
+   float signalPenalty = 0;
+   for ( int p = 7; p <= 10; p++ )  // p70, p80, p90, p100
+   {
+      float diff = b.percentiles[p] - a.percentiles[p];  // positive if candidate is dimmer
+      if ( diff > 0 )
+         signalPenalty += diff * diff;  // quadratic penalty for being too dim
+   }
+
+   // Dynamic range penalty: reference images have wide spread between background and signal
+   float refRange = b.percentiles[9] - b.percentiles[2];   // p90 - p20
+   float candRange = a.percentiles[9] - a.percentiles[2];
+   float rangePenalty = 0;
+   if ( candRange < refRange * 0.5f )
+      rangePenalty = (refRange - candRange) * (refRange - candRange);
+
+   return lumEMD * 2.0f + chEMD * 0.5f + pDist * 50.0f
+        + signalPenalty * 500.0f + rangePenalty * 200.0f;
 }
 
 // ============================================================================
@@ -1199,6 +1380,214 @@ static bool test_m101()
 
 
 // ============================================================================
+// Optimization mode
+// ============================================================================
+
+struct OptTarget
+{
+   const char* name;
+   const char* xisf_path;
+   const char* ref_png;   // hand-finished reference PNG from ~/Downloads/samples/
+};
+
+static const OptTarget g_opt_targets[] = {
+   { "M51",  "/Users/jonathan/Downloads/M51_NGC5194-RGB-session_1_crop3_cal.xisf",
+             "/Users/jonathan/Downloads/samples/M51_VeraLux_Stretch_PI.png" },
+   { "M101", "/Users/jonathan/Downloads/M101_stacked_cal.xisf",
+             "/Users/jonathan/Downloads/samples/M101_VeraLux_Stretch_PI.png" },
+};
+static constexpr int NUM_OPT_TARGETS = sizeof(g_opt_targets) / sizeof(g_opt_targets[0]);
+
+// Run pipeline on a single target with current g_params, return score against reference.
+// Lower score = better match. Returns a large value on failure.
+static float optimize_single( const OptTarget& tgt, const ImageHistogram& refHist, int iteration )
+{
+   TargetInfo ti;
+   ti.name = tgt.name;
+   ti.xisf_path = tgt.xisf_path;
+   ti.ref_path = "";
+
+   PipelineResult result = run_pipeline(ti);
+   if ( !result.ok ) return 1e6f;
+
+   ImageHistogram candidate = compute_histogram( result.final_ );
+   float score = histogram_distance( candidate, refHist );
+
+   // Save best iteration outputs
+   char path[512];
+   snprintf(path, sizeof(path), "%s/%s_opt_%03d.png", g_output_dir, tgt.name, iteration);
+   write_png(path, result.final_);
+
+   return score;
+}
+
+static void run_optimization( int max_iterations )
+{
+   fprintf(stdout, "\n=== OPTIMIZATION MODE (%d iterations) ===\n\n", max_iterations);
+
+   // Load reference PNGs
+   ImageHistogram refHists[NUM_OPT_TARGETS];
+   bool haveRef[NUM_OPT_TARGETS] = {};
+
+   for ( int t = 0; t < NUM_OPT_TARGETS; t++ )
+   {
+      pcl::Image refImg;
+      if ( file_exists(g_opt_targets[t].ref_png) && read_png(g_opt_targets[t].ref_png, refImg) )
+      {
+         refHists[t] = compute_histogram(refImg);
+         haveRef[t] = true;
+         fprintf(stdout, "Loaded reference: %s (%dx%d)\n",
+                 g_opt_targets[t].ref_png, refImg.Width(), refImg.Height());
+      }
+      else
+      {
+         fprintf(stderr, "WARNING: reference PNG not found: %s\n", g_opt_targets[t].ref_png);
+      }
+   }
+
+   // Count available targets
+   int numAvail = 0;
+   for ( int t = 0; t < NUM_OPT_TARGETS; t++ )
+      if ( haveRef[t] && file_exists(g_opt_targets[t].xisf_path) ) numAvail++;
+
+   if ( numAvail == 0 )
+   {
+      fprintf(stderr, "ERROR: No targets available with both XISF input and reference PNG.\n");
+      return;
+   }
+
+   // Parameter ranges: { default, min, max }
+   struct ParamRange { double* ptr; const char* name; double lo; double hi; };
+   ParamRange ranges[] = {
+      { &g_params.vl_target_bg,        "vl.target",      0.04,  0.15 },
+      { &g_params.vl_protect_b,        "vl.b",           1.0,  12.0  },
+      { &g_params.vl_convergence,      "vl.conv",        1.5,   6.0  },
+      { &g_params.wavelet_gain1,       "wavelet.gain1",  0.0,   2.5  },
+      { &g_params.wavelet_gain2,       "wavelet.gain2",  0.0,   3.0  },
+      { &g_params.wavelet_gain3,       "wavelet.gain3",  0.0,   3.5  },
+      { &g_params.wavelet_gain4,       "wavelet.gain4",  0.0,   2.5  },
+      { &g_params.wavelet_residual,    "wavelet.resid",  0.9,   1.8  },  // >=0.9: never dim the base image
+      { &g_params.wavelet_mask_lo_mad, "wavelet.maskLo", 0.5,   3.0  },
+      { &g_params.wavelet_mask_hi_mad, "wavelet.maskHi", 1.5,   8.0  },
+   };
+   int numParams = sizeof(ranges) / sizeof(ranges[0]);
+
+   // Save initial (default) values
+   std::vector<double> defaults(numParams);
+   for ( int p = 0; p < numParams; p++ )
+      defaults[p] = *ranges[p].ptr;
+
+   // Best tracking
+   float bestScore = 1e6f;
+   std::vector<double> bestParams = defaults;
+   int bestIter = -1;
+
+   std::mt19937 rng(42);
+   std::uniform_real_distribution<double> uni(0.0, 1.0);
+
+   for ( int iter = 0; iter < max_iterations; iter++ )
+   {
+      fprintf(stdout, "\n========== Iteration %d/%d ==========\n", iter + 1, max_iterations);
+
+      // Generate parameters: systematic grid for first few, then random perturbation
+      if ( iter == 0 )
+      {
+         // Iteration 0: use defaults
+         for ( int p = 0; p < numParams; p++ )
+            *ranges[p].ptr = defaults[p];
+      }
+      else if ( iter <= numParams )
+      {
+         // Systematic: perturb one parameter at a time from best known
+         for ( int p = 0; p < numParams; p++ )
+            *ranges[p].ptr = bestParams[p];
+         int pidx = (iter - 1) % numParams;
+         // Alternate between pushing toward lo and hi
+         double range = ranges[pidx].hi - ranges[pidx].lo;
+         double offset = (iter % 2 == 0) ? range * 0.2 : -range * 0.2;
+         *ranges[pidx].ptr = std::min( ranges[pidx].hi,
+            std::max( ranges[pidx].lo, bestParams[pidx] + offset ) );
+      }
+      else if ( iter <= numParams * 2 )
+      {
+         // Systematic: explore opposite direction
+         for ( int p = 0; p < numParams; p++ )
+            *ranges[p].ptr = bestParams[p];
+         int pidx = (iter - numParams - 1) % numParams;
+         double range = ranges[pidx].hi - ranges[pidx].lo;
+         double offset = (iter % 2 == 0) ? -range * 0.3 : range * 0.3;
+         *ranges[pidx].ptr = std::min( ranges[pidx].hi,
+            std::max( ranges[pidx].lo, bestParams[pidx] + offset ) );
+      }
+      else
+      {
+         // Random perturbation around best known — shrinking radius over time
+         double temperature = 1.0 - double(iter) / double(max_iterations);
+         temperature = std::max(0.1, temperature);
+         for ( int p = 0; p < numParams; p++ )
+         {
+            double range = ranges[p].hi - ranges[p].lo;
+            double noise = (uni(rng) * 2.0 - 1.0) * range * 0.3 * temperature;
+            double v = bestParams[p] + noise;
+            *ranges[p].ptr = std::min( ranges[p].hi, std::max( ranges[p].lo, v ) );
+         }
+      }
+
+      // Print current parameters
+      fprintf(stdout, "  Params:");
+      for ( int p = 0; p < numParams; p++ )
+         fprintf(stdout, " %s=%.3f", ranges[p].name, *ranges[p].ptr);
+      fprintf(stdout, "\n");
+
+      // Score against all available targets
+      float totalScore = 0;
+      int scored = 0;
+      for ( int t = 0; t < NUM_OPT_TARGETS; t++ )
+      {
+         if ( !haveRef[t] || !file_exists(g_opt_targets[t].xisf_path) ) continue;
+         float s = optimize_single( g_opt_targets[t], refHists[t], iter );
+         fprintf(stdout, "  %s score: %.2f\n", g_opt_targets[t].name, s);
+         totalScore += s;
+         scored++;
+      }
+
+      float avgScore = (scored > 0) ? totalScore / scored : 1e6f;
+      fprintf(stdout, "  ** Average score: %.2f (best so far: %.2f at iter %d)\n",
+              avgScore, bestScore, bestIter + 1);
+
+      if ( avgScore < bestScore )
+      {
+         bestScore = avgScore;
+         bestIter = iter;
+         for ( int p = 0; p < numParams; p++ )
+            bestParams[p] = *ranges[p].ptr;
+
+         fprintf(stdout, "  >>> NEW BEST! <<<\n");
+
+         // Save best PNGs with special name
+         for ( int t = 0; t < NUM_OPT_TARGETS; t++ )
+         {
+            char src[512], dst[512];
+            snprintf(src, sizeof(src), "%s/%s_opt_%03d.png", g_output_dir, g_opt_targets[t].name, iter);
+            snprintf(dst, sizeof(dst), "%s/%s_opt_best.png", g_output_dir, g_opt_targets[t].name);
+            rename(src, dst);
+         }
+      }
+   }
+
+   // Final report
+   fprintf(stdout, "\n=== OPTIMIZATION COMPLETE ===\n");
+   fprintf(stdout, "Best score: %.2f (iteration %d)\n", bestScore, bestIter + 1);
+   fprintf(stdout, "Best parameters:\n");
+   for ( int p = 0; p < numParams; p++ )
+      fprintf(stdout, "  --%s=%.4f\n", ranges[p].name, bestParams[p]);
+   fprintf(stdout, "\nCommand line to reproduce:\n  ./test_realdata");
+   for ( int p = 0; p < numParams; p++ )
+      fprintf(stdout, " --%s=%.4f", ranges[p].name, bestParams[p]);
+   fprintf(stdout, "\n\nBest output PNGs saved to %s/*_opt_best.png\n", g_output_dir);
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 
@@ -1208,18 +1597,32 @@ int main(int argc, char** argv)
 {
    QApplication app(argc, argv);
 
+   bool optimize = false;
+   int opt_iterations = 50;
+
    for ( int i = 1; i < argc; i++ )
    {
       if ( strcmp(argv[i], "--save-reference") == 0 )
          g_save_reference = true;
+      else if ( strcmp(argv[i], "--optimize") == 0 )
+         optimize = true;
+      else if ( strncmp(argv[i], "--optimize=", 11) == 0 )
+      {
+         optimize = true;
+         opt_iterations = std::max(1, atoi(argv[i] + 11));
+      }
       else if ( strncmp(argv[i], "--", 2) == 0 && strchr(argv[i], '=') )
          parse_param( argv[i] );
       else if ( strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 )
       {
-         fprintf(stdout, "Usage: %s [--save-reference] [--key=value ...]\n\n", argv[0]);
+         fprintf(stdout, "Usage: %s [--save-reference] [--optimize[=N]] [--key=value ...]\n\n", argv[0]);
          fprintf(stdout, "VeraLux params: vl.logD vl.b vl.conv vl.grip vl.shconv vl.target\n");
          fprintf(stdout, "                vl.wr vl.wg vl.wb (sensor weights)\n");
-         fprintf(stdout, "                vl.adaptive (0|1)\n\n");
+         fprintf(stdout, "                vl.adaptive (0|1)\n");
+         fprintf(stdout, "Wavelet params: wavelet.scales wavelet.gain0..gain4 wavelet.residual\n");
+         fprintf(stdout, "                wavelet.maskLo wavelet.maskHi\n\n");
+         fprintf(stdout, "--optimize[=N]  Run N iterations (default 50) of parameter optimization\n");
+         fprintf(stdout, "                comparing against reference PNGs in ~/Downloads/samples/\n\n");
          print_params();
          return 0;
       }
@@ -1238,18 +1641,27 @@ int main(int argc, char** argv)
       pcl::Module, GetMockFunctionResolver(), PCL_API_Version, nullptr );
 
    fprintf(stdout, "Mock API initialized.\n");
-   if ( g_save_reference )
-      fprintf(stdout, "Mode: SAVING REFERENCE VALUES\n");
-   print_params();
-   fprintf(stdout, "--- Real Data Regression Tests ---\n\n");
 
-   run_test("M51 (NGC 5194) VeraLux pipeline",  test_m51);
-   run_test("M101 (Pinwheel) VeraLux pipeline", test_m101);
+   if ( optimize )
+   {
+      print_params();
+      run_optimization( opt_iterations );
+   }
+   else
+   {
+      if ( g_save_reference )
+         fprintf(stdout, "Mode: SAVING REFERENCE VALUES\n");
+      print_params();
+      fprintf(stdout, "--- Real Data Regression Tests ---\n\n");
 
-   fprintf(stdout, "\n--- Results ---\n");
-   fprintf(stdout, "  %d tests run, %d passed, %d failed\n",
-           g_tests_run, g_tests_passed, g_tests_failed);
-   fprintf(stdout, "\n%s\n", g_tests_failed == 0 ? "ALL TESTS PASSED" : "SOME TESTS FAILED");
+      run_test("M51 (NGC 5194) VeraLux pipeline",  test_m51);
+      run_test("M101 (Pinwheel) VeraLux pipeline", test_m101);
+
+      fprintf(stdout, "\n--- Results ---\n");
+      fprintf(stdout, "  %d tests run, %d passed, %d failed\n",
+              g_tests_run, g_tests_passed, g_tests_failed);
+      fprintf(stdout, "\n%s\n", g_tests_failed == 0 ? "ALL TESTS PASSED" : "SOME TESTS FAILED");
+   }
 
    delete pcl::Module;
    return g_tests_failed > 0 ? 1 : 0;
