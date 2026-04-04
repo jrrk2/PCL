@@ -47,9 +47,8 @@ struct ThreadData {
 static std::map<const void*, ThreadData*> g_thread_data;
 static std::mutex g_thread_mutex;
 
-// Helper function to log a thread function call
-static void LogThreadCall(const char* function, const void* thread_handle) {
-    std::cout << "PCL Thread: " << function << " called with handle=" << thread_handle << std::endl;
+// Helper function to log a thread function call (silent by default)
+static void LogThreadCall(const char* /*function*/, const void* /*thread_handle*/) {
 }
 
 // Get thread data by handle

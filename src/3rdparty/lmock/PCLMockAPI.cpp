@@ -3061,8 +3061,7 @@ api_bool ViewList_SetViewListCurrentViewUpdatedEventRoutine(control_handle, api_
 // =============================================================
 
 
-void LogDebug(const std::string& message) {
-  qDebug() << "[PCLMockAPI] " << message.c_str() << "\n";    
+void LogDebug(const std::string& /*message*/) {
 }
 
 struct FFTTransform {

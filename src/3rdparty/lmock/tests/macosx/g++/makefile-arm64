@@ -16,7 +16,7 @@ LHE_OBJ_DIR=$(PCLSRCDIR)/modules/processes/contrib/zvrastil/LocalHistogramEquali
 LHE_SRC_DIR=$(PCLSRCDIR)/modules/processes/contrib/zvrastil/LocalHistogramEqualization
 
 .PHONY: all
-all: $(OBJ_DIR)/test_fft $(OBJ_DIR)/test_bgextraction $(OBJ_DIR)/test_stretch $(OBJ_DIR)/test_realdata
+all: $(OBJ_DIR)/test_fft $(OBJ_DIR)/test_bgextraction $(OBJ_DIR)/test_stretch $(OBJ_DIR)/test_realdata $(OBJ_DIR)/xisf_wcs $(OBJ_DIR)/galaxy_processor
 
 #
 # Compiler/linker flags
@@ -27,7 +27,11 @@ ARCH = -arch arm64
 SYSROOT = -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
 QT_BASE = /opt/homebrew/Cellar/qt@5/5.15.18
 
-CXXFLAGS = -c -pipe -pthread $(ARCH) -fPIC $(SYSROOT) -mmacosx-version-min=15 \
+#
+# Build mode: DEBUG=1 for sanitizers + debug info, default is release
+#
+
+COMMON_CXXFLAGS = -c -pipe -pthread $(ARCH) -fPIC $(SYSROOT) -mmacosx-version-min=15 \
 	-D_REENTRANT -D__PCL_MACOSX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES \
 	-I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" \
 	-I/opt/homebrew/include \
@@ -36,17 +40,25 @@ CXXFLAGS = -c -pipe -pthread $(ARCH) -fPIC $(SYSROOT) -mmacosx-version-min=15 \
 	-I$(QT_BASE)/lib/QtGui.framework/Versions/5/Headers \
 	-I$(QT_BASE)/lib/QtSvg.framework/Versions/5/Headers \
 	-I$(QT_BASE)/include \
-	-O2 -ffunction-sections -fdata-sections -fvisibility=default \
+	-ffunction-sections -fdata-sections -fvisibility=default \
 	-std=c++17 -stdlib=libc++ \
 	-Wall -Wno-parentheses -Wno-extern-c-compat \
 	-MMD -MP
 
-LDFLAGS = $(ARCH) -fsanitize=address -fPIC -headerpad_max_install_names \
+COMMON_LDFLAGS = $(ARCH) -fPIC -headerpad_max_install_names \
 	-Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk \
 	-mmacosx-version-min=15 -stdlib=libc++ \
 	-Wl,-export_dynamic -Wl,-dead_strip \
 	-L"$(PCLLIBDIR64)" \
 	-L/opt/homebrew/lib
+
+ifdef DEBUG
+CXXFLAGS = $(COMMON_CXXFLAGS) -O0 -g -fsanitize=address
+LDFLAGS  = $(COMMON_LDFLAGS) -fsanitize=address
+else
+CXXFLAGS = $(COMMON_CXXFLAGS) -O3 -DNDEBUG -march=native
+LDFLAGS  = $(COMMON_LDFLAGS)
+endif
 
 LIBS = -framework AppKit -lpthread \
 	-lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi \
@@ -63,7 +75,10 @@ DEP_FILES= \
 ./arm64/Release/test_fft.d \
 ./arm64/Release/test_bgextraction.d \
 ./arm64/Release/test_stretch.d \
-./arm64/Release/test_realdata.d
+./arm64/Release/test_realdata.d \
+./arm64/Release/xisf_wcs.d \
+./arm64/Release/galaxy_processor.d \
+./arm64/Release/stackengine_cli.d
 
 -include $(DEP_FILES)
 
@@ -116,6 +131,49 @@ $(OBJ_DIR)/test_realdata: ./arm64/Release/test_realdata.o $(BG_OBJS) $(LHE_OBJS)
 	@echo "Built: $@"
 
 #
+# XISF WCS inspector
+#
+
+$(OBJ_DIR)/xisf_wcs: ./arm64/Release/xisf_wcs.o
+	$(CXX) $(LDFLAGS) -o $@ $< $(LIBS)
+	@echo "Built: $@"
+
+#
+# Galaxy Processor pipeline
+# STACK=1 enables fitsstacker integration (requires OpenCV + cfitsio)
+#
+
+STELLARSOLVER_CXXFLAGS = -I/usr/local/include/libstellarsolver
+STELLARSOLVER_LIBS = -L/usr/local/lib -lstellarsolver
+
+FITSSTACKER_DIR = $(PCLSRCDIR)/3rdparty/lmock/tests/fitsstacker
+
+ifdef STACK
+OPENCV_CXXFLAGS = $(shell pkg-config --cflags opencv4)
+OPENCV_LIBS = -lopencv_core -lopencv_imgproc -lopencv_calib3d
+CFITSIO_CXXFLAGS = $(shell pkg-config --cflags cfitsio)
+CFITSIO_LIBS = $(shell pkg-config --libs cfitsio)
+STACK_CXXFLAGS = -DHAS_FITSSTACKER $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)"
+STACK_LIBS = $(OPENCV_LIBS) $(CFITSIO_LIBS)
+STACK_OBJ = ./arm64/Release/stackengine_cli.o
+else
+STACK_CXXFLAGS =
+STACK_LIBS =
+STACK_OBJ =
+endif
+
+$(OBJ_DIR)/galaxy_processor: ./arm64/Release/galaxy_processor.o $(STACK_OBJ)
+	$(CXX) $(LDFLAGS) -Wl,-rpath,/usr/local/lib -o $@ $^ $(STACK_LIBS) $(LIBS) $(STELLARSOLVER_LIBS)
+	@echo "Built: $@"
+
+ifdef STACK
+./arm64/Release/stackengine_cli.o: $(FITSSTACKER_DIR)/stackengine_cli.cpp $(FITSSTACKER_DIR)/stackengine.cpp $(FITSSTACKER_DIR)/stackengine.h
+	@mkdir -p ./arm64/Release
+	$(CXX) $(CXXFLAGS) $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)" -Wno-unused-variable -Wno-unused-function -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+endif
+
+#
 # Common rules
 #
 
@@ -125,6 +183,9 @@ clean:
 	rm -f ./arm64/Release/test_bgextraction.o ./arm64/Release/test_bgextraction.d $(OBJ_DIR)/test_bgextraction
 	rm -f ./arm64/Release/test_stretch.o ./arm64/Release/test_stretch.d $(OBJ_DIR)/test_stretch
 	rm -f ./arm64/Release/test_realdata.o ./arm64/Release/test_realdata.d $(OBJ_DIR)/test_realdata
+	rm -f ./arm64/Release/xisf_wcs.o ./arm64/Release/xisf_wcs.d $(OBJ_DIR)/xisf_wcs
+	rm -f ./arm64/Release/galaxy_processor.o ./arm64/Release/galaxy_processor.d $(OBJ_DIR)/galaxy_processor
+	rm -f ./arm64/Release/stackengine_cli.o ./arm64/Release/stackengine_cli.d
 
 .PHONY: solve
 solve:
@@ -136,6 +197,11 @@ run: all
 	$(OBJ_DIR)/test_bgextraction
 	$(OBJ_DIR)/test_stretch
 	$(OBJ_DIR)/test_realdata --save-reference
+
+./arm64/Release/galaxy_processor.o: ../../galaxy_processor.cpp
+	@mkdir -p ./arm64/Release
+	$(CXX) $(CXXFLAGS) $(STELLARSOLVER_CXXFLAGS) $(STACK_CXXFLAGS) -I"$(BG_SRC_DIR)" -I"$(LHE_SRC_DIR)" -I"$(PCLSRCDIR)/modules/file-formats" -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
 
 ./arm64/Release/%.o: ../../%.cpp
 	@mkdir -p ./arm64/Release
