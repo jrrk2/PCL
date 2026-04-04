@@ -1,90 +1,55 @@
 ######################################################################
-# PixInsight Makefile Generator Script v1.144
-# Copyright (C) 2009-2025 Pleiades Astrophoto
-######################################################################
-# Generated on .... 2025-04-07T08:58:03.746Z
-# Project id ...... GradientDomain
-# Project type .... Module
-# Platform ........ Linux/g++
-# Configuration ... Release/x64
+# PCL Mock Library
+# Platform: Linux/g++ x64
 ######################################################################
 
-OBJ_DIR="$(PCLSRCDIR)/modules/processes/contrib/gviehoever/GradientDomain/linux/g++/x64/Release"
+OBJ_DIR="x64/Release"
 
 .PHONY: all
-all: $(OBJ_DIR)/GradientDomain-pxm.so
+all: $(OBJ_DIR)/libMock-pxi.a
 
 #
 # Source files
 #
 
 SRC_FILES= \
-../../GradientsBase.cpp \
-../../GradientsHdrComposition.cpp \
-../../GradientsHdrCompositionInstance.cpp \
-../../GradientsHdrCompositionInterface.cpp \
-../../GradientsHdrCompositionParameters.cpp \
-../../GradientsHdrCompositionProcess.cpp \
-../../GradientsHdrCompression.cpp \
-../../GradientsHdrInstance.cpp \
-../../GradientsHdrInterface.cpp \
-../../GradientsHdrParameters.cpp \
-../../GradientsHdrProcess.cpp \
-../../GradientsMergeMosaic.cpp \
-../../GradientsMergeMosaicInstance.cpp \
-../../GradientsMergeMosaicInterface.cpp \
-../../GradientsMergeMosaicParameters.cpp \
-../../GradientsMergeMosaicProcess.cpp \
-../../GradientsModule.cpp \
-../../RgbPreserve.cpp
+../../FITS.cpp \
+../../PCLMockAPI.cpp \
+../../PCLMockImageWindow.cpp \
+../../PCLThreadMock.cpp \
+../../QtUiExporter.cpp \
+../../LuaScriptExporter.cpp \
+../../MockMain.cpp \
+../../PCLInterfaceScanner.cpp \
+../../ImageReader.cpp \
 
 #
 # Object files
 #
 
 OBJ_FILES= \
-./x64/Release/GradientsBase.o \
-./x64/Release/GradientsHdrComposition.o \
-./x64/Release/GradientsHdrCompositionInstance.o \
-./x64/Release/GradientsHdrCompositionInterface.o \
-./x64/Release/GradientsHdrCompositionParameters.o \
-./x64/Release/GradientsHdrCompositionProcess.o \
-./x64/Release/GradientsHdrCompression.o \
-./x64/Release/GradientsHdrInstance.o \
-./x64/Release/GradientsHdrInterface.o \
-./x64/Release/GradientsHdrParameters.o \
-./x64/Release/GradientsHdrProcess.o \
-./x64/Release/GradientsMergeMosaic.o \
-./x64/Release/GradientsMergeMosaicInstance.o \
-./x64/Release/GradientsMergeMosaicInterface.o \
-./x64/Release/GradientsMergeMosaicParameters.o \
-./x64/Release/GradientsMergeMosaicProcess.o \
-./x64/Release/GradientsModule.o \
-./x64/Release/RgbPreserve.o
+./x64/Release/PCLMockAPI.o \
+./x64/Release/PCLMockImageWindow.o \
+./x64/Release/PCLThreadMock.o \
+./x64/Release/QtUiExporter.o \
+./x64/Release/LuaScriptExporter.o \
+./x64/Release/MockMain.o \
+./x64/Release/PCLInterfaceScanner.o \
+./x64/Release/ImageReader.o \
 
 #
 # Dependency files
 #
 
 DEP_FILES= \
-./x64/Release/GradientsBase.d \
-./x64/Release/GradientsHdrComposition.d \
-./x64/Release/GradientsHdrCompositionInstance.d \
-./x64/Release/GradientsHdrCompositionInterface.d \
-./x64/Release/GradientsHdrCompositionParameters.d \
-./x64/Release/GradientsHdrCompositionProcess.d \
-./x64/Release/GradientsHdrCompression.d \
-./x64/Release/GradientsHdrInstance.d \
-./x64/Release/GradientsHdrInterface.d \
-./x64/Release/GradientsHdrParameters.d \
-./x64/Release/GradientsHdrProcess.d \
-./x64/Release/GradientsMergeMosaic.d \
-./x64/Release/GradientsMergeMosaicInstance.d \
-./x64/Release/GradientsMergeMosaicInterface.d \
-./x64/Release/GradientsMergeMosaicParameters.d \
-./x64/Release/GradientsMergeMosaicProcess.d \
-./x64/Release/GradientsModule.d \
-./x64/Release/RgbPreserve.d
+./x64/Release/PCLMockAPI.d \
+./x64/Release/PCLMockImageWindow.d \
+./x64/Release/PCLThreadMock.d \
+./x64/Release/QtUiExporter.d \
+./x64/Release/LuaScriptExporter.d \
+./x64/Release/MockMain.d \
+./x64/Release/PCLInterfaceScanner.d \
+./x64/Release/ImageReader.d \
 
 #
 # Rules
@@ -92,19 +57,21 @@ DEP_FILES= \
 
 -include $(DEP_FILES)
 
-$(OBJ_DIR)/GradientDomain-pxm.so: $(OBJ_FILES)
-	g++ -m64 -fPIC -pthread -Wl,-fuse-ld=gold -Wl,--enable-new-dtags -Wl,-z,noexecstack -Wl,-O1 -Wl,--gc-sections -rdynamic -shared -L"$(PCLLIBDIR64)" -L"$(PCLBINDIR64)/lib" -o $(OBJ_DIR)/GradientDomain-pxm.so $(OBJ_FILES) -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi
-	$(MAKE) -f ./makefile-x64 --no-print-directory post-build
+$(OBJ_DIR)/libMock-pxi.a: $(OBJ_FILES)
+	ar rc $@ $(OBJ_FILES)
+	cp -p $@ $(PCLLIBDIR64)
 
 .PHONY: clean
 clean:
-	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/GradientDomain-pxm.so
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/libMock-pxi.a
 
-.PHONY: post-build
-post-build:
-	cp $(OBJ_DIR)/GradientDomain-pxm.so $(PCLBINDIR64)
+# Create the x64/Release directory structure if it doesn't exist
+./x64/Release:
+	mkdir -p ./x64/Release
 
-./x64/Release/%.o: ../../%.cpp
-	g++ -c -pipe -pthread -m64 -fPIC -D_REENTRANT -D__PCL_LINUX -D__PCL_AVX2 -D__PCL_FMA -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -mavx2 -mfma -minline-all-stringops -O3 -ffunction-sections -fdata-sections -ffast-math -fvisibility=hidden -fvisibility-inlines-hidden -fnon-call-exceptions -std=c++17 -Wall -Wno-parentheses -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+QT5_CXXFLAGS = $(shell pkg-config --cflags Qt5Core Qt5Widgets Qt5Gui Qt5Svg 2>/dev/null)
+
+# Make sure the directory exists before compiling
+./x64/Release/%.o: ../../%.cpp | ./x64/Release
+	g++ -g -O0 -c -pipe -pthread -m64 -fmax-errors=1000 -fno-omit-frame-pointer -fPIC -D_REENTRANT -D__PCL_LINUX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -I"$(PCLSRCDIR)/modules/file-formats" $(QT5_CXXFLAGS) -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -std=c++17 -Wall -Wno-parentheses -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo ' '
-

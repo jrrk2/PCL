@@ -3,88 +3,60 @@
 # Copyright (C) 2009-2025 Pleiades Astrophoto
 ######################################################################
 # Generated on .... 2025-04-07T08:58:03.796Z
-# Project id ...... GradientDomain
+# Project id ...... GHS
 # Project type .... Module
 # Platform ........ MacOSX/g++
 # Configuration ... Release/x64
 ######################################################################
 
-OBJ_DIR="$(PCLSRCDIR)/modules/processes/contrib/gviehoever/GradientDomain/macosx/g++/x64/Release"
+MAIN=sandbox_main
+OBJ_DIR="x64/Release"
 
 .PHONY: all
-all: $(OBJ_DIR)/GradientDomain-pxm.dylib
+all: $(OBJ_DIR)/libMock-pxi.a
 
 #
 # Source files
 #
 
 SRC_FILES= \
-../../GradientsBase.cpp \
-../../GradientsHdrComposition.cpp \
-../../GradientsHdrCompositionInstance.cpp \
-../../GradientsHdrCompositionInterface.cpp \
-../../GradientsHdrCompositionParameters.cpp \
-../../GradientsHdrCompositionProcess.cpp \
-../../GradientsHdrCompression.cpp \
-../../GradientsHdrInstance.cpp \
-../../GradientsHdrInterface.cpp \
-../../GradientsHdrParameters.cpp \
-../../GradientsHdrProcess.cpp \
-../../GradientsMergeMosaic.cpp \
-../../GradientsMergeMosaicInstance.cpp \
-../../GradientsMergeMosaicInterface.cpp \
-../../GradientsMergeMosaicParameters.cpp \
-../../GradientsMergeMosaicProcess.cpp \
-../../GradientsModule.cpp \
-../../RgbPreserve.cpp
+../../FITS.cpp \
+../../PCLMockAPI.cpp \
+../../PCLMockImageWindow.cpp \
+../../PCLThreadMock.cpp \
+../../QtUiExporter.cpp \
+../../LuaScriptExporter.cpp \
+../../MockMain.cpp \
+../../PCLInterfaceScanner.cpp \
+../../ImageReader.cpp \
 
 #
 # Object files
 #
 
 OBJ_FILES= \
-./x64/Release/GradientsBase.o \
-./x64/Release/GradientsHdrComposition.o \
-./x64/Release/GradientsHdrCompositionInstance.o \
-./x64/Release/GradientsHdrCompositionInterface.o \
-./x64/Release/GradientsHdrCompositionParameters.o \
-./x64/Release/GradientsHdrCompositionProcess.o \
-./x64/Release/GradientsHdrCompression.o \
-./x64/Release/GradientsHdrInstance.o \
-./x64/Release/GradientsHdrInterface.o \
-./x64/Release/GradientsHdrParameters.o \
-./x64/Release/GradientsHdrProcess.o \
-./x64/Release/GradientsMergeMosaic.o \
-./x64/Release/GradientsMergeMosaicInstance.o \
-./x64/Release/GradientsMergeMosaicInterface.o \
-./x64/Release/GradientsMergeMosaicParameters.o \
-./x64/Release/GradientsMergeMosaicProcess.o \
-./x64/Release/GradientsModule.o \
-./x64/Release/RgbPreserve.o
+./x64/Release/PCLMockAPI.o \
+./x64/Release/PCLMockImageWindow.o \
+./x64/Release/PCLThreadMock.o \
+./x64/Release/QtUiExporter.o \
+./x64/Release/LuaScriptExporter.o \
+./x64/Release/MockMain.o \
+./x64/Release/PCLInterfaceScanner.o \
+./x64/Release/ImageReader.o \
 
 #
 # Dependency files
 #
 
 DEP_FILES= \
-./x64/Release/GradientsBase.d \
-./x64/Release/GradientsHdrComposition.d \
-./x64/Release/GradientsHdrCompositionInstance.d \
-./x64/Release/GradientsHdrCompositionInterface.d \
-./x64/Release/GradientsHdrCompositionParameters.d \
-./x64/Release/GradientsHdrCompositionProcess.d \
-./x64/Release/GradientsHdrCompression.d \
-./x64/Release/GradientsHdrInstance.d \
-./x64/Release/GradientsHdrInterface.d \
-./x64/Release/GradientsHdrParameters.d \
-./x64/Release/GradientsHdrProcess.d \
-./x64/Release/GradientsMergeMosaic.d \
-./x64/Release/GradientsMergeMosaicInstance.d \
-./x64/Release/GradientsMergeMosaicInterface.d \
-./x64/Release/GradientsMergeMosaicParameters.d \
-./x64/Release/GradientsMergeMosaicProcess.d \
-./x64/Release/GradientsModule.d \
-./x64/Release/RgbPreserve.d
+./x64/Release/PCLMockAPI.d \
+./x64/Release/PCLMockImageWindow.d \
+./x64/Release/PCLThreadMock.d \
+./x64/Release/QtUiExporter.d \
+./x64/Release/LuaScriptExporter.d \
+./x64/Release/MockMain.d \
+./x64/Release/PCLInterfaceScanner.d \
+./x64/Release/ImageReader.d \
 
 #
 # Rules
@@ -92,20 +64,19 @@ DEP_FILES= \
 
 -include $(DEP_FILES)
 
-$(OBJ_DIR)/GradientDomain-pxm.dylib: $(OBJ_FILES)
-	clang++ -arch x86_64 -fPIC -headerpad_max_install_names -Wl,-syslibroot,/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -stdlib=libc++ -Wl,-dead_strip -rdynamic -dynamiclib -install_name @executable_path/GradientDomain-pxm.dylib -L"$(PCLLIBDIR64)" -o $(OBJ_DIR)/GradientDomain-pxm.dylib $(OBJ_FILES) -framework AppKit -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi
-	$(MAKE) -f ./makefile-x64 --no-print-directory post-build
+$(OBJ_DIR)/libMock-pxi.a: $(OBJ_FILES)
+	ar rc $@ $(OBJ_FILES)
+	cp -p $@ $(PCLLIBDIR64)
 
 .PHONY: clean
 clean:
-	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/GradientDomain-pxm.dylib
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/${MAIN}
 
-.PHONY: post-build
-post-build:
-	cp $(OBJ_DIR)/GradientDomain-pxm.dylib $(PCLBINDIR64)
-	codesign --deep --options=runtime -s pleiades -f -v --timestamp $(PCLBINDIR64)/GradientDomain-pxm.dylib
+# Create the x64/Release directory structure if it doesn't exist
+./x64/Release:
+	mkdir -p ./x64/Release
 
-./x64/Release/%.o: ../../%.cpp
-	clang++ -c -pipe -pthread -arch x86_64 -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=12 -D_REENTRANT -D__PCL_MACOSX -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -msse4.2 -minline-all-stringops -O2 -ffunction-sections -fdata-sections -ffast-math -fvisibility=hidden -fvisibility-inlines-hidden -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+# Make sure the directory exists before compiling
+./x64/Release/%.o: ../../%.cpp | ./x64/Release
+	clang++ -g -O0 -c -pipe -pthread -arch x86_64 -ferror-limit=1000 -fno-omit-frame-pointer -fPIC -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk -mmacosx-version-min=15 -D_REENTRANT -D__PCL_MACOSX  -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -I"$(PCLSRCDIR)/modules/file-formats" -I/opt/homebrew/include -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtCore.framework/Versions/5/Headers  -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtWidgets.framework/Versions/5/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtGui.framework/Versions/5/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/lib/QtSvg.framework/Versions/5/Headers -I/opt/homebrew/Cellar/qt@5/5.15.18/include -ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden -std=c++17 -stdlib=libc++ -Wall -Wno-parentheses -Wno-extern-c-compat -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo ' '
-

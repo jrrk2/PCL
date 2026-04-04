@@ -1,5 +1,5 @@
 ######################################################################
-# PCL Mock Library
+# PCL Mock Test Suite
 # Platform: Linux/g++
 # Configuration: Release/all
 ######################################################################
@@ -20,3 +20,11 @@ all:
 .PHONY: clean
 clean:
 	$(MAKE) -f ./makefile-x64 --no-print-directory clean
+
+.PHONY: run
+run:
+	$(MAKE) -f ./makefile-x64 --no-print-directory run
+
+.PHONY: solve
+solve:
+	$(MAKE) -f ./makefile-x64 --no-print-directory solve

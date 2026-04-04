@@ -1,0 +1,73 @@
+######################################################################
+# PixInsight Makefile Generator Script v1.144
+# Copyright (C) 2009-2025 Pleiades Astrophoto
+######################################################################
+# Project id ...... contrib/jkimmitt
+# Project type .... Module
+# Platform ........ Linux/g++
+# Configuration ... Release/x64
+######################################################################
+
+OBJ_DIR="$(PCLSRCDIR)/modules/processes/contrib/jkimmitt/backgroundextraction/linux/g++/x64/Release"
+
+.PHONY: all
+all: $(OBJ_DIR)/BackgroundExtraction-pxm.so
+
+#
+# Source files
+#
+
+SRC_FILES= \
+../../BackgroundExtractionInstance.cpp \
+../../BackgroundExtractionInterface.cpp \
+../../BackgroundExtractionModule.cpp \
+../../BackgroundExtractionParameters.cpp \
+../../BackgroundExtractionProcess.cpp \
+../../BackgroundExtractor.cpp \
+
+#
+# Object files
+#
+
+OBJ_FILES= \
+./x64/Release/BackgroundExtractionInstance.o \
+./x64/Release/BackgroundExtractionInterface.o \
+./x64/Release/BackgroundExtractionModule.o \
+./x64/Release/BackgroundExtractionParameters.o \
+./x64/Release/BackgroundExtractionProcess.o \
+./x64/Release/BackgroundExtractor.o \
+
+#
+# Dependency files
+#
+
+DEP_FILES= \
+./x64/Release/BackgroundExtractionInstance.d \
+./x64/Release/BackgroundExtractionInterface.d \
+./x64/Release/BackgroundExtractionModule.d \
+./x64/Release/BackgroundExtractionParameters.d \
+./x64/Release/BackgroundExtractionProcess.d \
+./x64/Release/BackgroundExtractor.d \
+
+#
+# Rules
+#
+
+-include $(DEP_FILES)
+
+$(OBJ_DIR)/BackgroundExtraction-pxm.so: $(OBJ_FILES)
+	g++ -m64 -fPIC -pthread -Wl,-fuse-ld=gold -Wl,--enable-new-dtags -Wl,-z,noexecstack -Wl,-O1 -Wl,--gc-sections -rdynamic -shared -L"$(PCLLIBDIR64)" -L"$(PCLBINDIR64)/lib" -o $(OBJ_DIR)/BackgroundExtraction-pxm.so $(OBJ_FILES) -lpthread -lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi -llcms-pxi -lcminpack-pxi -lMock-pxi -lFITS-pxm -lTIFF-pxm
+	$(MAKE) -f ./makefile-x64 --no-print-directory post-build
+
+.PHONY: clean
+clean:
+	rm -f $(OBJ_FILES) $(DEP_FILES) $(OBJ_DIR)/BackgroundExtraction-pxm.so
+
+.PHONY: post-build
+post-build:
+	cp $(OBJ_DIR)/BackgroundExtraction-pxm.so $(PCLBINDIR64)
+
+./x64/Release/%.o: ../../%.cpp
+	@mkdir -p ./x64/Release
+	g++ -c -pipe -pthread -m64 -fPIC -D_REENTRANT -D__PCL_LINUX -D__PCL_NO_PERFORMANCE_CRITICAL_MATH_ROUTINES -I"$(PCLINCDIR)" -I"$(PCLSRCDIR)/3rdparty" -O0 -g -ffunction-sections -fdata-sections -fvisibility=default -std=c++17 -Wall -Wno-parentheses -MMD -MP -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
