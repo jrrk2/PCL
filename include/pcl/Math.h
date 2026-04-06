@@ -2066,6 +2066,9 @@ inline void Rotate( long& x, long& y, T1 sa, T1 ca, T2 xc, T2 yc ) noexcept
    y = (long)RoundInt( T1( yc ) + sa*dx + ca*dy );
 }
 
+// Only define the int64 overload if int64 is a distinct type from long
+// (e.g. on Windows/MSVC where int64 = __int64, or 32-bit platforms).
+#if !defined(__linux__) || !defined(__x86_64__)
 /*!
  * Rotates a point on the plane.
  *
@@ -2084,6 +2087,7 @@ inline void Rotate( int64& x, int64& y, T1 sa, T1 ca, T2 xc, T2 yc ) noexcept
    x = RoundInt64( T1( xc ) + ca*dx - sa*dy );
    y = RoundInt64( T1( yc ) + sa*dx + ca*dy );
 }
+#endif
 
 /*!
  * Rotates a point on the plane.

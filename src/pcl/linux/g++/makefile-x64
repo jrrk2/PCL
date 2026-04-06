@@ -191,6 +191,7 @@ SRC_FILES= \
 ../../UCCaseFolding.cpp \
 ../../UCLowercase.cpp \
 ../../UCUppercase.cpp \
+../../UIControlObject.cpp \
 ../../UIObject.cpp \
 ../../UIScaling.cpp \
 ../../UnixSignalException.cpp \
@@ -386,6 +387,7 @@ OBJ_FILES= \
 ./x64/Release/UCCaseFolding.o \
 ./x64/Release/UCLowercase.o \
 ./x64/Release/UCUppercase.o \
+./x64/Release/UIControlObject.o \
 ./x64/Release/UIObject.o \
 ./x64/Release/UIScaling.o \
 ./x64/Release/UnixSignalException.o \
@@ -581,6 +583,7 @@ DEP_FILES= \
 ./x64/Release/UCCaseFolding.d \
 ./x64/Release/UCLowercase.d \
 ./x64/Release/UCUppercase.d \
+./x64/Release/UIControlObject.d \
 ./x64/Release/UIObject.d \
 ./x64/Release/UIScaling.d \
 ./x64/Release/UnixSignalException.d \

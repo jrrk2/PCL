@@ -99,6 +99,9 @@ public:
     // Public for CLI use (gradient fitting on stacked result)
     static cv::Mat fitGradient(const cv::Mat &channel, const std::vector<StarPos> &stars,
                                int degree, std::vector<double> &coeffs);
+    static cv::Mat fitGradient(const cv::Mat &channel, const std::vector<StarPos> &stars,
+                               int degree, std::vector<double> &coeffs,
+                               const cv::Mat &signalMask);
     static cv::Mat evalGradient(int rows, int cols, const std::vector<double> &coeffs, int degree);
 
     // Signal stubs (no-ops in CLI mode, original class emits Qt signals)

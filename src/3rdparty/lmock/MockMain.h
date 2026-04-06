@@ -23,6 +23,9 @@
 #ifdef __linux__
 #include <unistd.h>
 #include <limits.h>
+#ifndef RTLD_MAIN_ONLY
+#define RTLD_MAIN_ONLY RTLD_DEFAULT
+#endif
 #endif
 
 #include <pcl/MetaModule.h>

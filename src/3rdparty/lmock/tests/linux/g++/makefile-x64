@@ -14,7 +14,7 @@ LHE_OBJ_DIR=$(PCLSRCDIR)/modules/processes/contrib/zvrastil/LocalHistogramEquali
 LHE_SRC_DIR=$(PCLSRCDIR)/modules/processes/contrib/zvrastil/LocalHistogramEqualization
 
 .PHONY: all
-all: $(OBJ_DIR)/test_fft $(OBJ_DIR)/test_bgextraction $(OBJ_DIR)/test_stretch $(OBJ_DIR)/test_realdata $(OBJ_DIR)/xisf_wcs $(OBJ_DIR)/galaxy_processor
+all: $(OBJ_DIR)/test_fft $(OBJ_DIR)/test_bgextraction $(OBJ_DIR)/test_stretch $(OBJ_DIR)/test_realdata $(OBJ_DIR)/xisf_wcs $(OBJ_DIR)/xisf_snr $(OBJ_DIR)/galaxy_processor
 
 #
 # Compiler/linker flags
@@ -40,8 +40,20 @@ COMMON_CXXFLAGS = -c -pipe -pthread -m64 -fPIC \
 COMMON_LDFLAGS = -m64 -fPIC -pthread \
 	-Wl,-fuse-ld=gold -Wl,--enable-new-dtags -Wl,-z,noexecstack \
 	-Wl,-O1 -Wl,--gc-sections \
+	-Wl,--allow-multiple-definition \
 	-rdynamic \
-	-L"$(PCLLIBDIR64)"
+	-L"$(PCLLIBDIR64)" \
+	-L"$(PCLSRCDIR)/pcl/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/3rdparty/lz4/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/3rdparty/zstd/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/3rdparty/zlib/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/3rdparty/RFC6234/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/3rdparty/lcms/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/3rdparty/cminpack/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/3rdparty/lmock/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/modules/file-formats/XISF/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/modules/file-formats/FITS/linux/g++/x64/Release" \
+	-L"$(PCLSRCDIR)/modules/file-formats/TIFF/linux/g++/x64/Release"
 
 ifdef DEBUG
 CXXFLAGS = $(COMMON_CXXFLAGS) -O0 -g -fsanitize=address
@@ -52,8 +64,10 @@ LDFLAGS  = $(COMMON_LDFLAGS)
 endif
 
 LIBS = -lpthread \
+	-Wl,--start-group \
 	-lPCL-pxi -llz4-pxi -lzstd-pxi -lzlib-pxi -lRFC6234-pxi \
 	-llcms-pxi -lcminpack-pxi -lMock-pxi -lXISF-pxm -lFITS-pxm -lTIFF-pxm \
+	-Wl,--end-group \
 	-lfftw3 -lfftw3_threads \
 	$(QT5_LIBS)
 
@@ -67,6 +81,7 @@ DEP_FILES= \
 ./x64/Release/test_stretch.d \
 ./x64/Release/test_realdata.d \
 ./x64/Release/xisf_wcs.d \
+./x64/Release/xisf_snr.d \
 ./x64/Release/galaxy_processor.d \
 ./x64/Release/stackengine_cli.d
 
@@ -129,39 +144,37 @@ $(OBJ_DIR)/xisf_wcs: ./x64/Release/xisf_wcs.o
 	@echo "Built: $@"
 
 #
-# Galaxy Processor pipeline
-# STACK=1 enables fitsstacker integration (requires OpenCV + cfitsio)
+# XISF S/N metrics tool
+#
+
+$(OBJ_DIR)/xisf_snr: ./x64/Release/xisf_snr.o
+	$(CXX) $(LDFLAGS) -o $@ $< $(LIBS)
+	@echo "Built: $@"
+
+#
+# Galaxy Processor pipeline (requires OpenCV + cfitsio + stellarsolver)
 #
 
 STELLARSOLVER_CXXFLAGS = $(shell pkg-config --cflags stellarsolver 2>/dev/null || echo "-I/usr/include/libstellarsolver")
 STELLARSOLVER_LIBS = $(shell pkg-config --libs stellarsolver 2>/dev/null || echo "-lstellarsolver")
 
 FITSSTACKER_DIR = $(PCLSRCDIR)/3rdparty/lmock/tests/fitsstacker
-
-ifdef STACK
 OPENCV_CXXFLAGS = $(shell pkg-config --cflags opencv4)
 OPENCV_LIBS = -lopencv_core -lopencv_imgproc -lopencv_calib3d
 CFITSIO_CXXFLAGS = $(shell pkg-config --cflags cfitsio)
 CFITSIO_LIBS = $(shell pkg-config --libs cfitsio)
-STACK_CXXFLAGS = -DHAS_FITSSTACKER $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)"
+STACK_CXXFLAGS = $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)"
 STACK_LIBS = $(OPENCV_LIBS) $(CFITSIO_LIBS)
 STACK_OBJ = ./x64/Release/stackengine_cli.o
-else
-STACK_CXXFLAGS =
-STACK_LIBS =
-STACK_OBJ =
-endif
 
 $(OBJ_DIR)/galaxy_processor: ./x64/Release/galaxy_processor.o $(STACK_OBJ)
 	$(CXX) $(LDFLAGS) -Wl,-rpath,/usr/local/lib -o $@ $^ $(STACK_LIBS) $(LIBS) $(STELLARSOLVER_LIBS)
 	@echo "Built: $@"
 
-ifdef STACK
 ./x64/Release/stackengine_cli.o: $(FITSSTACKER_DIR)/stackengine_cli.cpp $(FITSSTACKER_DIR)/stackengine.cpp $(FITSSTACKER_DIR)/stackengine.h
 	@mkdir -p ./x64/Release
 	$(CXX) $(CXXFLAGS) $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)" -Wno-unused-variable -Wno-unused-function -MF"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo ' '
-endif
 
 #
 # Common rules
@@ -174,6 +187,7 @@ clean:
 	rm -f ./x64/Release/test_stretch.o ./x64/Release/test_stretch.d $(OBJ_DIR)/test_stretch
 	rm -f ./x64/Release/test_realdata.o ./x64/Release/test_realdata.d $(OBJ_DIR)/test_realdata
 	rm -f ./x64/Release/xisf_wcs.o ./x64/Release/xisf_wcs.d $(OBJ_DIR)/xisf_wcs
+	rm -f ./x64/Release/xisf_snr.o ./x64/Release/xisf_snr.d $(OBJ_DIR)/xisf_snr
 	rm -f ./x64/Release/galaxy_processor.o ./x64/Release/galaxy_processor.d $(OBJ_DIR)/galaxy_processor
 	rm -f ./x64/Release/stackengine_cli.o ./x64/Release/stackengine_cli.d
 

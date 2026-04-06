@@ -10,6 +10,13 @@
 //   make -f makefile-arm64 PCLSRCDIR=... PCLINCDIR=... PCLLIBDIR64=... \
 //        $(OBJ_DIR)/galaxy_processor
 
+// OpenCV must be included before PCL headers. PCL's APIDefs.h has
+// 'using namespace pcl;' which leaks pcl::int64/uint64 into the global
+// namespace, conflicting with OpenCV's global typedefs of the same names.
+#include "stackengine_cli.h"
+#include <opencv2/imgproc.hpp>
+#include <opencv2/calib3d.hpp>
+
 #include <pcl/XISF.h>
 #include <pcl/WCSKeywords.h>
 #include <pcl/AstrometricMetadata.h>
@@ -38,18 +45,17 @@
 #include <numeric>
 #include <memory>
 #include <sstream>
+#include <sys/statvfs.h>
 #include <QCoreApplication>
 #include <QDir>
 #include <QImage>
 #include <random>
 
-#ifdef HAS_FITSSTACKER
-#include "stackengine_cli.h"
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
-#endif
-
+// OpenCV and PCL both define int64/uint64 — OpenCV as global typedefs,
+// PCL as 'using' in namespace pcl. APIDefs.h does 'using namespace pcl;'
+// which leaks pcl types into the global namespace. Temporarily force
+// int64/uint64 to resolve to the same underlying type as both PCL and
+// OpenCV use, suppressing the ambiguity in OpenCV headers.
 using namespace pcl;
 
 // ============================================================================
@@ -111,6 +117,36 @@ struct SimpleTANWCS
       dec = atan( ( sin_dec0 + eta_r * cos_dec0 ) / sqrt( xi_r * xi_r + denom * denom ) ) * 180.0 / M_PI;
       while ( ra < 0 ) ra += 360.0;
       while ( ra >= 360.0 ) ra -= 360.0;
+      return true;
+   }
+
+   bool WorldToPixel( double ra, double dec, double& px, double& py ) const
+   {
+      if ( !valid ) return false;
+      double ra0 = crval1 * M_PI / 180.0;
+      double dec0 = crval2 * M_PI / 180.0;
+      double ra_r = ra * M_PI / 180.0;
+      double dec_r = dec * M_PI / 180.0;
+      double cos_dec = cos( dec_r );
+      double sin_dec = sin( dec_r );
+      double cos_dec0 = cos( dec0 );
+      double sin_dec0 = sin( dec0 );
+      double dra = ra_r - ra0;
+      double cos_dra = cos( dra );
+      double denom = sin_dec * sin_dec0 + cos_dec * cos_dec0 * cos_dra;
+      if ( denom <= 0 ) return false;  // behind tangent point
+      double xi  = ( cos_dec * sin( dra ) ) / denom;
+      double eta = ( sin_dec * cos_dec0 - cos_dec * sin_dec0 * cos_dra ) / denom;
+      // xi, eta are in radians; CD matrix expects degrees
+      xi  *= 180.0 / M_PI;
+      eta *= 180.0 / M_PI;
+      // Invert CD matrix: [dx, dy] = CD^-1 * [xi, eta]
+      double det = cd11 * cd22 - cd12 * cd21;
+      if ( std::abs( det ) < 1e-20 ) return false;
+      double dx = ( cd22 * xi - cd12 * eta ) / det;
+      double dy = ( -cd21 * xi + cd11 * eta ) / det;
+      px = crpix1 + dx;
+      py = crpix2 + dy;
       return true;
    }
 
@@ -277,12 +313,16 @@ static bool PlateSolve( const Image& image, SimpleTANWCS& wcs,
                 << " Dec=" << hintDec << "\n";
    }
 
-   // Find index files
+   // Find index files — search standard locations on macOS and Linux
    QStringList indexPaths;
    QStringList searchDirs = {
       "/Users/jonathan/kstars/astrometry",
       "/opt/homebrew/share/astrometry",
-      "/usr/local/share/astrometry"
+      "/usr/local/share/astrometry",
+      "/usr/share/astrometry",
+      QDir::homePath() + "/.local/share/kstars/astrometry",
+      QDir::homePath() + "/kstars/astrometry",
+      QDir::homePath() + "/.local/share/astrometry"
    };
    for ( const auto& dir : searchDirs )
    {
@@ -292,7 +332,10 @@ static bool PlateSolve( const Image& image, SimpleTANWCS& wcs,
    }
    if ( indexPaths.isEmpty() )
    {
-      std::cerr << "  ERROR: No astrometry index file directories found\n";
+      std::cerr << "  ERROR: No astrometry index file directories found\n"
+                << "  Searched:\n";
+      for ( const auto& dir : searchDirs )
+         std::cerr << "    " << dir.toStdString() << "\n";
       return false;
    }
    solver.setIndexFolderPaths( indexPaths );
@@ -317,15 +360,23 @@ static bool PlateSolve( const Image& image, SimpleTANWCS& wcs,
    // Store WCSData for accurate pixel-to-sky transforms
    g_solvedWCS = std::make_unique<WCSData>( solver.getWCSData() );
 
-   // Also populate SimpleTANWCS for resolution/field calculations
+   // Populate SimpleTANWCS with proper rotation from plate solve.
+   // StellarSolver orientation = position angle of "up" measured East of North.
+   // StellarSolver pixel coords are 0-indexed top-down (same as PCL).
+   // We store CRPIX in PCL convention (0-indexed, y=0 at top) since PixelToWorld
+   // and WorldToPixel will be called with those coordinates.
    wcs.crval1 = solution.ra;
    wcs.crval2 = solution.dec;
    wcs.crpix1 = w / 2.0;
    wcs.crpix2 = h / 2.0;
    double degPerPix = pixscale / 3600.0;
-   wcs.cd11 = -degPerPix;  // approximate, actual transforms use g_solvedWCS
-   wcs.cd22 = degPerPix;
-   wcs.cd12 = wcs.cd21 = 0;
+   double theta = solution.orientation * M_PI / 180.0;
+   // Negative parity (standard CCD): RA increases to the left.
+   // For top-down image (y increases downward), the CD matrix is:
+   wcs.cd11 = -degPerPix * cos( theta );
+   wcs.cd12 = degPerPix * sin( theta );
+   wcs.cd21 = degPerPix * sin( theta );
+   wcs.cd22 = degPerPix * cos( theta );
    wcs.valid = true;
 
    std::cout << "    Plate solve SUCCESS\n";
@@ -524,68 +575,101 @@ static void SmartCropStackingEdges( Image& image, int& cropX0, int& cropY0 )
       return;
    }
 
-   // For each row, count valid pixels
-   std::vector<int> rowValidCount( h, 0 );
-   for ( int y = 0; y < h; ++y )
-      for ( int x = 0; x < w; ++x )
-         if ( valid[y * w + x] ) ++rowValidCount[y];
+   // Find the largest inscribed circle using a Chamfer distance transform.
+   // For alt-az field rotation, the valid region is roughly circular, so the
+   // largest inscribed circle maximizes retained area. We then crop to the
+   // bounding square of that circle.
 
-   // For each column, count valid pixels
-   std::vector<int> colValidCount( w, 0 );
-   for ( int x = 0; x < w; ++x )
-      for ( int y = 0; y < h; ++y )
-         if ( valid[y * w + x] ) ++colValidCount[x];
+   // Chamfer 3-4 distance transform (approximates Euclidean distance * 3)
+   // All image border pixels are treated as invalid (distance 0) to ensure
+   // the transform doesn't produce infinite distances at edges.
+   std::vector<int> dist( w * h, 0 );
+   for ( int y = 0; y < h; y++ )
+      for ( int x = 0; x < w; x++ )
+      {
+         if ( y == 0 || y == h - 1 || x == 0 || x == w - 1 )
+            dist[y * w + x] = 0;  // border always 0
+         else
+            dist[y * w + x] = valid[y * w + x] ? 30000 : 0;
+      }
 
-   // Strategy: iteratively shrink from all four sides, always removing
-   // the edge (row or column) that has the lowest valid fraction.
-   // Stop when every remaining edge row/column is at least 99% valid.
-   // This finds the largest rectangle that avoids the ragged stacking
-   // boundaries without being overly aggressive.
-   int left = 0, right = w - 1, top = 0, bottom = h - 1;
-   const double targetEdgeValid = 0.99;
-   const int maxIterations = w + h; // Safety limit
+   // Forward pass (top-left to bottom-right)
+   for ( int y = 1; y < h - 1; y++ )
+      for ( int x = 1; x < w - 1; x++ )
+      {
+         int d = dist[y * w + x];
+         if ( d == 0 ) continue;
+         d = std::min( d, dist[( y - 1 ) * w + x - 1] + 4 );
+         d = std::min( d, dist[( y - 1 ) * w + x    ] + 3 );
+         d = std::min( d, dist[( y - 1 ) * w + x + 1] + 4 );
+         d = std::min( d, dist[y * w + x - 1] + 3 );
+         dist[y * w + x] = d;
+      }
 
-   for ( int iter = 0; iter < maxIterations; ++iter )
+   // Backward pass (bottom-right to top-left)
+   for ( int y = h - 2; y >= 1; y-- )
+      for ( int x = w - 2; x >= 1; x-- )
+      {
+         int d = dist[y * w + x];
+         if ( d == 0 ) continue;
+         d = std::min( d, dist[( y + 1 ) * w + x + 1] + 4 );
+         d = std::min( d, dist[( y + 1 ) * w + x    ] + 3 );
+         d = std::min( d, dist[( y + 1 ) * w + x - 1] + 4 );
+         d = std::min( d, dist[y * w + x + 1] + 3 );
+         dist[y * w + x] = d;
+      }
+
+   // Find the pixel with maximum distance — center of largest inscribed circle
+   int bestX = w / 2, bestY = h / 2;
+   int maxDist = 0;
+   for ( int y = 0; y < h; y++ )
+      for ( int x = 0; x < w; x++ )
+         if ( dist[y * w + x] > maxDist )
+         {
+            maxDist = dist[y * w + x];
+            bestX = x;
+            bestY = y;
+         }
+
+   // Chamfer 3-4 distance: divide by 3 to get approximate pixel radius
+   int radius = maxDist / 3;
+
+   std::cout << "  Largest inscribed circle: center=(" << bestX << "," << bestY
+             << ") radius=" << radius << " px\n";
+
+   if ( radius < 10 )
    {
-      int curW = right - left + 1;
-      int curH = bottom - top + 1;
-      if ( curW < w / 2 || curH < h / 2 )
-         break; // Don't crop more than half in either dimension
-
-      // Count valid pixels in each edge row/column within current bounds
-      auto countValidInRow = [&]( int y ) -> int {
-         int cnt = 0;
-         for ( int x = left; x <= right; ++x )
-            if ( valid[y * w + x] ) ++cnt;
-         return cnt;
-      };
-      auto countValidInCol = [&]( int x ) -> int {
-         int cnt = 0;
-         for ( int y = top; y <= bottom; ++y )
-            if ( valid[y * w + x] ) ++cnt;
-         return cnt;
-      };
-
-      double fracTop = double( countValidInRow( top ) ) / curW;
-      double fracBot = double( countValidInRow( bottom ) ) / curW;
-      double fracLeft = double( countValidInCol( left ) ) / curH;
-      double fracRight = double( countValidInCol( right ) ) / curH;
-
-      // Find worst edge
-      double worstFrac = std::min( { fracTop, fracBot, fracLeft, fracRight } );
-      if ( worstFrac >= targetEdgeValid )
-         break; // All edges are clean
-
-      // Remove the worst edge
-      if ( worstFrac == fracTop )
-         ++top;
-      else if ( worstFrac == fracBot )
-         --bottom;
-      else if ( worstFrac == fracLeft )
-         ++left;
-      else
-         --right;
+      std::cout << "  Inscribed circle too small — no crop applied\n";
+      cropX0 = 0;
+      cropY0 = 0;
+      return;
    }
+
+   // Force crop centre to image centre — the telescope tracks the target so
+   // the centre pixel is always valid and is the point of interest.
+   bestX = w / 2;
+   bestY = h / 2;
+
+   // Limit crop to 1/sqrt(2) of original dimensions — the worst case for
+   // 360° alt-az field rotation inscribing a square in a rotated rectangle.
+   int minW = int( std::ceil( w / std::sqrt( 2.0 ) ) );
+   int minH = int( std::ceil( h / std::sqrt( 2.0 ) ) );
+   int maxRadius = std::min( { bestX, w - 1 - bestX, bestY, h - 1 - bestY, radius } );
+   // Ensure the cropped square meets the minimum dimension
+   int side = 2 * maxRadius + 1;
+   if ( side < minW || side < minH )
+   {
+      int needR = std::max( ( minW - 1 ) / 2, ( minH - 1 ) / 2 );
+      maxRadius = std::min( needR, std::min( { bestX, w - 1 - bestX, bestY, h - 1 - bestY } ) );
+   }
+   else
+      maxRadius = radius;
+
+   // Crop to the bounding square centred on image centre
+   int left   = std::max( 0, bestX - maxRadius );
+   int right  = std::min( w - 1, bestX + maxRadius );
+   int top    = std::max( 0, bestY - maxRadius );
+   int bottom = std::min( h - 1, bestY + maxRadius );
 
    int newW = right - left + 1;
    int newH = bottom - top + 1;
@@ -2150,21 +2234,30 @@ static ImageHistogram compute_histogram( const Image& image )
    if ( N == 0 ) return h;
 
    std::vector<float> lum( N );
+   int valid = 0;
    for ( int y = 0; y < H; y++ )
       for ( int x = 0; x < W; x++ )
       {
-         float L = 0.2126f * image( x, y, 0 )
-                 + 0.7152f * image( x, y, 1 )
-                 + 0.0722f * image( x, y, 2 );
-         lum[y * W + x] = L;
-         int bin = std::min( HIST_BINS - 1, std::max( 0, int( L * HIST_BINS ) ) );
+         float r = image( x, y, 0 ), g = image( x, y, 1 ), b = image( x, y, 2 );
+         // Clamp to [0,1] and skip non-finite values
+         r = ( r != r || r < 0 ) ? 0 : ( r > 1 ? 1 : r );
+         g = ( g != g || g < 0 ) ? 0 : ( g > 1 ? 1 : g );
+         b = ( b != b || b < 0 ) ? 0 : ( b > 1 ? 1 : b );
+         float L = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+         lum[valid] = L;
+         valid++;
+         int bin = int( L * ( HIST_BINS - 1 ) );
+         bin = ( bin < 0 ) ? 0 : ( bin >= HIST_BINS ? HIST_BINS - 1 : bin );
          h.lum[bin] += 1.0f;
+         float cv[3] = { r, g, b };
          for ( int c = 0; c < 3; c++ )
          {
-            int cb = std::min( HIST_BINS - 1, std::max( 0, int( image( x, y, c ) * HIST_BINS ) ) );
+            int cb = int( cv[c] * ( HIST_BINS - 1 ) );
+            cb = ( cb < 0 ) ? 0 : ( cb >= HIST_BINS ? HIST_BINS - 1 : cb );
             h.ch[c][cb] += 1.0f;
          }
       }
+   N = valid;
 
    // Normalize
    float invN = 1.0f / N;
@@ -2176,6 +2269,7 @@ static ImageHistogram compute_histogram( const Image& image )
    }
 
    // Luminance percentiles
+   lum.resize( N );
    std::sort( lum.begin(), lum.end() );
    for ( int p = 0; p <= 10; p++ )
    {
@@ -2185,10 +2279,10 @@ static ImageHistogram compute_histogram( const Image& image )
    return h;
 }
 
-// Score: lower = better match to reference
+// Score: lower = better match to reference (range ~0-10)
 static float histogram_distance( const ImageHistogram& a, const ImageHistogram& b )
 {
-   // Earth-mover distance on luminance CDF
+   // Earth-mover distance on luminance CDF, normalized to [0,1]
    float lumEMD = 0;
    float cumA = 0, cumB = 0;
    for ( int i = 0; i < HIST_BINS; i++ )
@@ -2197,8 +2291,9 @@ static float histogram_distance( const ImageHistogram& a, const ImageHistogram& 
       cumB += b.lum[i];
       lumEMD += std::abs( cumA - cumB );
    }
+   lumEMD /= HIST_BINS;
 
-   // Per-channel EMD
+   // Per-channel EMD, normalized
    float chEMD = 0;
    for ( int c = 0; c < 3; c++ )
    {
@@ -2210,8 +2305,10 @@ static float histogram_distance( const ImageHistogram& a, const ImageHistogram& 
          chEMD += std::abs( cumA - cumB );
       }
    }
+   chEMD /= HIST_BINS * 3;
 
    // Percentile distance — weight upper percentiles more heavily
+   // Percentiles are [0,1] so pDist is naturally bounded
    float pDist = 0;
    for ( int p = 0; p <= 10; p++ )
    {
@@ -2219,13 +2316,17 @@ static float histogram_distance( const ImageHistogram& a, const ImageHistogram& 
       pDist += w * std::abs( a.percentiles[p] - b.percentiles[p] );
    }
 
-   // Signal brightness penalty: prevent "dark and flat" false minima
+   // Signal brightness penalty: prevent "dark and flat" false minima.
+   // Penalizes candidate being dimmer OR brighter than reference in upper percentiles,
+   // with dimness weighted more heavily since it loses unrecoverable detail.
    float signalPenalty = 0;
    for ( int p = 7; p <= 10; p++ )
    {
-      float diff = b.percentiles[p] - a.percentiles[p];
-      if ( diff > 0 )
-         signalPenalty += diff * diff;
+      float diff = a.percentiles[p] - b.percentiles[p]; // candidate - reference
+      if ( diff < 0 )
+         signalPenalty += 2.0f * diff * diff;  // too dim
+      else
+         signalPenalty += diff * diff;          // too bright
    }
 
    // Dynamic range penalty
@@ -2269,105 +2370,197 @@ static bool FetchSurveyReference(
       return false;
    }
 
-   // Compute survey size needed to cover the input FoV after rotation.
-   // Map all 4 corners through the CD matrix to find sky extent.
-   double cd11 = wcs.cd11, cd12 = wcs.cd12, cd21 = wcs.cd21, cd22 = wcs.cd22;
-   double crpix1 = wcs.crpix1, crpix2 = wcs.crpix2;
+   // Use a fixed-size survey tile so the same download can be reused across
+   // different crop/trim passes.  The 3000px tile at the input pixscale gives
+   // ample margin for any reasonable crop of the input field.
+   int surveySize = 3000;  // fixed tile — Legacy Survey max
 
-   double corners[][2] = { {1, 1}, {double( inputW ), 1},
-                           {1, double( inputH )}, {double( inputW ), double( inputH )} };
-   double minRA = 1e30, maxRA = -1e30, minDec = 1e30, maxDec = -1e30;
-   for ( auto& c : corners )
-   {
-      double dx = c[0] - crpix1, dy = c[1] - crpix2;
-      double dRA  = cd11 * dx + cd12 * dy;
-      double dDec = cd21 * dx + cd22 * dy;
-      minRA = std::min( minRA, dRA ); maxRA = std::max( maxRA, dRA );
-      minDec = std::min( minDec, dDec ); maxDec = std::max( maxDec, dDec );
-   }
-   double skyExtentRA = ( maxRA - minRA ) * 1.1;
-   double skyExtentDec = ( maxDec - minDec ) * 1.1;
-   double skyExtent = std::max( skyExtentRA, skyExtentDec );
-   double survPixscaleDeg = pixscaleArcsec / 3600.0;
-   int surveySize = int( std::ceil( skyExtent / survPixscaleDeg ) );
-
-   // Clamp survey size to Legacy Survey max (3000px)
-   surveySize = std::min( surveySize, 3000 );
-
-   // Build URL
+   // Build URL — fetch FITS cutout (uncompressed linear flux in nanomaggies)
    char url[1024];
    snprintf( url, sizeof( url ),
-      "https://www.legacysurvey.org/viewer/cutout.jpg?ra=%.6f&dec=%.6f&size=%d&layer=%s&pixscale=%.3f",
+      "https://www.legacysurvey.org/viewer/cutout.fits?ra=%.6f&dec=%.6f&size=%d&layer=%s&pixscale=%.3f",
       centerRA, centerDec, surveySize, layer, pixscaleArcsec );
 
-   std::cout << "  Fetching survey: " << layer << " " << surveySize << "px at "
+   std::cout << "  Fetching survey FITS: " << layer << " " << surveySize << "px at "
              << std::setprecision( 3 ) << pixscaleArcsec << "\"/px\n";
 
-   // Download via curl to a temp file, then decode with QImage
-   std::string tmpPath = "/tmp/galaxy_proc_survey.jpg";
-   char curlCmd[2048];
-   snprintf( curlCmd, sizeof( curlCmd ),
-      "curl -s --max-time 60 -o '%s' '%s' 2>/dev/null", tmpPath.c_str(), url );
+   // Cache survey tiles — round center to nearest 100" to encourage reuse
+   // across runs with slightly different plate solutions or crops.
+   // 100" = 0.02778°, well within the 3000px tile margin.
+   double cacheRA  = std::round( centerRA  * 36.0 ) / 36.0;  // 100" = 1/36 deg
+   double cacheDec = std::round( centerDec * 36.0 ) / 36.0;
+   char cacheFile[512];
+   snprintf( cacheFile, sizeof( cacheFile ),
+      "galaxy_proc_survey_%s_%.4f_%+.4f_%.3f.fits",
+      layer, cacheRA, cacheDec, pixscaleArcsec );
+   std::string tmpPath = cacheFile;
 
-   int exitCode = system( curlCmd );
-   if ( exitCode != 0 )
+   // Check cache
+   QFileInfo cacheInfo( QString::fromStdString( tmpPath ) );
+   if ( cacheInfo.exists() && cacheInfo.size() > 2880 )
    {
-      std::cerr << "  ERROR: curl failed (exit " << exitCode << ")\n";
-      return false;
+      std::cout << "  Using cached survey: " << tmpPath << "\n";
    }
-
-   QImage qimg( tmpPath.c_str() );
-   if ( qimg.isNull() )
+   else
    {
-      std::cerr << "  ERROR: Failed to decode survey JPEG\n";
-      return false;
-   }
+      char curlCmd[2048];
+      snprintf( curlCmd, sizeof( curlCmd ),
+         "curl -s --max-time 120 -o '%s' '%s' 2>/dev/null", tmpPath.c_str(), url );
 
-   int survW = qimg.width(), survH = qimg.height();
-   std::cout << "  Survey image: " << survW << "x" << survH << "\n";
-
-   // Convert QImage to float arrays
-   std::vector<float> survR( survW * survH ), survG( survW * survH ), survB( survW * survH );
-   for ( int y = 0; y < survH; y++ )
-      for ( int x = 0; x < survW; x++ )
+      int exitCode = system( curlCmd );
+      if ( exitCode != 0 )
       {
-         QRgb px = qimg.pixel( x, y );
-         int idx = y * survW + x;
-         survR[idx] = qRed( px ) / 255.0f;
-         survG[idx] = qGreen( px ) / 255.0f;
-         survB[idx] = qBlue( px ) / 255.0f;
+         std::cerr << "  ERROR: curl failed (exit " << exitCode << ")\n";
+         return false;
       }
+      std::cout << "  Downloaded survey: " << tmpPath << "\n";
+   }
 
-   // Orient survey to match input WCS via bilinear interpolation.
-   // Survey JPEG: N up (y=0=top), E left. CD: dRA=-ps*(x-cx), dDec=-ps*(y-cy)
-   // Input FITS: pixel via CD matrix from CRPIX.
+   // Read FITS cutout — Legacy Survey returns multi-HDU: one image per band (g, r, z)
+   fitsfile* fptr = nullptr;
+   int fitsStatus = 0;
+   fits_open_file( &fptr, tmpPath.c_str(), READONLY, &fitsStatus );
+   if ( fitsStatus )
+   {
+      std::cerr << "  ERROR: Failed to open survey FITS\n";
+      return false;
+   }
+
+   // Get dimensions from primary HDU
+   int naxis = 0;
+   fits_get_img_dim( fptr, &naxis, &fitsStatus );
+   long naxes[3] = { 1, 1, 1 };
+   fits_get_img_size( fptr, 3, naxes, &fitsStatus );
+   int survW = int( naxes[0] ), survH = int( naxes[1] );
+   int nBands = ( naxis >= 3 ) ? int( naxes[2] ) : 1;
+
+   std::cout << "  Survey FITS: " << survW << "x" << survH << " (" << nBands << " bands)\n";
+
+   // Read all bands into float arrays.
+   // Legacy Survey FITS cutout: 3D cube [W x H x bands] where bands = g, r, z.
+   // We map g→B, r→G, z→R for approximate visual colour.
+   int npix = survW * survH;
+   std::vector<std::vector<float>> bands( nBands, std::vector<float>( npix ) );
+   if ( naxis >= 3 )
+   {
+      // 3D cube — read each band plane
+      for ( int b = 0; b < nBands; b++ )
+      {
+         long fpixel[3] = { 1, 1, b + 1 };
+         fits_read_pix( fptr, TFLOAT, fpixel, npix, nullptr, bands[b].data(), nullptr, &fitsStatus );
+      }
+   }
+   else
+   {
+      // Single 2D image
+      long fpixel[2] = { 1, 1 };
+      fits_read_pix( fptr, TFLOAT, fpixel, npix, nullptr, bands[0].data(), nullptr, &fitsStatus );
+   }
+   fits_close_file( fptr, &fitsStatus );
+
+   // Map bands to RGB: g→B, r→G, z→R (Legacy Survey band order)
+   std::vector<float>& survR = ( nBands >= 3 ) ? bands[2] : bands[0];
+   std::vector<float>& survG = ( nBands >= 2 ) ? bands[1] : bands[0];
+   std::vector<float>& survB = bands[0];
+
+   // Normalize flux to [0,1] — find a robust max (99.9th percentile)
+   {
+      std::vector<float> allFlux;
+      allFlux.reserve( npix * 3 );
+      for ( int i = 0; i < npix; i++ )
+      {
+         float r = survR[i], g = survG[i], b = survB[i];
+         if ( r == r ) allFlux.push_back( r );
+         if ( g == g ) allFlux.push_back( g );
+         if ( b == b ) allFlux.push_back( b );
+      }
+      std::sort( allFlux.begin(), allFlux.end() );
+      float fluxMax = allFlux[int( allFlux.size() * 0.999 )];
+      float fluxMin = allFlux[int( allFlux.size() * 0.001 )];
+      if ( fluxMax <= fluxMin ) fluxMax = fluxMin + 1;
+      float scale = 1.0f / ( fluxMax - fluxMin );
+      std::cout << "  Survey flux range: " << fluxMin << " to " << fluxMax << " nanomaggies\n";
+      for ( int i = 0; i < npix; i++ )
+      {
+         survR[i] = std::max( 0.0f, std::min( 1.0f, ( survR[i] - fluxMin ) * scale ) );
+         survG[i] = std::max( 0.0f, std::min( 1.0f, ( survG[i] - fluxMin ) * scale ) );
+         survB[i] = std::max( 0.0f, std::min( 1.0f, ( survB[i] - fluxMin ) * scale ) );
+      }
+   }
+
+   // Read survey WCS from FITS header
+   double survCrpix1 = 0, survCrpix2 = 0;
+   double survCrval1 = 0, survCrval2 = 0;
+   double survCd11 = 0, survCd12 = 0, survCd21 = 0, survCd22 = 0;
+   {
+      fitsfile* wfptr = nullptr;
+      int ws = 0;
+      fits_open_file( &wfptr, tmpPath.c_str(), READONLY, &ws );
+      if ( !ws )
+      {
+         fits_read_key( wfptr, TDOUBLE, "CRPIX1", &survCrpix1, nullptr, &ws ); ws = 0;
+         fits_read_key( wfptr, TDOUBLE, "CRPIX2", &survCrpix2, nullptr, &ws ); ws = 0;
+         fits_read_key( wfptr, TDOUBLE, "CRVAL1", &survCrval1, nullptr, &ws ); ws = 0;
+         fits_read_key( wfptr, TDOUBLE, "CRVAL2", &survCrval2, nullptr, &ws ); ws = 0;
+         fits_read_key( wfptr, TDOUBLE, "CD1_1", &survCd11, nullptr, &ws ); ws = 0;
+         fits_read_key( wfptr, TDOUBLE, "CD1_2", &survCd12, nullptr, &ws ); ws = 0;
+         fits_read_key( wfptr, TDOUBLE, "CD2_1", &survCd21, nullptr, &ws ); ws = 0;
+         fits_read_key( wfptr, TDOUBLE, "CD2_2", &survCd22, nullptr, &ws ); ws = 0;
+         fits_close_file( wfptr, &ws );
+      }
+   }
+
+   // Reproject: for each output pixel, map input_pixel → sky → survey_pixel
+   // using proper TAN gnomonic projection via SimpleTANWCS methods.
+   // Build a SimpleTANWCS for the survey tile
+   SimpleTANWCS survWcs;
+   survWcs.crval1 = survCrval1; survWcs.crval2 = survCrval2;
+   survWcs.crpix1 = survCrpix1; survWcs.crpix2 = survCrpix2;
+   survWcs.cd11 = survCd11; survWcs.cd12 = survCd12;
+   survWcs.cd21 = survCd21; survWcs.cd22 = survCd22;
+   survWcs.valid = true;
+
    int outW = inputW, outH = inputH;
    refImage = Image( outW, outH, ColorSpace::RGB );
+   refImage.Zero();
 
-   float cxSurv = ( survW - 1 ) / 2.0f;
-   float cySurv = ( survH - 1 ) / 2.0f;
-   float ps = float( survPixscaleDeg );
-   float invPs = 1.0f / ps;
-
-   float dRA_dx = float( cd11 ) * invPs;
-   float dDec_dx = float( cd21 ) * invPs;
+   std::cout << "  Reprojecting survey to match input WCS...\n";
 
    for ( int oy = 0; oy < outH; oy++ )
    {
-      float dy = float( oy + 1 ) - float( crpix2 );
-      float sxBase = cxSurv - float( cd12 ) * dy * invPs;
-      float syBase = cySurv - float( cd22 ) * dy * invPs;
-      float dx0 = 1.0f - float( crpix1 );
-      float sx = sxBase - float( cd11 ) * dx0 * invPs;
-      float sy = syBase - float( cd21 ) * dx0 * invPs;
-
       for ( int ox = 0; ox < outW; ox++ )
       {
+         // Input pixel → sky using StellarSolver's WCS if available (most accurate),
+         // otherwise fall back to SimpleTANWCS (CRPIX in PCL convention: 0-indexed, y=0 at top)
+         double ra, dec;
+         if ( g_solvedWCS )
+         {
+            // Convert cropped pixel coords back to original frame for g_solvedWCS
+            QPointF pixel( ( double( ox ) + g_cropOffsetX ) / 2.0 + 1.0,
+                           ( double( oy ) + g_cropOffsetY ) / 2.0 + 1.0 );
+            FITSImage::wcs_point sky;
+            if ( !g_solvedWCS->pixelToWCS( pixel, sky ) )
+               continue;
+            ra = sky.ra;
+            dec = sky.dec;
+         }
+         else if ( !wcs.PixelToWorld( double( ox ), double( oy ), ra, dec ) )
+            continue;
+
+         // Sky → survey pixel via proper TAN projection
+         double survPx, survPy;
+         if ( !survWcs.WorldToPixel( ra, dec, survPx, survPy ) )
+            continue;
+
+         // cfitsio array: index 0 = FITS row 1 (bottom), so array coords = fitsCoord - 1
+         double sx = survPx - 1.0;
+         double sy = survPy - 1.0;
+
          int x0 = int( std::floor( sx ) );
          int y0 = int( std::floor( sy ) );
          if ( x0 >= 0 && y0 >= 0 && x0 < survW - 1 && y0 < survH - 1 )
          {
-            float fx = sx - x0, fy = sy - y0;
+            float fx = float( sx - x0 ), fy = float( sy - y0 );
             float w00 = ( 1 - fx ) * ( 1 - fy ), w10 = fx * ( 1 - fy );
             float w01 = ( 1 - fx ) * fy, w11 = fx * fy;
             int i00 = y0 * survW + x0;
@@ -2378,9 +2571,106 @@ static bool FetchSurveyReference(
             refImage( ox, oy, 2 ) = w00 * survB[i00] + w10 * survB[i00 + 1]
                                   + w01 * survB[i00 + survW] + w11 * survB[i00 + survW + 1];
          }
-         sx -= dRA_dx;
-         sy -= dDec_dx;
       }
+   }
+
+   // Save reprojected reference for visual verification
+   {
+      String convergent = String::UTF8ToUTF16( "galaxy_proc_survey_reprojected.xisf" );
+      XISFWriter convergentWriter;
+      convergentWriter.Create( convergent, 1 );
+      ImageOptions convergentOptions;
+      convergentOptions.bitsPerSample = 32;
+      convergentOptions.ieeefpSampleFormat = true;
+      convergentWriter.SetImageOptions( convergentOptions );
+      convergentWriter.WriteImage( refImage );
+      convergentWriter.Close();
+      std::cout << "  Saved reprojected survey: galaxy_proc_survey_reprojected.xisf\n";
+   }
+
+   // Self-check: verify reprojection via coverage and cross-correlation sharpness.
+   // Avoids plate-solving which can hang on FWHM-distorted survey stars.
+   {
+      std::cout << "  Verifying reprojection alignment...\n";
+
+      // 1. Coverage: fraction of output pixels that received survey data
+      int nonZero = 0;
+      int totalPix = outW * outH;
+      for ( int y = 0; y < outH; y++ )
+         for ( int x = 0; x < outW; x++ )
+            if ( refImage( x, y, 0 ) > 0 || refImage( x, y, 1 ) > 0 || refImage( x, y, 2 ) > 0 )
+               nonZero++;
+      double coverage = 100.0 * nonZero / totalPix;
+
+      // 2. Downsample both images to luminance at 1/4 resolution for cross-correlation
+      int dsW = outW / 4, dsH = outH / 4;
+      std::vector<float> refLum( dsW * dsH, 0 ), inpLum( dsW * dsH, 0 );
+      for ( int y = 0; y < dsH; y++ )
+         for ( int x = 0; x < dsW; x++ )
+         {
+            int sx = x * 4, sy = y * 4;
+            float r = refImage( sx, sy, 0 ), g = refImage( sx, sy, 1 ), b = refImage( sx, sy, 2 );
+            // -ffast-math safe: use v != v instead of std::isnan
+            r = ( r != r ) ? 0 : r;
+            g = ( g != g ) ? 0 : g;
+            b = ( b != b ) ? 0 : b;
+            refLum[y * dsW + x] = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+         }
+
+      // 3. Compute mean and stddev of reprojected luminance (non-zero pixels only)
+      double refSum = 0, refSum2 = 0;
+      int refN = 0;
+      for ( int i = 0; i < dsW * dsH; i++ )
+      {
+         float v = refLum[i];
+         if ( v != v || v <= 0 || v > 1e6f ) continue; // skip NaN/zero/outlier
+         refSum += v;
+         refSum2 += double( v ) * v;
+         refN++;
+      }
+      double refMean = refN > 0 ? refSum / refN : 0;
+      double refStd = refN > 1 ? std::sqrt( refSum2 / refN - refMean * refMean ) : 0;
+
+      // 4. Sharpness: ratio of high-frequency energy to total energy via Laplacian
+      //    A blurry (misaligned) reprojection will have low sharpness.
+      double lapSum = 0, pixSum = 0;
+      for ( int y = 1; y < dsH - 1; y++ )
+         for ( int x = 1; x < dsW - 1; x++ )
+         {
+            float c = refLum[y * dsW + x];
+            if ( c <= 0 ) continue;
+            float lap = 4 * c - refLum[( y - 1 ) * dsW + x] - refLum[( y + 1 ) * dsW + x]
+                              - refLum[y * dsW + x - 1] - refLum[y * dsW + x + 1];
+            lapSum += std::abs( lap );
+            pixSum += c;
+         }
+      double sharpness = pixSum > 0 ? lapSum / pixSum : 0;
+
+      // 5. Print WCS info
+      double inputDet = wcs.cd11 * wcs.cd22 - wcs.cd12 * wcs.cd21;
+      double inputRot = ( inputDet < 0 )
+         ? std::atan2( wcs.cd21, wcs.cd22 ) * 180.0 / M_PI
+         : std::atan2( -wcs.cd12, wcs.cd22 ) * 180.0 / M_PI;
+      double inputScale = wcs.Resolution() * 3600.0;
+
+      std::cout << "    Input  WCS: RA=" << std::setprecision( 4 ) << std::fixed << wcs.crval1
+                << " Dec=" << wcs.crval2 << " rot=" << inputRot << "° scale=" << inputScale << "\"/px"
+                << " CD=[" << std::setprecision( 6 ) << std::scientific
+                << wcs.cd11 << ", " << wcs.cd12 << "; " << wcs.cd21 << ", " << wcs.cd22 << "]\n";
+      std::cout << std::fixed
+                << "    Coverage: " << std::setprecision( 1 ) << coverage << "%"
+                << "  mean=" << std::setprecision( 4 ) << refMean
+                << "  std=" << refStd
+                << "  sharpness=" << std::setprecision( 3 ) << sharpness << "\n"
+                << std::defaultfloat;
+
+      if ( coverage < 50.0 )
+         std::cerr << "  WARNING: Low coverage (" << std::setprecision( 1 ) << coverage
+                   << "%) — survey may not overlap input field\n";
+      if ( sharpness < 0.01 )
+         std::cerr << "  WARNING: Low sharpness — reprojection may be misaligned or blurred\n";
+      if ( coverage >= 50.0 && sharpness >= 0.01 )
+         std::cout << "    Reprojection verified OK\n";
    }
 
    // Normalize reference luminosity to match VeraLux target background via MTF
@@ -2532,7 +2822,7 @@ static void RunOptimization( Image& image, int maxIterations, const SimpleTANWCS
       ImageHistogram candHist = compute_histogram( trial );
       float score = histogram_distance( candHist, refHist );
 
-      std::cout << "  Score: " << std::setprecision( 2 ) << std::fixed << score
+      std::cout << "  Score: " << std::setprecision( 4 ) << std::fixed << score
                 << " (best: " << bestScore << " at iter " << bestIter + 1 << ")\n";
       std::cout << std::defaultfloat;
 
@@ -2549,7 +2839,7 @@ static void RunOptimization( Image& image, int maxIterations, const SimpleTANWCS
 
    // Final report
    std::cout << "\n=== OPTIMIZATION COMPLETE ===\n";
-   std::cout << "Best score: " << std::setprecision( 2 ) << std::fixed << bestScore
+   std::cout << "Best score: " << std::setprecision( 4 ) << std::fixed << bestScore
              << " (iteration " << bestIter + 1 << ")\n" << std::defaultfloat;
    std::cout << "Best parameters:\n";
    for ( int p = 0; p < numParams; p++ )
@@ -2575,8 +2865,6 @@ static bool EndsWithCI( const std::string& s, const char* suffix )
 // ============================================================================
 // Stacking front-end (requires STACK=1 build with OpenCV + cfitsio)
 // ============================================================================
-
-#ifdef HAS_FITSSTACKER
 
 // Convert cv::Mat (float32, 1 or 3 channels) to pcl::Image
 static Image CvMatToPCLImage( const cv::Mat& mat )
@@ -2681,7 +2969,7 @@ static Image StackFramesLRGB(
 
    // Phase 1: Build luminance frames and run full alignment + stack
    std::cout << "  Phase 1: Luminance alignment + stack...\n";
-   QString tmpDir = QDir::tempPath() + "/galaxy_proc_lrgb";
+   QString tmpDir = QDir::currentPath() + "/galaxy_proc_lrgb";
    QDir dir( tmpDir );
    if ( !dir.exists() ) dir.mkpath( "." );
 
@@ -2747,15 +3035,42 @@ static Image StackFramesLRGB(
       if ( lumFrames[i].enabled && lumFrames[i].aligned )
          usableIdx.push_back( i );
 
-   // Helper: warp a single frame's RGB and build its validity mask
+   // Helper: warp a single frame's RGB, apply per-frame normalization
+   // (gradient removal + scale/offset matching the luminance stack), and build
+   // its validity mask.  Without this the RGB drizzle uses raw un-normalized
+   // values while the L stack has had backgrounds subtracted, causing
+   // L < colourL → dimming in the LRGB synthesis.
    auto warpFrame = [&]( int idx, cv::Mat& warped, cv::Mat& mask ) -> bool {
       cv::Mat rgb = StackEngine::loadFits( origPaths[idx] );
       if ( rgb.empty() || rgb.channels() < 3 )
          return false;
-      cv::warpPerspective( rgb, warped, lumFrames[idx].homography, cv::Size( w, h ),
+
+      const FrameInfo& fi = lumFrames[idx];
+
+      // Apply per-channel gradient removal and scale/offset (same as prepareFrame)
+      std::vector<cv::Mat> ch;
+      cv::split( rgb, ch );
+      int nc = std::min( (int)ch.size(), 3 );
+      for ( int c = 0; c < nc; c++ )
+      {
+         if ( !fi.gradientCoeffs[c].empty() )
+         {
+            int deg = (int)std::round( ( -1 + std::sqrt( 1 + 8.0 * fi.gradientCoeffs[c].size() ) ) / 2.0 );
+            cv::Mat grad = StackEngine::evalGradient( rgb.rows, rgb.cols, fi.gradientCoeffs[c], deg );
+            ch[c] = fi.scale[c] * ( ch[c] - grad ) + fi.offset[c];
+         }
+         else
+         {
+            ch[c] = fi.scale[c] * ch[c] + fi.offset[c];
+         }
+      }
+      cv::Mat normalized;
+      cv::merge( ch, normalized );
+
+      cv::warpPerspective( normalized, warped, fi.homography, cv::Size( w, h ),
                            cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar( 0, 0, 0 ) );
       cv::Mat ones = cv::Mat::ones( rgb.size(), CV_8UC1 );
-      cv::warpPerspective( ones, mask, lumFrames[idx].homography, cv::Size( w, h ),
+      cv::warpPerspective( ones, mask, fi.homography, cv::Size( w, h ),
                            cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar( 0 ) );
       return true;
    };
@@ -2985,7 +3300,6 @@ static Image StackFramesRGB(
    return CvMatToPCLImage( result );
 }
 
-#endif // HAS_FITSSTACKER
 
 // ============================================================================
 // Main
@@ -3001,10 +3315,8 @@ int main( int argc, char** argv )
       std::cerr << "Usage: galaxy_processor <input.xisf|fits ...> [-o output.xisf]\n"
                 << "       [--gaia-db /path/to/gdr3sp*.xpsd] [--no-spcc] [--no-bgneutralize]\n"
                 << "       [--sdss] [--stretch] [--optimize[=N]]\n"
-#ifdef HAS_FITSSTACKER
-                << "       [--stack] [--lrgb] [--gradient=0|1|2|3] [--global-gradient]\n"
-                << "       [--sigma=N] [--clip-iters=N]\n"
-#endif
+                << "       [--stack] [--lrgb] [--gradient=0|1|2|3] [--global-gradient] [--survey-mask]\n"
+                << "       [--sigma=N] [--clip-iters=N] [--max-frames=N]\n"
                 ;
       return 1;
    }
@@ -3027,12 +3339,12 @@ int main( int argc, char** argv )
    bool doStretch = false;
    bool doOptimize = false;
    int  optIterations = 50;
-#ifdef HAS_FITSSTACKER
    bool doStack = false;
+   int maxFrames = 0; // 0 = no limit
    bool doLRGB = false;
    bool globalGradient = false;
+   bool surveyMaskGradient = false;
    StackParams stackParams;
-#endif
 
    for ( int i = 1; i < argc; ++i )
    {
@@ -3060,7 +3372,6 @@ int main( int argc, char** argv )
          doStretch = true;
          optIterations = std::max( 1, std::atoi( arg.c_str() + 11 ) );
       }
-#ifdef HAS_FITSSTACKER
       else if ( arg == "--stack" )
          doStack = true;
       else if ( arg == "--lrgb" )
@@ -3072,6 +3383,11 @@ int main( int argc, char** argv )
          stackParams.gradientDegree = std::atoi( arg.c_str() + 11 );
       else if ( arg == "--global-gradient" )
          globalGradient = true;
+      else if ( arg == "--survey-mask" )
+      {
+         globalGradient = true;  // survey mask implies global gradient
+         surveyMaskGradient = true;
+      }
       else if ( arg.substr( 0, 8 ) == "--sigma=" )
       {
          stackParams.sigmaLow = std::atof( arg.c_str() + 8 );
@@ -3079,7 +3395,8 @@ int main( int argc, char** argv )
       }
       else if ( arg.substr( 0, 13 ) == "--clip-iters=" )
          stackParams.clipIterations = std::max( 1, std::atoi( arg.c_str() + 13 ) );
-#endif
+      else if ( arg.substr( 0, 13 ) == "--max-frames=" )
+         maxFrames = std::max( 1, std::atoi( arg.c_str() + 13 ) );
       else if ( arg[0] != '-' )
       {
          if ( inputPath.empty() )
@@ -3099,16 +3416,33 @@ int main( int argc, char** argv )
       return 1;
    }
 
-   // Default output path
+   // Apply --max-frames limit (clamp to actual file count)
+   if ( maxFrames > 0 )
+   {
+      maxFrames = std::min( maxFrames, (int)inputPaths.size() );
+      if ( (int)inputPaths.size() > maxFrames )
+      {
+         std::cout << "Limiting to " << maxFrames << " of " << inputPaths.size() << " input frames\n";
+         inputPaths.resize( maxFrames );
+         inputPath = inputPaths[0];
+      }
+   }
+
+   // Default output path — write to current directory
    if ( outputPath.empty() )
    {
-      std::string basePath = inputPath;
+      // Strip directory from input filename
+      std::string baseName = inputPath;
+      size_t slash = baseName.rfind( '/' );
+      if ( slash != std::string::npos )
+         baseName = baseName.substr( slash + 1 );
+
       // When stacking, strip per-frame date/time code (e.g. _20260305_193734)
       // from the first filename since it doesn't represent the whole stack.
       if ( doStack && inputPaths.size() > 1 )
       {
-         size_t dot = basePath.rfind( '.' );
-         std::string stem = ( dot != std::string::npos ) ? basePath.substr( 0, dot ) : basePath;
+         size_t dot = baseName.rfind( '.' );
+         std::string stem = ( dot != std::string::npos ) ? baseName.substr( 0, dot ) : baseName;
          // Match trailing _YYYYMMDD_HHMMSS pattern
          if ( stem.size() >= 16 )
          {
@@ -3126,25 +3460,47 @@ int main( int argc, char** argv )
       }
       else
       {
-         size_t dot = basePath.rfind( '.' );
+         size_t dot = baseName.rfind( '.' );
          if ( dot != std::string::npos )
-            outputPath = basePath.substr( 0, dot ) + "_processed.xisf";
+            outputPath = baseName.substr( 0, dot ) + "_processed.xisf";
          else
-            outputPath = basePath + "_processed.xisf";
+            outputPath = baseName + "_processed.xisf";
       }
    }
 
-   // Default Gaia DB paths if not specified
+   // Default Gaia DB paths if not specified — search standard locations
    if ( gaiaDbPaths.empty() && doSPCC )
    {
-      const char* defaultPaths[] = {
-         "/Users/jonathan/PixInsight/databases/gdr3sp-1.0.0-s-01.xpsd",
-         "/Users/jonathan/PixInsight/databases/gdr3sp-1.0.0-s-02.xpsd",
-         "/Users/jonathan/PixInsight/databases/gdr3sp-1.0.0-s-03.xpsd",
-         "/Users/jonathan/PixInsight/databases/gdr3sp-1.0.0-s-04.xpsd"
+      std::string home = QDir::homePath().toStdString();
+      std::vector<std::string> searchDirs = {
+         home + "/PixInsight/databases",
+         "/usr/share/pixinsight",
+         "/usr/local/share/pixinsight",
+         home + "/.local/share/pixinsight"
       };
-      for ( const char* p : defaultPaths )
-         gaiaDbPaths.push_back( p );
+      const char* dbFiles[] = {
+         "gdr3sp-1.0.0-s-01.xpsd",
+         "gdr3sp-1.0.0-s-02.xpsd",
+         "gdr3sp-1.0.0-s-03.xpsd",
+         "gdr3sp-1.0.0-s-04.xpsd"
+      };
+      for ( const auto& dir : searchDirs )
+      {
+         QDir d( QString::fromStdString( dir ) );
+         if ( d.exists( dbFiles[0] ) )
+         {
+            for ( const char* f : dbFiles )
+               gaiaDbPaths.push_back( dir + "/" + f );
+            break;
+         }
+      }
+      if ( gaiaDbPaths.empty() )
+      {
+         std::cerr << "  Gaia DR3/SP database not found in:\n";
+         for ( const auto& dir : searchDirs )
+            std::cerr << "    " << dir << "/" << dbFiles[0] << "\n";
+         std::cerr << "  Use --gaia-db <path> to specify, or --no-spcc to skip SPCC\n";
+      }
    }
 
    try
@@ -3162,10 +3518,31 @@ int main( int argc, char** argv )
       FITSKeywordArray keywords;
       PropertyArray properties;
 
-#ifdef HAS_FITSSTACKER
       if ( doStack && inputPaths.size() > 1 )
       {
          std::cout << "--- Step 0: Stack " << inputPaths.size() << " frames ---\n";
+
+         // Estimate disk space needed for temporary luminance frames.
+         // Each frame produces a single-channel uncompressed float32 FITS
+         // in ./galaxy_proc_lrgb/. Input is typically 16-bit RGB (6 bytes/px),
+         // temp luminance is float32 mono (4 bytes/px) ≈ 2/3 of input size.
+         {
+            QFileInfo fi( QString::fromStdString( inputPaths[0] ) );
+            double perFrameMB = fi.size() / ( 1024.0 * 1024.0 ) * 2.0 / 3.0;
+            double totalGB = perFrameMB * inputPaths.size() / 1024.0;
+            struct statvfs st;
+            double availGB = 0;
+            if ( statvfs( ".", &st ) == 0 )
+               availGB = double( st.f_bavail ) * st.f_frsize / ( 1024.0 * 1024.0 * 1024.0 );
+            std::cout << "  Temporary files: ./galaxy_proc_lrgb/ (~"
+                      << std::fixed << std::setprecision( 1 ) << totalGB << " GB estimated";
+            if ( availGB > 0 )
+               std::cout << ", " << availGB << " GB available";
+            std::cout << ")\n" << std::defaultfloat;
+            if ( availGB > 0 && totalGB > availGB * 0.9 )
+               std::cerr << "  WARNING: Estimated temp space may exceed available disk!\n";
+         }
+
          if ( globalGradient )
          {
             std::cout << "  Gradient removal: global (degree " << stackParams.gradientDegree << ")\n";
@@ -3188,6 +3565,102 @@ int main( int argc, char** argv )
             {
                std::cout << "  Fitting global gradient (degree "
                          << stackParams.gradientDegree << ") on stacked image...\n";
+
+               // Build survey-based signal mask if requested
+               cv::Mat signalMask; // empty unless --survey-mask
+               if ( surveyMaskGradient )
+               {
+                  std::cout << "  Building survey signal mask...\n";
+
+                  // Plate-solve the stacked image to get WCS
+                  SimpleTANWCS stackWcs;
+                  bool solved = PlateSolve( image, stackWcs, keywords );
+                  if ( !solved )
+                     std::cerr << "  WARNING: Plate solve failed for survey mask — "
+                               << "falling back to unmasked gradient fit\n";
+                  else
+                  {
+                     // Compute field center
+                     int iw = image.Width(), ih = image.Height();
+                     double survCenterRA = stackWcs.crval1;
+                     double survCenterDec = stackWcs.crval2;
+                     double survPixscale = stackWcs.Resolution() * 3600.0;
+
+                     if ( g_solvedWCS )
+                     {
+                        double cx = ( iw / 2.0 + g_cropOffsetX ) / 2.0 + 1.0;
+                        double cy = ( ih / 2.0 + g_cropOffsetY ) / 2.0 + 1.0;
+                        QPointF cp( cx, cy );
+                        FITSImage::wcs_point sky;
+                        if ( g_solvedWCS->pixelToWCS( cp, sky ) )
+                        {
+                           survCenterRA = sky.ra;
+                           survCenterDec = sky.dec;
+                        }
+                     }
+
+                     // Fetch survey tile and reproject to match stacked image
+                     Image surveyRef;
+                     if ( FetchSurveyReference( surveyRef, stackWcs, iw, ih,
+                                                survCenterRA, survCenterDec, survPixscale, 0.0 ) )
+                     {
+                        // Convert reprojected survey to luminance
+                        int sw = surveyRef.Width(), sh = surveyRef.Height();
+                        std::vector<float> survLum( sw * sh );
+                        int nch = std::min( surveyRef.NumberOfChannels(), 3 );
+                        for ( int y = 0; y < sh; y++ )
+                           for ( int x = 0; x < sw; x++ )
+                           {
+                              float lum = 0;
+                              for ( int c = 0; c < nch; c++ )
+                                 lum += surveyRef( x, y, c );
+                              survLum[y * sw + x] = lum / nch;
+                           }
+
+                        // Compute median and MAD of survey luminance (non-zero pixels only)
+                        std::vector<float> validPix;
+                        validPix.reserve( sw * sh );
+                        for ( float v : survLum )
+                           if ( v > 0 )
+                              validPix.push_back( v );
+
+                        if ( validPix.size() > 100 )
+                        {
+                           std::sort( validPix.begin(), validPix.end() );
+                           float median = validPix[validPix.size() / 2];
+                           std::vector<float> absdev( validPix.size() );
+                           for ( size_t i = 0; i < validPix.size(); i++ )
+                              absdev[i] = std::abs( validPix[i] - median );
+                           std::sort( absdev.begin(), absdev.end() );
+                           float mad = absdev[absdev.size() / 2] * 1.4826f; // MAD → sigma
+
+                           // Threshold: signal is anything above median + 3*MAD
+                           float threshold = median + 3.0f * mad;
+                           signalMask = cv::Mat( sh, sw, CV_8U, cv::Scalar( 255 ) );
+                           for ( int y = 0; y < sh; y++ )
+                              for ( int x = 0; x < sw; x++ )
+                                 if ( survLum[y * sw + x] > threshold )
+                                    signalMask.at<uint8_t>( y, x ) = 0; // exclude signal
+
+                           int masked = cv::countNonZero( signalMask == 0 );
+                           std::cout << "  Survey mask: " << masked << "/" << ( sw * sh )
+                                     << " pixels masked as signal ("
+                                     << std::setprecision( 1 ) << std::fixed
+                                     << ( 100.0 * masked / ( sw * sh ) ) << "%)\n"
+                                     << std::defaultfloat;
+                           std::cout << "  Threshold: median=" << median
+                                     << " MAD_sigma=" << mad
+                                     << " thresh=" << threshold << "\n";
+                        }
+                        else
+                           std::cerr << "  WARNING: Survey too few valid pixels for mask\n";
+                     }
+                     else
+                        std::cerr << "  WARNING: Survey fetch failed — "
+                                  << "falling back to unmasked gradient fit\n";
+                  }
+               }
+
                cv::Mat cvImg = PCLImageToCvMat( image );
                std::vector<cv::Mat> channels;
                cv::split( cvImg, channels );
@@ -3195,14 +3668,20 @@ int main( int argc, char** argv )
                for ( int c = 0; c < std::min( (int)channels.size(), 3 ); c++ )
                {
                   std::vector<double> coeffs;
-                  cv::Mat grad = StackEngine::fitGradient(
-                     channels[c], emptyStars, stackParams.gradientDegree, coeffs );
+                  cv::Mat grad;
+                  if ( !signalMask.empty() )
+                     grad = StackEngine::fitGradient(
+                        channels[c], emptyStars, stackParams.gradientDegree, coeffs, signalMask );
+                  else
+                     grad = StackEngine::fitGradient(
+                        channels[c], emptyStars, stackParams.gradientDegree, coeffs );
                   channels[c] -= grad;
                }
                cv::Mat result;
                cv::merge( channels, result );
                image = CvMatToPCLImage( result );
-               std::cout << "  Global gradient removed.\n";
+               std::cout << "  Global gradient removed"
+                         << ( signalMask.empty() ? ".\n" : " (survey-masked).\n" );
             }
          }
          else
@@ -3272,7 +3751,6 @@ int main( int argc, char** argv )
          }
       }
       else
-#endif // HAS_FITSSTACKER
       {
          // Single-file load path
          String pclInputPath = String::UTF8ToUTF16( inputPath.c_str() );
@@ -3398,7 +3876,9 @@ int main( int argc, char** argv )
 
       // ---------------------------------------------------------------
       // Pipeline Step 2: Smart crop of stacking edges
+      // Only when freshly stacked — a pre-stacked input was already cropped.
       // ---------------------------------------------------------------
+      if ( doStack && inputPaths.size() > 1 )
       {
          std::cout << "--- Step 2: Smart Crop Stacking Edges ---\n";
          SmartCropStackingEdges( image, g_cropOffsetX, g_cropOffsetY );
@@ -3443,7 +3923,39 @@ int main( int argc, char** argv )
          std::cout << "--- Step 4: Color Calibration (SKIPPED) ---\n\n";
 
       // ---------------------------------------------------------------
+      // Save calibrated linear result before stretching
+      // ---------------------------------------------------------------
+      std::cout << "--- Saving Result (linear) ---\n";
+      {
+         String pclOutputPath = String::UTF8ToUTF16( outputPath.c_str() );
+
+         XISFWriter writer;
+         writer.Create( pclOutputPath, 1 );
+
+         ImageOptions xisfOptions;
+         xisfOptions.bitsPerSample = 32;
+         xisfOptions.ieeefpSampleFormat = true;
+         writer.SetImageOptions( xisfOptions );
+
+         writer.WriteFITSKeywords( keywords );
+         for ( const Property& p : properties )
+            writer.WriteImageProperty( p.Id(), p.Value() );
+
+         writer.WriteImageProperty( "Processing:GalaxyProcessor:Version", Variant( IsoString( "1.0.0" ) ) );
+         if ( doBgNeutralize )
+            writer.WriteImageProperty( "Processing:GalaxyProcessor:BackgroundNeutralization", Variant( true ) );
+         if ( doSPCC )
+            writer.WriteImageProperty( "Processing:GalaxyProcessor:SPCC", Variant( true ) );
+
+         writer.WriteImage( image );
+         writer.Close();
+
+         std::cout << "Output saved to: " << outputPath << "\n\n";
+      }
+
+      // ---------------------------------------------------------------
       // Pipeline Step 5: VeraLux HyperMetric Stretch + Wavelet Enhancement
+      // (applied after saving linear data — stretched result saved separately)
       // ---------------------------------------------------------------
       if ( doStretch )
       {
@@ -3456,15 +3968,17 @@ int main( int argc, char** argv )
 
          if ( doOptimize )
          {
-            // Compute field center for survey fetch
+            // Compute field center of the cropped image for survey fetch.
+            // g_solvedWCS uses original (uncropped) pixel coords, so add crop offset.
             double optCenterRA = tanWcs.crval1;
             double optCenterDec = tanWcs.crval2;
             double optPixscale = tanWcs.valid ? tanWcs.Resolution() * 3600.0 : 0;
 
-            // Try WCS for more accurate center
             if ( g_solvedWCS )
             {
-               QPointF cp( w / 4.0, h / 4.0 );
+               double cx = ( w / 2.0 + g_cropOffsetX ) / 2.0 + 1.0;
+               double cy = ( h / 2.0 + g_cropOffsetY ) / 2.0 + 1.0;
+               QPointF cp( cx, cy );
                FITSImage::wcs_point sky;
                if ( g_solvedWCS->pixelToWCS( cp, sky ) )
                {
@@ -3489,41 +4003,47 @@ int main( int argc, char** argv )
             WaveletEnhance( image, vlParams );
             std::cout << "\n";
          }
+
+         // Save stretched result — replace _stacked with _processed,
+         // or append _stretched if no _stacked suffix
+         std::string stretchedPath = outputPath;
+         size_t stk = stretchedPath.rfind( "_stacked" );
+         if ( stk != std::string::npos )
+            stretchedPath.replace( stk, 8, "_processed" );
+         else
+         {
+            size_t dot = stretchedPath.rfind( '.' );
+            if ( dot != std::string::npos )
+               stretchedPath.insert( dot, "_stretched" );
+            else
+               stretchedPath += "_stretched";
+         }
+
+         std::cout << "--- Saving Stretched Result ---\n";
+         {
+            String pclStretchedPath = String::UTF8ToUTF16( stretchedPath.c_str() );
+            XISFWriter writer;
+            writer.Create( pclStretchedPath, 1 );
+
+            ImageOptions xisfOptions;
+            xisfOptions.bitsPerSample = 32;
+            xisfOptions.ieeefpSampleFormat = true;
+            writer.SetImageOptions( xisfOptions );
+
+            writer.WriteFITSKeywords( keywords );
+            for ( const Property& p : properties )
+               writer.WriteImageProperty( p.Id(), p.Value() );
+
+            writer.WriteImageProperty( "Processing:GalaxyProcessor:Version", Variant( IsoString( "1.0.0" ) ) );
+            writer.WriteImageProperty( "Processing:GalaxyProcessor:Stretched", Variant( true ) );
+
+            writer.WriteImage( image );
+            writer.Close();
+
+            std::cout << "Stretched output saved to: " << stretchedPath << "\n";
+         }
       }
 
-      // ---------------------------------------------------------------
-      // Save result as XISF preserving all metadata
-      // ---------------------------------------------------------------
-      std::cout << "--- Saving Result ---\n";
-      String pclOutputPath = String::UTF8ToUTF16( outputPath.c_str() );
-
-      XISFWriter writer;
-      writer.Create( pclOutputPath, 1 );
-
-      // Set image properties (keywords + XISF properties)
-      ImageOptions xisfOptions;
-      xisfOptions.bitsPerSample = 32;
-      xisfOptions.ieeefpSampleFormat = true;
-      writer.SetImageOptions( xisfOptions );
-
-      // Write FITS keywords
-      writer.WriteFITSKeywords( keywords );
-
-      // Write XISF properties
-      for ( const Property& p : properties )
-         writer.WriteImageProperty( p.Id(), p.Value() );
-
-      // Add processing history property
-      writer.WriteImageProperty( "Processing:GalaxyProcessor:Version", Variant( IsoString( "1.0.0" ) ) );
-      if ( doBgNeutralize )
-         writer.WriteImageProperty( "Processing:GalaxyProcessor:BackgroundNeutralization", Variant( true ) );
-      if ( doSPCC )
-         writer.WriteImageProperty( "Processing:GalaxyProcessor:SPCC", Variant( true ) );
-
-      writer.WriteImage( image );
-      writer.Close();
-
-      std::cout << "Output saved to: " << outputPath << "\n";
       std::cout << "\nDone.\n";
    }
    catch ( const Exception& e )

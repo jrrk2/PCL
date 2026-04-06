@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <memory>
 #include <cstdio>
+#include <cstring>
 #include <fftw3.h>
 #include <QSvgRenderer>
 #include <QScrollArea>
@@ -2923,6 +2924,12 @@ api_bool GlobalContext::ShowConsole(console_handle, api_bool)
 {
     return api_true;
 }
+
+// Weak default: just print to stderr when MockMain is not linked.
+// MockMain.cpp provides the real implementation that writes to the GUI console.
+#ifdef __linux__
+extern "C" __attribute__((weak)) void MockMainWriteConsole(const pcl::char16_type*, bool) {}
+#endif
 
 api_bool GlobalContext::WriteConsole(console_handle, const char16_type *text, api_bool newline)
 {
@@ -6075,34 +6082,6 @@ void ComboBoxContext::SetComboBoxMaxVisibleItemCount(control_handle control, int
 // =============================================================
 
 // =============================================================
-// ViewContext - Screen Transfer Functions Stubs
-// =============================================================
-
-api_bool ViewContext::GetViewScreenTransferFunctions(const_view_handle view,
-                                                     double* m, double* c0, double* c1,
-                                                     double* r0, double* r1)
-{
-    logf("[Mock] ViewContext::GetViewScreenTransferFunctions");
-    
-    // Mock implementation: return identity STF (no transformation)
-    if (m) *m = 0.5;    // midtones
-    if (c0) *c0 = 0.0;  // shadows clipping
-    if (c1) *c1 = 1.0;  // highlights clipping
-    if (r0) *r0 = 0.0;  // shadows dynamic range
-    if (r1) *r1 = 1.0;  // highlights dynamic range
-    
-    return api_false;  // No STF currently set
-}
-
-api_bool ViewContext::GetViewScreenTransferFunctionsEnabled(view_handle view)
-{
-    logf("[Mock] ViewContext::GetViewScreenTransferFunctionsEnabled");
-    
-    // Mock implementation: STF not enabled
-    return api_false;
-}
-
-// =============================================================
 // BrushContext - Gradient Brush Stubs
 // =============================================================
 
@@ -6516,20 +6495,6 @@ api_bool ExternalProcessContext::SetExternalProcessStandardErrorDataAvailableEve
 // =============================================================
 // END OF VIEW, BRUSH, TIMER, CONTROL, SPINBOX, TREEBOX, GRAPHICS, AND EXTERNALPROCESS STUBS
 // =============================================================
-
-// =============================================================
-// ViewContext - Additional Stubs
-// =============================================================
-
-api_bool ViewContext::DeleteViewProperty(api_handle hModule, view_handle view,
-                                         const char* id, uint32 notify)
-{
-    logf("[Mock] ViewContext::DeleteViewProperty (id=%s, notify=%s)",
-         id ? id : "null", notify ? "true" : "false");
-    
-    // Mock implementation: property doesn't exist
-    return api_false;
-}
 
 // =============================================================
 // GlobalContext - Settings Stubs (Unsigned Integer)
@@ -7022,18 +6987,6 @@ void FontContext::SetFontPixelSize(font_handle font, int32 size)
     
     // Mock implementation: accept pixel size
     // In real implementation, this would modify the font handle
-}
-
-// =============================================================
-// ViewContext - Additional Stub
-// =============================================================
-
-api_bool ViewContext::IsStoredPreview(const_view_handle view)
-{
-    logf("[Mock] ViewContext::IsStoredPreview");
-    
-    // Mock implementation: not a stored preview
-    return api_false;
 }
 
 // =============================================================

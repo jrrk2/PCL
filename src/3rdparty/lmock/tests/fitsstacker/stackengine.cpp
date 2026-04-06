@@ -548,6 +548,97 @@ cv::Mat StackEngine::fitGradient(const cv::Mat &channel, const std::vector<StarP
     return evalGradient(h, w, coeffs, degree);
 }
 
+// Overload with additional signal mask (CV_8U, 0 = exclude from fit)
+cv::Mat StackEngine::fitGradient(const cv::Mat &channel, const std::vector<StarPos> &stars,
+                                  int degree, std::vector<double> &coeffs,
+                                  const cv::Mat &signalMask)
+{
+    if (degree < 1) {
+        coeffs.clear();
+        return cv::Mat::zeros(channel.size(), CV_32FC1);
+    }
+
+    int nterms = polyTerms(degree);
+    int h = channel.rows, w = channel.cols;
+
+    // Build mask: start with all valid, then mask out stars and signal regions
+    cv::Mat mask = cv::Mat::ones(h, w, CV_8U) * 255;
+    for (auto &s : stars) {
+        int r = std::max(10, (int)(s.fwhm * 3));
+        cv::circle(mask, s.pos, r, cv::Scalar(0), -1);
+    }
+    if (!signalMask.empty() && signalMask.size() == mask.size())
+        cv::bitwise_and(mask, signalMask, mask);
+
+    int step = 32;
+    int patchR = 3;
+    std::vector<cv::Point2i> samples;
+    std::vector<double> values;
+    for (int y = step / 2; y < h; y += step)
+        for (int x = step / 2; x < w; x += step)
+            if (mask.at<uchar>(y, x) > 0) {
+                std::vector<float> patch;
+                for (int dy = -patchR; dy <= patchR; dy++)
+                    for (int dx = -patchR; dx <= patchR; dx++) {
+                        int py = y + dy, px = x + dx;
+                        if (py >= 0 && py < h && px >= 0 && px < w && mask.at<uchar>(py, px) > 0)
+                            patch.push_back(channel.at<float>(py, px));
+                    }
+                if (patch.size() < 5) continue;
+                std::nth_element(patch.begin(), patch.begin() + patch.size() / 2, patch.end());
+                samples.push_back({x, y});
+                values.push_back(patch[patch.size() / 2]);
+            }
+
+    if ((int)samples.size() < nterms * 3) {
+        if (degree > 1) return fitGradient(channel, stars, 1, coeffs, signalMask);
+        coeffs.assign(nterms, 0);
+        return cv::Mat::zeros(channel.size(), CV_32FC1);
+    }
+
+    std::vector<bool> inlier(samples.size(), true);
+    for (int iter = 0; iter < 2; iter++) {
+        int n = 0;
+        for (size_t i = 0; i < samples.size(); i++) if (inlier[i]) n++;
+
+        cv::Mat A(n, nterms, CV_64F);
+        cv::Mat b(n, 1, CV_64F);
+        int row = 0;
+        for (size_t i = 0; i < samples.size(); i++) {
+            if (!inlier[i]) continue;
+            polyRow((double)samples[i].x / w, (double)samples[i].y / h, degree, A.ptr<double>(row));
+            b.at<double>(row, 0) = values[i];
+            row++;
+        }
+
+        cv::Mat c;
+        cv::solve(A, b, c, cv::DECOMP_SVD);
+        coeffs.resize(nterms);
+        for (int i = 0; i < nterms; i++) coeffs[i] = c.at<double>(i, 0);
+
+        if (iter < 1) {
+            std::vector<double> residuals(samples.size());
+            for (size_t i = 0; i < samples.size(); i++) {
+                double rv[20];
+                polyRow((double)samples[i].x / w, (double)samples[i].y / h, degree, rv);
+                double pred = 0;
+                for (int j = 0; j < nterms; j++) pred += coeffs[j] * rv[j];
+                residuals[i] = std::abs(values[i] - pred);
+            }
+            auto sr = residuals;
+            std::sort(sr.begin(), sr.end());
+            double med = sr[sr.size() / 2];
+            std::vector<double> ad(sr.size());
+            for (size_t i = 0; i < sr.size(); i++) ad[i] = std::abs(sr[i] - med);
+            std::sort(ad.begin(), ad.end());
+            double sig = ad[ad.size() / 2] * 1.4826;
+            for (size_t i = 0; i < samples.size(); i++)
+                inlier[i] = residuals[i] < 3.0 * sig + 1e-6;
+        }
+    }
+    return evalGradient(h, w, coeffs, degree);
+}
+
 cv::Mat StackEngine::evalGradient(int rows, int cols, const std::vector<double> &coeffs, int degree)
 {
     int nterms = polyTerms(degree);

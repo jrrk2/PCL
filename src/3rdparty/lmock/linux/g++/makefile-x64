@@ -33,9 +33,13 @@ OBJ_FILES= \
 ./x64/Release/PCLThreadMock.o \
 ./x64/Release/QtUiExporter.o \
 ./x64/Release/LuaScriptExporter.o \
-./x64/Release/MockMain.o \
 ./x64/Release/PCLInterfaceScanner.o \
 ./x64/Release/ImageReader.o \
+
+# MockMain.o is built but NOT included in the library archive.
+# It contains main() which conflicts with test executables that
+# define their own main(). Tests link MockMain.o directly when needed.
+MOCKMAIN_OBJ = ./x64/Release/MockMain.o
 
 #
 # Dependency files
@@ -57,7 +61,7 @@ DEP_FILES= \
 
 -include $(DEP_FILES)
 
-$(OBJ_DIR)/libMock-pxi.a: $(OBJ_FILES)
+$(OBJ_DIR)/libMock-pxi.a: $(OBJ_FILES) $(MOCKMAIN_OBJ)
 	ar rc $@ $(OBJ_FILES)
 	cp -p $@ $(PCLLIBDIR64)
 

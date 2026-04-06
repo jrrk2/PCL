@@ -139,39 +139,29 @@ $(OBJ_DIR)/xisf_wcs: ./arm64/Release/xisf_wcs.o
 	@echo "Built: $@"
 
 #
-# Galaxy Processor pipeline
-# STACK=1 enables fitsstacker integration (requires OpenCV + cfitsio)
+# Galaxy Processor pipeline (requires OpenCV + cfitsio + stellarsolver)
 #
 
 STELLARSOLVER_CXXFLAGS = -I/usr/local/include/libstellarsolver
 STELLARSOLVER_LIBS = -L/usr/local/lib -lstellarsolver
 
 FITSSTACKER_DIR = $(PCLSRCDIR)/3rdparty/lmock/tests/fitsstacker
-
-ifdef STACK
 OPENCV_CXXFLAGS = $(shell pkg-config --cflags opencv4)
 OPENCV_LIBS = -lopencv_core -lopencv_imgproc -lopencv_calib3d
 CFITSIO_CXXFLAGS = $(shell pkg-config --cflags cfitsio)
 CFITSIO_LIBS = $(shell pkg-config --libs cfitsio)
-STACK_CXXFLAGS = -DHAS_FITSSTACKER $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)"
+STACK_CXXFLAGS = $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)"
 STACK_LIBS = $(OPENCV_LIBS) $(CFITSIO_LIBS)
 STACK_OBJ = ./arm64/Release/stackengine_cli.o
-else
-STACK_CXXFLAGS =
-STACK_LIBS =
-STACK_OBJ =
-endif
 
 $(OBJ_DIR)/galaxy_processor: ./arm64/Release/galaxy_processor.o $(STACK_OBJ)
 	$(CXX) $(LDFLAGS) -Wl,-rpath,/usr/local/lib -o $@ $^ $(STACK_LIBS) $(LIBS) $(STELLARSOLVER_LIBS)
 	@echo "Built: $@"
 
-ifdef STACK
 ./arm64/Release/stackengine_cli.o: $(FITSSTACKER_DIR)/stackengine_cli.cpp $(FITSSTACKER_DIR)/stackengine.cpp $(FITSSTACKER_DIR)/stackengine.h
 	@mkdir -p ./arm64/Release
 	$(CXX) $(CXXFLAGS) $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)" -Wno-unused-variable -Wno-unused-function -MF"$(@:%.o=%.d)" -o"$@" "$<"
 	@echo ' '
-endif
 
 #
 # Common rules

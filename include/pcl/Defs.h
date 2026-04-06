@@ -385,9 +385,9 @@ template <typename... Args> inline void __pcl_unused__( Args&&... ) {}
 #else                         // Linux/X11, FreeBSD/X11 and Mac OS X
 #  define PCL_EXPORT          __attribute__((visibility ("default")))
 #  if defined( __clang__ )    // Clang does not have the "externally_visible" attribute
-#    define PCL_MODULE_EXPORT   __attribute__((used)) __attribute__((visibility("default"))) // extern "C" __attribute__((visibility ("default")))
+#    define PCL_MODULE_EXPORT   extern "C" __attribute__((used)) __attribute__((visibility("default")))
 #  else
-#    define PCL_MODULE_EXPORT   __attribute__((used)) __attribute__((visibility("default"))) // extern "C" __attribute__((visibility ("default"), externally_visible))
+#    define PCL_MODULE_EXPORT   extern "C" __attribute__((used)) __attribute__((visibility("default")))
 #  endif
 #  define PCL_IMPORT          __attribute__((visibility ("default")))
 #  define PCL_LOCAL           __attribute__((visibility ("hidden")))
@@ -596,6 +596,7 @@ using distance_type = ptrdiff_t;
 /*
  * Portable integer types
  */
+#include <cstdint>
 #ifndef __PCL_NO_PORTABLE_INTEGER_TYPES
 
 namespace pcl
@@ -643,18 +644,20 @@ using uint32 = unsigned int;
 #ifdef _MSC_VER   // Valid for MS Visual C++
 using int64 = signed __int64;
 using uint64 = unsigned __int64;
-#else             // Valid for gcc
+#else             // Valid for gcc/clang
 /*!
  * Signed two's complement 64-bit integer type.
+ * Uses int64_t for compatibility with other libraries (e.g. OpenCV).
  * \ingroup portable_integer_types
  */
-using int64 = signed long long;
+using int64 = int64_t;
 
 /*!
  * Unsigned 64-bit integer type.
+ * Uses uint64_t for compatibility with other libraries (e.g. OpenCV).
  * \ingroup portable_integer_types
  */
-using uint64 = unsigned long long;
+using uint64 = uint64_t;
 #endif // _MSC_VER
 
 struct PCL_AssertScalarSizes

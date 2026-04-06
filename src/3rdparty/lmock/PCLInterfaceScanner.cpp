@@ -1,11 +1,19 @@
-// PCLInterfaceScanner.cpp - FIXED VERSION
+// PCLInterfaceScanner.cpp - Cross-platform version (macOS Mach-O + Linux ELF)
 
 #include "PCLInterfaceScanner.h"
 
+#ifdef __APPLE__
 #include <mach-o/loader.h>
 #include <mach-o/fat.h>
 #include <mach-o/nlist.h>
 #include <mach-o/dyld.h>
+#endif
+
+#ifdef __linux__
+#include <elf.h>
+#include <link.h>
+#include <limits.h>
+#endif
 
 #include <cxxabi.h>
 
@@ -31,6 +39,12 @@ static std::string demangle(const char* mangled)
     }
     return mangled ? std::string(mangled) : std::string();
 }
+
+// ============================================================================
+// collectAllExternalFunctionSymbols — platform-specific implementations
+// ============================================================================
+
+#ifdef __APPLE__
 
 // Very small helper to read the main executable's Mach-O symbol table
 // and collect all external function symbols.
@@ -125,6 +139,142 @@ std::vector<std::string> collectAllExternalFunctionSymbols()
     return result;
 }
 
+static std::string getExePath()
+{
+    return _dyld_get_image_name(0);
+}
+
+#endif // __APPLE__
+
+#ifdef __linux__
+
+// Read the main executable's ELF symbol table (.symtab or .dynsym)
+// and collect all global/weak function symbols.
+std::vector<std::string> collectAllExternalFunctionSymbols()
+{
+    std::vector<std::string> result;
+
+    // Read /proc/self/exe path
+    char exePath[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+    if (len <= 0)
+        return result;
+    exePath[len] = '\0';
+
+    int fd = ::open(exePath, O_RDONLY);
+    if (fd < 0)
+        return result;
+
+    struct stat st;
+    if (fstat(fd, &st) != 0)
+    {
+        ::close(fd);
+        return result;
+    }
+
+    void* mapped = mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    ::close(fd);
+    if (mapped == MAP_FAILED)
+        return result;
+
+    const uint8_t* base = reinterpret_cast<const uint8_t*>(mapped);
+
+    // Verify ELF magic
+    if (st.st_size < static_cast<off_t>(sizeof(Elf64_Ehdr)) ||
+        base[0] != 0x7f || base[1] != 'E' || base[2] != 'L' || base[3] != 'F')
+    {
+        munmap(mapped, st.st_size);
+        return result;
+    }
+
+    const Elf64_Ehdr* ehdr = reinterpret_cast<const Elf64_Ehdr*>(base);
+
+    // Walk section headers to find .symtab (preferred) or .dynsym
+    const Elf64_Shdr* shdrs = reinterpret_cast<const Elf64_Shdr*>(base + ehdr->e_shoff);
+    const char* shstrtab = reinterpret_cast<const char*>(base + shdrs[ehdr->e_shstrndx].sh_offset);
+
+    const Elf64_Shdr* symtabShdr = nullptr;
+    const Elf64_Shdr* strtabShdr = nullptr;
+
+    // Try .symtab first, fall back to .dynsym
+    for (uint16_t i = 0; i < ehdr->e_shnum; ++i)
+    {
+        const char* name = shstrtab + shdrs[i].sh_name;
+        if (std::strcmp(name, ".symtab") == 0)
+        {
+            symtabShdr = &shdrs[i];
+            strtabShdr = &shdrs[symtabShdr->sh_link];
+            break;
+        }
+    }
+
+    if (!symtabShdr)
+    {
+        // Fall back to .dynsym
+        for (uint16_t i = 0; i < ehdr->e_shnum; ++i)
+        {
+            const char* name = shstrtab + shdrs[i].sh_name;
+            if (std::strcmp(name, ".dynsym") == 0)
+            {
+                symtabShdr = &shdrs[i];
+                strtabShdr = &shdrs[symtabShdr->sh_link];
+                break;
+            }
+        }
+    }
+
+    if (!symtabShdr || !strtabShdr)
+    {
+        munmap(mapped, st.st_size);
+        return result;
+    }
+
+    const Elf64_Sym* symTable = reinterpret_cast<const Elf64_Sym*>(base + symtabShdr->sh_offset);
+    const char* strTable = reinterpret_cast<const char*>(base + strtabShdr->sh_offset);
+    size_t numSyms = symtabShdr->sh_size / sizeof(Elf64_Sym);
+
+    for (size_t i = 0; i < numSyms; ++i)
+    {
+        const Elf64_Sym& sym = symTable[i];
+
+        // We want global or weak function symbols
+        unsigned char bind = ELF64_ST_BIND(sym.st_info);
+        unsigned char type = ELF64_ST_TYPE(sym.st_info);
+
+        if (bind != STB_GLOBAL && bind != STB_WEAK)
+            continue;
+        if (type != STT_FUNC)
+            continue;
+        if (sym.st_name == 0)
+            continue;
+
+        const char* rawName = strTable + sym.st_name;
+        if (rawName[0] == 0)
+            continue;
+
+        result.push_back(rawName);
+    }
+
+    munmap(mapped, st.st_size);
+    return result;
+}
+
+static std::string getExePath()
+{
+    char exePath[PATH_MAX];
+    ssize_t len = readlink("/proc/self/exe", exePath, sizeof(exePath) - 1);
+    if (len <= 0)
+        return "(unknown)";
+    exePath[len] = '\0';
+    return exePath;
+}
+
+#endif // __linux__
+
+// ============================================================================
+// Shared code (platform-independent)
+// ============================================================================
+
 // Extract class name from a demangled constructor
 // Input: "pcl::SandboxInterface::SandboxInterface()"
 // Output: "pcl::SandboxInterface"
@@ -134,15 +284,15 @@ static std::string extractClassName(const std::string& demangled)
     size_t parenPos = demangled.find('(');
     if (parenPos == std::string::npos)
         return "";
-    
+
     // Work backwards from the paren to find the last ::
     size_t colonPos = demangled.rfind("::", parenPos);
     if (colonPos == std::string::npos)
         return "";
-    
+
     // The class name is everything before the last ::
     std::string className = demangled.substr(0, colonPos);
-    
+
     return className;
 }
 
@@ -151,7 +301,7 @@ std::vector<DiscoveredInterface> scanDerivedPCLInterfaces()
     std::vector<DiscoveredInterface> out;
     auto allSyms = collectAllExternalFunctionSymbols();
 
-    std::cerr << "Scanning executable: " << _dyld_get_image_name(0) << std::endl;
+    std::cerr << "Scanning executable: " << getExePath() << std::endl;
     std::cerr << "Found " << allSyms.size() << " symbols in symbol table" << std::endl;
 
     // First pass: collect all C++ symbols
@@ -170,13 +320,13 @@ std::vector<DiscoveredInterface> scanDerivedPCLInterfaces()
         {
             isCppSymbol = true;  // macOS style
         }
-        
+
         if (isCppSymbol)
         {
             cppSymbols.push_back(mangled);
         }
     }
-    
+
     std::cerr << "Collected " << cppSymbols.size() << " C++ symbols" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Scanning for ProcessInterface-derived classes..." << std::endl;
@@ -195,14 +345,14 @@ std::vector<DiscoveredInterface> scanDerivedPCLInterfaces()
                              mangled.find("C2Ev") != std::string::npos ||
                              mangled.find("C1E") != std::string::npos ||
                              mangled.find("C2E") != std::string::npos);
-        
+
         if (!isConstructor)
             continue;
-        
+
         constructors++;
 
         // Strip leading underscore(s) for demangling
-        // Linux: _Z... → Z...
+        // Linux: _Z... → already correct for __cxa_demangle
         // macOS: __Z... → _Z... (demangle expects single underscore)
         std::string toDemangle = mangled;
         if (mangled.size() >= 4 && mangled[0] == '_' && mangled[1] == '_' && mangled[2] == 'Z')
@@ -215,28 +365,28 @@ std::vector<DiscoveredInterface> scanDerivedPCLInterfaces()
             // Already correct format (Linux style with single _)
             // No change needed
         }
-        
+
         std::string dem = demangle(toDemangle.c_str());
-        
+
         // Must contain "Interface" to be an interface class
         if (dem.find("Interface") == std::string::npos)
             continue;
-        
+
         interfaceRelated++;
-        
+
         // Extract class name
         std::string className = extractClassName(dem);
-        
+
         if (className.empty())
             continue;
-        
+
         // Must end with "Interface" to match our pattern
-        if (className.length() < 9 || 
+        if (className.length() < 9 ||
             className.substr(className.length() - 9) != "Interface")
             continue;
-        
+
         // Found one!
-        std::cerr << "✓ Found ProcessInterface derivative:" << std::endl;
+        std::cerr << "Found ProcessInterface derivative:" << std::endl;
         std::cerr << "  Mangled:   " << mangled << std::endl;
         std::cerr << "  Demangled: " << dem << std::endl;
         std::cerr << "  Class:     " << className << std::endl;
@@ -258,10 +408,14 @@ std::vector<DiscoveredInterface> scanDerivedPCLInterfaces()
 
     if (out.empty())
     {
-        std::cerr << "⚠️  WARNING: No ProcessInterface derivatives found!" << std::endl;
+        std::cerr << "WARNING: No ProcessInterface derivatives found!" << std::endl;
         std::cerr << std::endl;
         std::cerr << "This could mean:" << std::endl;
+#ifdef __APPLE__
         std::cerr << "1. Your interface classes are in a separate .dylib" << std::endl;
+#else
+        std::cerr << "1. Your interface classes are in a separate .so" << std::endl;
+#endif
         std::cerr << "2. The symbols were stripped from the binary" << std::endl;
         std::cerr << "3. The interface classes aren't actually compiled into this executable" << std::endl;
         std::cerr << "4. They use a different naming pattern" << std::endl;
@@ -272,8 +426,13 @@ std::vector<DiscoveredInterface> scanDerivedPCLInterfaces()
         int count = 0;
         for (const auto& mangled : cppSymbols)
         {
-            std::string noUnderscore = mangled.substr(1);
-            std::string dem = demangle(noUnderscore.c_str());
+            std::string toTry = mangled;
+#ifdef __APPLE__
+            // macOS: strip leading underscore for demangling
+            if (mangled.size() > 1 && mangled[0] == '_')
+                toTry = mangled.substr(1);
+#endif
+            std::string dem = demangle(toTry.c_str());
             if (dem.find("Interface") != std::string::npos)
             {
                 std::cerr << "  Found: " << dem.substr(0, 120) << (dem.length() > 120 ? "..." : "") << std::endl;
@@ -284,7 +443,7 @@ std::vector<DiscoveredInterface> scanDerivedPCLInterfaces()
                 }
             }
         }
-        
+
         if (count == 0) {
             std::cerr << "  (No symbols containing 'Interface' found)" << std::endl;
         }
