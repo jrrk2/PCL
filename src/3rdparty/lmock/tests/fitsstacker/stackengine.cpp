@@ -317,6 +317,146 @@ double StackEngine::measureFWHM(const cv::Mat &gray, cv::Point2f center)
     return 2.0 * hm_sum / hm_count;
 }
 
+// ─── PSF Fitting (2D Elliptical Gaussian via Levenberg-Marquardt) ───────────
+
+bool StackEngine::fitPSF(const cv::Mat &gray, cv::Point2f center,
+                          float &A, float &x0, float &y0,
+                          float &sigmaX, float &sigmaY, float &B,
+                          float &residual)
+{
+    int cx = cvRound(center.x), cy = cvRound(center.y);
+    int r = 8;
+    if (cx < r || cy < r || cx >= gray.cols - r || cy >= gray.rows - r) return false;
+
+    // Estimate background from border median
+    std::vector<float> border;
+    border.reserve(4 * (2 * r + 1));
+    for (int dx = -r; dx <= r; dx++) {
+        border.push_back(gray.at<float>(cy - r, cx + dx));
+        border.push_back(gray.at<float>(cy + r, cx + dx));
+    }
+    for (int dy = -r + 1; dy < r; dy++) {
+        border.push_back(gray.at<float>(cy + dy, cx - r));
+        border.push_back(gray.at<float>(cy + dy, cx + r));
+    }
+    std::nth_element(border.begin(), border.begin() + border.size() / 2, border.end());
+    B = border[border.size() / 2];
+
+    float peak = gray.at<float>(cy, cx);
+    A = peak - B;
+    if (A <= 0) return false;
+    if (peak > 0.95f) return false; // saturated
+
+    // Initialize from weighted moments
+    x0 = center.x;
+    y0 = center.y;
+    double Mxx = 0, Myy = 0, M00 = 0;
+    for (int dy = -r; dy <= r; dy++)
+        for (int dx = -r; dx <= r; dx++) {
+            float w = gray.at<float>(cy + dy, cx + dx) - B;
+            if (w > 0) {
+                M00 += w;
+                Mxx += w * dx * dx;
+                Myy += w * dy * dy;
+            }
+        }
+    if (M00 <= 0) return false;
+    sigmaX = (float)std::sqrt(Mxx / M00);
+    sigmaY = (float)std::sqrt(Myy / M00);
+    if (sigmaX < 0.3f) sigmaX = 0.3f;
+    if (sigmaY < 0.3f) sigmaY = 0.3f;
+
+    // Levenberg-Marquardt: 6 parameters [A, x0, y0, sigmaX, sigmaY, B]
+    float params[6] = {A, x0, y0, sigmaX, sigmaY, B};
+    float lambda = 0.001f;
+
+    // Collect data pixels (within radius, above background)
+    struct Pixel { float x, y, val; };
+    std::vector<Pixel> pixels;
+    for (int dy = -r; dy <= r; dy++)
+        for (int dx = -r; dx <= r; dx++)
+            if (dx * dx + dy * dy <= r * r)
+                pixels.push_back({(float)(cx + dx), (float)(cy + dy),
+                                  gray.at<float>(cy + dy, cx + dx)});
+
+    int nPix = (int)pixels.size();
+    if (nPix < 10) return false;
+
+    for (int iter = 0; iter < 5; iter++) {
+        float pA = params[0], px0 = params[1], py0 = params[2];
+        float psx = params[3], psy = params[4], pB = params[5];
+        float sx2 = psx * psx, sy2 = psy * psy;
+
+        // Build J^T*J (6x6) and J^T*r (6x1)
+        double JtJ[36] = {}, Jtr[6] = {};
+        double sumR2 = 0;
+
+        for (int i = 0; i < nPix; i++) {
+            float dx = pixels[i].x - px0, dy = pixels[i].y - py0;
+            float ex = dx * dx / sx2, ey = dy * dy / sy2;
+            float g = pA * std::exp(-0.5f * (ex + ey));
+            float pred = g + pB;
+            float ri = pixels[i].val - pred;
+            sumR2 += ri * ri;
+
+            // Jacobian row
+            float J[6];
+            J[0] = g / (pA + 1e-10f);         // dA
+            J[1] = g * dx / sx2;                // dx0
+            J[2] = g * dy / sy2;                // dy0
+            J[3] = g * dx * dx / (psx * sx2);   // dsigmaX
+            J[4] = g * dy * dy / (psy * sy2);   // dsigmaY
+            J[5] = 1.0f;                         // dB
+
+            for (int a = 0; a < 6; a++) {
+                Jtr[a] += J[a] * ri;
+                for (int b = 0; b < 6; b++)
+                    JtJ[a * 6 + b] += J[a] * J[b];
+            }
+        }
+
+        // Add damping
+        for (int a = 0; a < 6; a++)
+            JtJ[a * 6 + a] *= (1.0 + lambda);
+
+        // Solve 6x6 system
+        cv::Mat H(6, 6, CV_64F, JtJ);
+        cv::Mat g(6, 1, CV_64F, Jtr);
+        cv::Mat dp;
+        if (!cv::solve(H, g, dp, cv::DECOMP_SVD)) break;
+
+        // Update parameters
+        for (int a = 0; a < 6; a++)
+            params[a] += (float)dp.at<double>(a, 0);
+
+        // Clamp
+        if (params[0] < 0) params[0] = 0;
+        if (params[3] < 0.3f) params[3] = 0.3f;
+        if (params[4] < 0.3f) params[4] = 0.3f;
+        if (std::abs(params[1] - center.x) > r) params[1] = center.x;
+        if (std::abs(params[2] - center.y) > r) params[2] = center.y;
+    }
+
+    A = params[0]; x0 = params[1]; y0 = params[2];
+    sigmaX = params[3]; sigmaY = params[4]; B = params[5];
+
+    // Compute residual
+    double sumR2 = 0;
+    float sx2 = sigmaX * sigmaX, sy2 = sigmaY * sigmaY;
+    for (int i = 0; i < nPix; i++) {
+        float dx = pixels[i].x - x0, dy = pixels[i].y - y0;
+        float g = A * std::exp(-0.5f * (dx * dx / sx2 + dy * dy / sy2));
+        float ri = pixels[i].val - (g + B);
+        sumR2 += ri * ri;
+    }
+    residual = (float)std::sqrt(sumR2 / nPix);
+
+    // Reject poor fits
+    if (residual > 0.2f * A) return false;
+
+    return true;
+}
+
 // ─── Alignment: Geometric Triangle Matching ─────────────────────────────────
 
 static inline float starDist(const StarPos &a, const StarPos &b)
@@ -446,7 +586,116 @@ StackEngine::AlignResult StackEngine::matchStars(const std::vector<StarPos> &fra
     res.inliers = cv::countNonZero(mask);
     if (res.inliers < 4) return res;
     res.H = H;
+
+    // Store inlier correspondences for TPS fitting
+    for (int i = 0; i < (int)srcPts.size(); i++) {
+        if (mask.at<uchar>(i)) {
+            res.srcPts.push_back(srcPts[i]);
+            res.dstPts.push_back(dstPts[i]);
+        }
+    }
     return res;
+}
+
+// ─── TPS Distortion Correction ─────────────────────────────────────────────
+
+static inline double tpsKernel(double r2)
+{
+    return (r2 > 0) ? r2 * std::log(r2) : 0;
+}
+
+FrameInfo::TPSCoeffs StackEngine::fitTPS(const std::vector<cv::Point2f> &srcPts,
+                                          const std::vector<cv::Point2f> &dstPts)
+{
+    FrameInfo::TPSCoeffs result;
+    int N = (int)srcPts.size();
+    if (N < 6) return result;
+
+    int M = N + 3;
+    cv::Mat L = cv::Mat::zeros(M, M, CV_64F);
+
+    // Fill K block
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++) {
+            if (i == j) {
+                L.at<double>(i, j) = 1e-6; // regularization
+                continue;
+            }
+            double dx = srcPts[i].x - srcPts[j].x;
+            double dy = srcPts[i].y - srcPts[j].y;
+            L.at<double>(i, j) = tpsKernel(dx * dx + dy * dy);
+        }
+
+    // Fill P block and P^T block
+    for (int i = 0; i < N; i++) {
+        L.at<double>(i, N)     = 1;   L.at<double>(N, i)     = 1;
+        L.at<double>(i, N + 1) = srcPts[i].x; L.at<double>(N + 1, i) = srcPts[i].x;
+        L.at<double>(i, N + 2) = srcPts[i].y; L.at<double>(N + 2, i) = srcPts[i].y;
+    }
+
+    // Solve for x-mapping
+    cv::Mat vx(M, 1, CV_64F, cv::Scalar(0));
+    for (int i = 0; i < N; i++) vx.at<double>(i, 0) = dstPts[i].x;
+    cv::Mat solX;
+    if (!cv::solve(L, vx, solX, cv::DECOMP_SVD)) return result;
+
+    // Solve for y-mapping
+    cv::Mat vy(M, 1, CV_64F, cv::Scalar(0));
+    for (int i = 0; i < N; i++) vy.at<double>(i, 0) = dstPts[i].y;
+    cv::Mat solY;
+    if (!cv::solve(L, vy, solY, cv::DECOMP_SVD)) return result;
+
+    result.ctrlPts.assign(srcPts.begin(), srcPts.end());
+    result.wx.resize(N);
+    result.wy.resize(N);
+    for (int i = 0; i < N; i++) {
+        result.wx[i] = solX.at<double>(i, 0);
+        result.wy[i] = solY.at<double>(i, 0);
+    }
+    result.ax[0] = solX.at<double>(N, 0);
+    result.ax[1] = solX.at<double>(N + 1, 0);
+    result.ax[2] = solX.at<double>(N + 2, 0);
+    result.ay[0] = solY.at<double>(N, 0);
+    result.ay[1] = solY.at<double>(N + 1, 0);
+    result.ay[2] = solY.at<double>(N + 2, 0);
+    result.valid = true;
+    return result;
+}
+
+void StackEngine::generateTPSRemapMaps(const FrameInfo::TPSCoeffs &tps, int rows, int cols,
+                                         cv::Mat &mapX, cv::Mat &mapY)
+{
+    int N = (int)tps.ctrlPts.size();
+
+    // Generate at 1/4 resolution for speed, then upscale
+    int sRows = (rows + 3) / 4, sCols = (cols + 3) / 4;
+    cv::Mat smX(sRows, sCols, CV_32FC1), smY(sRows, sCols, CV_32FC1);
+
+    cv::parallel_for_(cv::Range(0, sRows), [&](const cv::Range &range) {
+        for (int sy = range.start; sy < range.end; sy++) {
+            float *px = smX.ptr<float>(sy);
+            float *py = smY.ptr<float>(sy);
+            double y = sy * 4.0;
+            for (int sx = 0; sx < sCols; sx++) {
+                double x = sx * 4.0;
+                double fx = tps.ax[0] + tps.ax[1] * x + tps.ax[2] * y;
+                double fy = tps.ay[0] + tps.ay[1] * x + tps.ay[2] * y;
+                for (int i = 0; i < N; i++) {
+                    double dx = x - tps.ctrlPts[i].x;
+                    double dy2 = y - tps.ctrlPts[i].y;
+                    double r2 = dx * dx + dy2 * dy2;
+                    double U = tpsKernel(r2);
+                    fx += tps.wx[i] * U;
+                    fy += tps.wy[i] * U;
+                }
+                px[sx] = (float)fx;
+                py[sx] = (float)fy;
+            }
+        }
+    });
+
+    cv::resize(smX, mapX, cv::Size(cols, rows), 0, 0, cv::INTER_LINEAR);
+    cv::resize(smY, mapY, cv::Size(cols, rows), 0, 0, cv::INTER_LINEAR);
 }
 
 // ─── Background Gradient ────────────────────────────────────────────────────
@@ -868,12 +1117,22 @@ cv::Mat StackEngine::prepareFrame(const FrameInfo &fi, const cv::Mat &raw, cv::M
     int h = m_refImage.rows, w = m_refImage.cols;
 
     cv::Mat warped;
-    cv::warpPerspective(raw, warped, fi.homography, cv::Size(w, h),
-                        cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
-
     cv::Mat ones = cv::Mat::ones(raw.size(), CV_8UC1);
-    cv::warpPerspective(ones, mask, fi.homography, cv::Size(w, h),
-                        cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar(0));
+
+    if (fi.tpsCoeffs.valid) {
+        // TPS distortion-corrected warping
+        cv::Mat mapX, mapY;
+        generateTPSRemapMaps(fi.tpsCoeffs, h, w, mapX, mapY);
+        cv::remap(raw, warped, mapX, mapY, cv::INTER_LINEAR,
+                  cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+        cv::remap(ones, mask, mapX, mapY, cv::INTER_NEAREST,
+                  cv::BORDER_CONSTANT, cv::Scalar(0));
+    } else {
+        cv::warpPerspective(raw, warped, fi.homography, cv::Size(w, h),
+                            cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+        cv::warpPerspective(ones, mask, fi.homography, cv::Size(w, h),
+                            cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar(0));
+    }
 
     std::vector<cv::Mat> channels;
     cv::split(warped, channels);
@@ -884,12 +1143,45 @@ cv::Mat StackEngine::prepareFrame(const FrameInfo &fi, const cv::Mat &raw, cv::M
         if (!fi.gradientCoeffs[c].empty()) {
             int deg = (int)std::round((-1 + std::sqrt(1 + 8.0 * fi.gradientCoeffs[c].size())) / 2.0);
             cv::Mat origGrad = evalGradient(raw.rows, raw.cols, fi.gradientCoeffs[c], deg);
-            cv::warpPerspective(origGrad, grad, fi.homography, cv::Size(w, h),
-                                cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
+            if (fi.tpsCoeffs.valid) {
+                cv::Mat mapX, mapY;
+                generateTPSRemapMaps(fi.tpsCoeffs, h, w, mapX, mapY);
+                cv::remap(origGrad, grad, mapX, mapY, cv::INTER_LINEAR,
+                          cv::BORDER_CONSTANT, cv::Scalar(0));
+            } else {
+                cv::warpPerspective(origGrad, grad, fi.homography, cv::Size(w, h),
+                                    cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
+            }
         } else {
             grad = cv::Mat::zeros(h, w, CV_32FC1);
         }
-        channels[c] = fi.scale[c] * (channels[c] - grad) + fi.offset[c];
+
+        // Apply normalization: local (grid-based) or global (scalar)
+        if (fi.localGridSize > 0 && !fi.localMedian[c].empty()) {
+            // Build scale/offset grids and upscale to full resolution
+            int gs = fi.localGridSize;
+            const FrameInfo &ref = m_frames[m_refIndex];
+            cv::Mat scaleGrid(gs, gs, CV_64FC1), offsetGrid(gs, gs, CV_64FC1);
+            for (int gy = 0; gy < gs; gy++)
+                for (int gx = 0; gx < gs; gx++) {
+                    int idx = gy * gs + gx;
+                    double refSig = ref.localMAD[c][idx];
+                    double frmSig = fi.localMAD[c][idx];
+                    double s = (frmSig > 1e-6) ? refSig / frmSig : 1.0;
+                    double refMed = ref.localMedian[c][idx];
+                    double frmMed = fi.localMedian[c][idx];
+                    scaleGrid.at<double>(gy, gx) = s;
+                    offsetGrid.at<double>(gy, gx) = refMed - s * frmMed;
+                }
+            cv::Mat scaleFull, offsetFull;
+            cv::resize(scaleGrid, scaleFull, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+            cv::resize(offsetGrid, offsetFull, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+            scaleFull.convertTo(scaleFull, CV_32FC1);
+            offsetFull.convertTo(offsetFull, CV_32FC1);
+            channels[c] = scaleFull.mul(channels[c] - grad) + offsetFull;
+        } else {
+            channels[c] = fi.scale[c] * (channels[c] - grad) + fi.offset[c];
+        }
     }
 
     cv::Mat result;
@@ -1007,6 +1299,34 @@ void StackEngine::analyzeFrames(const StackParams &params)
         fi.backgroundLevel = robustMedian(gray);
         fi.backgroundNoise = robustMAD(gray, fi.backgroundLevel);
 
+        // PSF fitting for better quality metrics
+        if (params.psfWeighting && !m_cancelled) {
+            std::vector<float> psfFwhms, eccs;
+            double totalFlux = 0;
+            for (auto &s : fi.stars) {
+                float pA, px0, py0, psx, psy, pB, presid;
+                if (fitPSF(gray, s.pos, pA, px0, py0, psx, psy, pB, presid)) {
+                    s.fwhmX = 2.3548f * psx;
+                    s.fwhmY = 2.3548f * psy;
+                    float minS = std::min(psx, psy), maxS = std::max(psx, psy);
+                    s.eccentricity = std::sqrt(1.0f - (minS * minS) / (maxS * maxS));
+                    s.psfFlux = 2.0f * (float)M_PI * pA * psx * psy;
+                    s.psfResidual = presid;
+                    s.fwhm = (s.fwhmX + s.fwhmY) / 2.0f;
+                    psfFwhms.push_back(s.fwhm);
+                    eccs.push_back(s.eccentricity);
+                    totalFlux += s.psfFlux;
+                }
+            }
+            if (!psfFwhms.empty()) {
+                std::nth_element(psfFwhms.begin(), psfFwhms.begin() + psfFwhms.size() / 2, psfFwhms.end());
+                fi.fwhm = psfFwhms[psfFwhms.size() / 2];
+                std::nth_element(eccs.begin(), eccs.begin() + eccs.size() / 2, eccs.end());
+                fi.medianEccentricity = eccs[eccs.size() / 2];
+                fi.totalPSFFlux = totalFlux;
+            }
+        }
+
         // Per-channel stats (used for normalization; overwritten in Phase 1b if gradient enabled)
         {
             std::vector<cv::Mat> chans;
@@ -1017,8 +1337,15 @@ void StackEngine::analyzeFrames(const StackParams &params)
             }
         }
 
-        if (fi.fwhm > 0 && fi.backgroundNoise > 0)
-            fi.qualityScore = fi.starCount / (fi.fwhm * fi.fwhm * fi.backgroundNoise);
+        if (fi.fwhm > 0 && fi.backgroundNoise > 0) {
+            if (params.psfWeighting && fi.totalPSFFlux > 0) {
+                double avgFlux = fi.totalPSFFlux / fi.starCount;
+                double ecc = fi.medianEccentricity;
+                fi.qualityScore = avgFlux / (fi.fwhm * fi.fwhm * (1.0 + ecc * ecc) * fi.backgroundNoise);
+            } else {
+                fi.qualityScore = fi.starCount / (fi.fwhm * fi.fwhm * fi.backgroundNoise);
+            }
+        }
 
         if (m_cancelled) return;
         // Satellite trail detection: threshold → Hough lines
@@ -1119,6 +1446,12 @@ void StackEngine::analyzeFrames(const StackParams &params)
         fi.inlierCount = ar.inliers;
         fi.aligned = !fi.homography.empty();
         if (!fi.aligned) fi.enabled = false;
+
+        // Fit TPS for distortion correction using matched correspondences
+        if (fi.aligned && params.distortionCorrection && ar.srcPts.size() >= 6) {
+            // TPS maps ref→frame (inverse mapping for cv::remap)
+            fi.tpsCoeffs = fitTPS(ar.dstPts, ar.srcPts);
+        }
 
         int done = ++m_progressCounter;
         if (done % 100 == 0 || done == total) {
@@ -1239,6 +1572,45 @@ void StackEngine::refitGradients(const StackParams &params)
             cv::Mat flat = chans[c] - grad;
             fi.flatMedian[c] = robustMedian(flat);
             fi.flatMAD[c] = robustMAD(flat, fi.flatMedian[c]);
+
+            // Local normalization: compute per-cell stats on the flat image
+            if (params.localNormalization) {
+                int gs = params.localNormGridSize;
+                fi.localGridSize = gs;
+                fi.localMedian[c].resize(gs * gs);
+                fi.localMAD[c].resize(gs * gs);
+                int cellH = flat.rows / gs, cellW = flat.cols / gs;
+                for (int gy = 0; gy < gs; gy++)
+                    for (int gx = 0; gx < gs; gx++) {
+                        int y0 = gy * cellH, x0 = gx * cellW;
+                        int y1 = (gy == gs - 1) ? flat.rows : y0 + cellH;
+                        int x1 = (gx == gs - 1) ? flat.cols : x0 + cellW;
+                        std::vector<float> vals;
+                        vals.reserve((y1 - y0) * (x1 - x0) / 4);
+                        for (int y = y0; y < y1; y += 2) {
+                            const float *row = flat.ptr<float>(y);
+                            for (int x = x0; x < x1; x += 2) {
+                                float v = row[x];
+                                if (std::isfinite(v)) vals.push_back(v);
+                            }
+                        }
+                        int idx = gy * gs + gx;
+                        if (vals.size() >= 100) {
+                            std::nth_element(vals.begin(), vals.begin() + vals.size() / 2, vals.end());
+                            double med = vals[vals.size() / 2];
+                            fi.localMedian[c][idx] = med;
+                            std::vector<float> dev(vals.size());
+                            for (size_t k = 0; k < vals.size(); k++)
+                                dev[k] = std::abs(vals[k] - (float)med);
+                            std::nth_element(dev.begin(), dev.begin() + dev.size() / 2, dev.end());
+                            fi.localMAD[c][idx] = dev[dev.size() / 2] * 1.4826;
+                        } else {
+                            // Too few pixels — use global stats
+                            fi.localMedian[c][idx] = fi.flatMedian[c];
+                            fi.localMAD[c][idx] = fi.flatMAD[c];
+                        }
+                    }
+            }
         }
 
         emit progress(ki + 1, nKeys, QString("Gradient fitting %1/%2").arg(ki + 1).arg(nKeys));
@@ -1292,6 +1664,18 @@ void StackEngine::refitGradients(const StackParams &params)
             }
             fi.flatMedian[c] = pf.flatMedian[c] * (1.0 - t) + nf.flatMedian[c] * t;
             fi.flatMAD[c] = pf.flatMAD[c] * (1.0 - t) + nf.flatMAD[c] * t;
+
+            // Interpolate local normalization grids
+            if (params.localNormalization && pf.localGridSize > 0 && nf.localGridSize > 0) {
+                int gs = pf.localGridSize;
+                fi.localGridSize = gs;
+                fi.localMedian[c].resize(gs * gs);
+                fi.localMAD[c].resize(gs * gs);
+                for (int j = 0; j < gs * gs; j++) {
+                    fi.localMedian[c][j] = pf.localMedian[c][j] * (1.0 - t) + nf.localMedian[c][j] * t;
+                    fi.localMAD[c][j] = pf.localMAD[c][j] * (1.0 - t) + nf.localMAD[c][j] * t;
+                }
+            }
         }
     }
 

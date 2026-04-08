@@ -12,6 +12,11 @@ struct StarPos {
     cv::Point2f pos;
     float brightness;
     float fwhm;
+    // PSF fit results (populated when psfWeighting is enabled)
+    float fwhmX = 0, fwhmY = 0;
+    float eccentricity = 0;
+    float psfFlux = 0;
+    float psfResidual = 0;
 };
 
 struct FrameInfo {
@@ -52,6 +57,24 @@ struct FrameInfo {
     double objAzimuth = 0;      // from OBJCTAZ header
     double objAltitude = 0;     // from OBJCTALT header
 
+    // PSF aggregate stats (computed when psfWeighting is enabled)
+    double medianEccentricity = 0;
+    double totalPSFFlux = 0;
+
+    // Local normalization grids (gridSize x gridSize per channel)
+    std::vector<double> localMedian[3];
+    std::vector<double> localMAD[3];
+    int localGridSize = 0;
+
+    // TPS distortion correction coefficients
+    struct TPSCoeffs {
+        std::vector<cv::Point2f> ctrlPts;  // source control points
+        std::vector<double> wx, wy;         // TPS weights (N each)
+        double ax[3] = {}, ay[3] = {};      // affine terms [a0, a1, a2]
+        bool valid = false;
+    };
+    TPSCoeffs tpsCoeffs;
+
     bool hasSatelliteTrail = false;
     bool enabled = true;
 };
@@ -68,6 +91,10 @@ struct StackParams {
     bool rayleighModel = false;   // Rayleigh scattering sky model
     double minSolarDepression = 0;// 0=off, >0 = require sun this many degrees below horizon
     int gradientKeyInterval = 10; // fit gradient every N frames, interpolate between
+    bool psfWeighting = false;        // PSF-based subframe weighting
+    bool localNormalization = false;  // spatially-varying normalization
+    int localNormGridSize = 16;       // NxN grid for local normalization
+    bool distortionCorrection = false;// TPS distortion correction
 };
 
 class StackEngine : public QObject {
@@ -117,8 +144,24 @@ private:
     static cv::Mat toGray(const cv::Mat &color);
 
     // Alignment — geometric triangle matching
-    struct AlignResult { cv::Mat H; int inliers; };
+    struct AlignResult {
+        cv::Mat H;
+        int inliers;
+        std::vector<cv::Point2f> srcPts, dstPts; // matched correspondences
+    };
     AlignResult matchStars(const std::vector<StarPos> &frameStars);
+
+    // PSF fitting (2D elliptical Gaussian via Levenberg-Marquardt)
+    static bool fitPSF(const cv::Mat &gray, cv::Point2f center,
+                       float &A, float &x0, float &y0,
+                       float &sigmaX, float &sigmaY, float &B,
+                       float &residual);
+
+    // TPS distortion correction
+    static FrameInfo::TPSCoeffs fitTPS(const std::vector<cv::Point2f> &srcPts,
+                                        const std::vector<cv::Point2f> &dstPts);
+    static void generateTPSRemapMaps(const FrameInfo::TPSCoeffs &tps, int rows, int cols,
+                                      cv::Mat &mapX, cv::Mat &mapY);
 
     // Background gradient
     static cv::Mat fitGradient(const cv::Mat &channel, const std::vector<StarPos> &stars,

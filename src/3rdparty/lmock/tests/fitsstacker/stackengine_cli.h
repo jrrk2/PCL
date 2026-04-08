@@ -19,6 +19,11 @@ struct StarPos {
     cv::Point2f pos;
     float brightness;
     float fwhm;
+    // PSF fit results (populated when psfWeighting is enabled)
+    float fwhmX = 0, fwhmY = 0;
+    float eccentricity = 0;
+    float psfFlux = 0;
+    float psfResidual = 0;
 };
 
 struct FrameInfo {
@@ -53,6 +58,24 @@ struct FrameInfo {
     double objAzimuth = 0;
     double objAltitude = 0;
 
+    // PSF aggregate stats (computed when psfWeighting is enabled)
+    double medianEccentricity = 0;
+    double totalPSFFlux = 0;
+
+    // Local normalization grids (gridSize x gridSize per channel)
+    std::vector<double> localMedian[3];
+    std::vector<double> localMAD[3];
+    int localGridSize = 0;
+
+    // TPS distortion correction coefficients
+    struct TPSCoeffs {
+        std::vector<cv::Point2f> ctrlPts;  // source control points
+        std::vector<double> wx, wy;         // TPS weights (N each)
+        double ax[3] = {}, ay[3] = {};      // affine terms [a0, a1, a2]
+        bool valid = false;
+    };
+    TPSCoeffs tpsCoeffs;
+
     bool hasSatelliteTrail = false;
     bool enabled = true;
 };
@@ -69,6 +92,10 @@ struct StackParams {
     bool rayleighModel = false;
     double minSolarDepression = 0;
     int gradientKeyInterval = 10;
+    bool psfWeighting = false;        // PSF-based subframe weighting
+    bool localNormalization = false;  // spatially-varying normalization
+    int localNormGridSize = 16;       // NxN grid for local normalization
+    bool distortionCorrection = false;// TPS distortion correction
 };
 
 // CLI version: plain C++ class, no QObject/MOC dependency
@@ -120,8 +147,24 @@ private:
     static double measureFWHM(const cv::Mat &gray, cv::Point2f center);
     static cv::Mat toGray(const cv::Mat &color);
 
-    struct AlignResult { cv::Mat H; int inliers; };
+    struct AlignResult {
+        cv::Mat H;
+        int inliers;
+        std::vector<cv::Point2f> srcPts, dstPts;
+    };
     AlignResult matchStars(const std::vector<StarPos> &frameStars);
+
+    // PSF fitting (2D elliptical Gaussian via Levenberg-Marquardt)
+    static bool fitPSF(const cv::Mat &gray, cv::Point2f center,
+                       float &A, float &x0, float &y0,
+                       float &sigmaX, float &sigmaY, float &B,
+                       float &residual);
+
+    // TPS distortion correction
+    static FrameInfo::TPSCoeffs fitTPS(const std::vector<cv::Point2f> &srcPts,
+                                        const std::vector<cv::Point2f> &dstPts);
+    static void generateTPSRemapMaps(const FrameInfo::TPSCoeffs &tps, int rows, int cols,
+                                      cv::Mat &mapX, cv::Mat &mapY);
 
     static void fitRayleighGradient(const std::vector<cv::Mat> &channels,
                                      const std::vector<StarPos> &stars,
