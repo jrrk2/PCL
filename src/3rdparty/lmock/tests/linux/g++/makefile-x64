@@ -21,8 +21,8 @@ all: $(OBJ_DIR)/test_fft $(OBJ_DIR)/test_bgextraction $(OBJ_DIR)/test_stretch $(
 #
 
 CXX = g++
-QT5_CXXFLAGS = $(shell pkg-config --cflags Qt5Core Qt5Widgets Qt5Gui Qt5Svg 2>/dev/null)
-QT5_LIBS = $(shell pkg-config --libs Qt5Core Qt5Widgets Qt5Gui Qt5Svg 2>/dev/null)
+QT5_CXXFLAGS = $(shell pkg-config --cflags Qt5Core Qt5Widgets Qt5Gui Qt5Svg Qt5Concurrent 2>/dev/null)
+QT5_LIBS = $(shell pkg-config --libs Qt5Core Qt5Widgets Qt5Gui Qt5Svg Qt5Concurrent 2>/dev/null)
 
 #
 # Build mode: DEBUG=1 for sanitizers + debug info, default is release
@@ -82,7 +82,16 @@ DEP_FILES= \
 ./x64/Release/test_realdata.d \
 ./x64/Release/xisf_wcs.d \
 ./x64/Release/xisf_snr.d \
-./x64/Release/galaxy_processor.d \
+./x64/Release/gp_wcs.d \
+./x64/Release/gp_plate_solver.d \
+./x64/Release/gp_color_calibration.d \
+./x64/Release/gp_stretch.d \
+./x64/Release/gp_histogram.d \
+./x64/Release/gp_survey.d \
+./x64/Release/gp_stacking.d \
+./x64/Release/gp_lua.d \
+./x64/Release/gp_pcl_modules.d \
+./x64/Release/galaxy_processor_main.d \
 ./x64/Release/stackengine_cli.d
 
 -include $(DEP_FILES)
@@ -159,21 +168,75 @@ STELLARSOLVER_CXXFLAGS = $(shell pkg-config --cflags stellarsolver 2>/dev/null |
 STELLARSOLVER_LIBS = $(shell pkg-config --libs stellarsolver 2>/dev/null || echo "-lstellarsolver")
 
 FITSSTACKER_DIR = $(PCLSRCDIR)/3rdparty/lmock/tests/fitsstacker
+GP_DIR = $(PCLSRCDIR)/3rdparty/lmock/tests/galaxy_processor
 OPENCV_CXXFLAGS = $(shell pkg-config --cflags opencv4)
-OPENCV_LIBS = -lopencv_core -lopencv_imgproc -lopencv_calib3d
+OPENCV_LIBS = -lopencv_core -lopencv_imgproc
 CFITSIO_CXXFLAGS = $(shell pkg-config --cflags cfitsio)
 CFITSIO_LIBS = $(shell pkg-config --libs cfitsio)
 STACK_CXXFLAGS = $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)"
 STACK_LIBS = $(OPENCV_LIBS) $(CFITSIO_LIBS)
 STACK_OBJ = ./x64/Release/stackengine_cli.o
 
-$(OBJ_DIR)/galaxy_processor: ./x64/Release/galaxy_processor.o $(STACK_OBJ)
-	$(CXX) $(LDFLAGS) -Wl,-rpath,/usr/local/lib -o $@ $^ $(STACK_LIBS) $(LIBS) $(STELLARSOLVER_LIBS)
+LUA_DIR = $(GP_DIR)/lua
+SOL_DIR = $(GP_DIR)/sol2
+LUA_CXXFLAGS = -I"$(LUA_DIR)" -I"$(SOL_DIR)"
+LUA_LIB = $(LUA_DIR)/liblua54.a
+LUA_LIBS = $(LUA_LIB) -lm -ldl
+
+GP_CXXFLAGS = $(CXXFLAGS) $(STELLARSOLVER_CXXFLAGS) $(STACK_CXXFLAGS) $(LUA_CXXFLAGS) -I"$(GP_DIR)" -I"$(BG_SRC_DIR)" -I"$(LHE_SRC_DIR)" -I"$(PCLSRCDIR)/modules/file-formats"
+
+MOC = moc
+
+GP_OBJ = \
+	./x64/Release/gp_wcs.o \
+	./x64/Release/gp_plate_solver.o \
+	./x64/Release/gp_color_calibration.o \
+	./x64/Release/gp_stretch.o \
+	./x64/Release/gp_histogram.o \
+	./x64/Release/gp_survey.o \
+	./x64/Release/gp_stacking.o \
+	./x64/Release/gp_lua.o \
+	./x64/Release/gp_pcl_modules.o \
+	./x64/Release/gp_gui.o \
+	./x64/Release/moc_gp_gui.o \
+	./x64/Release/galaxy_processor_main.o
+
+$(LUA_LIB):
+	cd $(LUA_DIR) && gcc -c -O2 -DLUA_USE_POSIX -DLUA_USE_DLOPEN \
+		lapi.c lauxlib.c lbaselib.c lcode.c lcorolib.c lctype.c ldblib.c \
+		ldebug.c ldo.c ldump.c lfunc.c lgc.c linit.c liolib.c llex.c \
+		lmathlib.c lmem.c loadlib.c lobject.c lopcodes.c loslib.c \
+		lparser.c lstate.c lstring.c lstrlib.c ltable.c ltablib.c \
+		ltm.c lundump.c lutf8lib.c lvm.c lzio.c && \
+	ar rcs liblua54.a *.o && rm -f *.o
+	@echo "Built Lua 5.4 static library"
+
+$(OBJ_DIR)/galaxy_processor: $(GP_OBJ) $(STACK_OBJ) $(LUA_LIB)
+	$(CXX) $(LDFLAGS) -Wl,-rpath,/usr/local/lib -o $@ $(GP_OBJ) $(STACK_OBJ) $(STACK_LIBS) $(LIBS) $(STELLARSOLVER_LIBS) $(LUA_LIBS)
 	@echo "Built: $@"
 
 ./x64/Release/stackengine_cli.o: $(FITSSTACKER_DIR)/stackengine_cli.cpp $(FITSSTACKER_DIR)/stackengine.cpp $(FITSSTACKER_DIR)/stackengine.h
 	@mkdir -p ./x64/Release
 	$(CXX) $(CXXFLAGS) $(OPENCV_CXXFLAGS) $(CFITSIO_CXXFLAGS) -I"$(FITSSTACKER_DIR)" -Wno-unused-variable -Wno-unused-function -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+
+./x64/Release/gp_%.o: $(GP_DIR)/gp_%.cpp
+	@mkdir -p ./x64/Release
+	$(CXX) $(GP_CXXFLAGS) -Wno-unused-variable -Wno-unused-function -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+
+./x64/Release/galaxy_processor_main.o: $(GP_DIR)/galaxy_processor_main.cpp
+	@mkdir -p ./x64/Release
+	$(CXX) $(GP_CXXFLAGS) -Wno-unused-variable -Wno-unused-function -MF"$(@:%.o=%.d)" -o"$@" "$<"
+	@echo ' '
+
+./x64/Release/moc_gp_gui.cpp: $(GP_DIR)/gp_gui.h
+	@mkdir -p ./x64/Release
+	$(MOC) $(GP_DIR)/gp_gui.h -o $@
+	@echo "MOC: gp_gui.h"
+
+./x64/Release/moc_gp_gui.o: ./x64/Release/moc_gp_gui.cpp
+	$(CXX) $(GP_CXXFLAGS) -Wno-unused-variable -Wno-unused-function -o"$@" "$<"
 	@echo ' '
 
 #
@@ -188,7 +251,7 @@ clean:
 	rm -f ./x64/Release/test_realdata.o ./x64/Release/test_realdata.d $(OBJ_DIR)/test_realdata
 	rm -f ./x64/Release/xisf_wcs.o ./x64/Release/xisf_wcs.d $(OBJ_DIR)/xisf_wcs
 	rm -f ./x64/Release/xisf_snr.o ./x64/Release/xisf_snr.d $(OBJ_DIR)/xisf_snr
-	rm -f ./x64/Release/galaxy_processor.o ./x64/Release/galaxy_processor.d $(OBJ_DIR)/galaxy_processor
+	rm -f $(GP_OBJ) $(GP_OBJ:.o=.d) $(OBJ_DIR)/galaxy_processor
 	rm -f ./x64/Release/stackengine_cli.o ./x64/Release/stackengine_cli.d
 
 .PHONY: solve
@@ -202,10 +265,7 @@ run: all
 	$(OBJ_DIR)/test_stretch
 	$(OBJ_DIR)/test_realdata --save-reference
 
-./x64/Release/galaxy_processor.o: ../../galaxy_processor.cpp
-	@mkdir -p ./x64/Release
-	$(CXX) $(CXXFLAGS) $(STELLARSOLVER_CXXFLAGS) $(STACK_CXXFLAGS) -I"$(BG_SRC_DIR)" -I"$(LHE_SRC_DIR)" -I"$(PCLSRCDIR)/modules/file-formats" -MF"$(@:%.o=%.d)" -o"$@" "$<"
-	@echo ' '
+# galaxy_processor module compile rules are above via GP_OBJ pattern rules
 
 ./x64/Release/%.o: ../../%.cpp
 	@mkdir -p ./x64/Release

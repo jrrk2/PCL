@@ -1,7 +1,7 @@
 #include "stackengine.h"
 #include <fitsio.h>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/calib3d.hpp>
+// opencv2/calib3d.hpp no longer needed (findHomography replaced)
 #include <algorithm>
 #include <cmath>
 #include <numeric>
@@ -9,12 +9,242 @@
 #include <future>
 #include <set>
 #include <map>
+#include <random>
 #include <QDir>
 #include <QFileInfo>
 #include <QDebug>
 #include <QtConcurrent>
 
 StackEngine::StackEngine(QObject *parent) : QObject(parent) {}
+
+// ─── Thread-based parallel loop (replaces cv::parallel_for_) ────────────────
+template<typename F>
+static void parallelFor(int start, int end, F &&body)
+{
+    int n = std::max(1, (int)std::thread::hardware_concurrency());
+    int total = end - start;
+    if (total <= 0) return;
+    if (n > total) n = total;
+    std::vector<std::thread> threads(n);
+    for (int t = 0; t < n; t++) {
+        int lo = start + t * total / n;
+        int hi = start + (t + 1) * total / n;
+        threads[t] = std::thread([lo, hi, &body]() { body(lo, hi); });
+    }
+    for (auto &t : threads) t.join();
+}
+
+// ─── Channel split/merge (replaces cv::split / cv::merge) ──────────────────
+static void splitChannels(const cv::Mat &src, std::vector<cv::Mat> &dst)
+{
+    int nc = src.channels();
+    dst.resize(nc);
+    for (int c = 0; c < nc; c++)
+        dst[c] = cv::Mat(src.rows, src.cols, CV_MAKETYPE(src.depth(), 1));
+    for (int y = 0; y < src.rows; y++) {
+        const uchar *srow = src.ptr(y);
+        int elemSize1 = (int)src.elemSize1();
+        int step = nc * elemSize1;
+        for (int c = 0; c < nc; c++) {
+            uchar *drow = dst[c].ptr(y);
+            const uchar *sp = srow + c * elemSize1;
+            for (int x = 0; x < src.cols; x++) {
+                std::memcpy(drow + x * elemSize1, sp + x * step, elemSize1);
+            }
+        }
+    }
+}
+
+static void mergeChannels(const std::vector<cv::Mat> &src, cv::Mat &dst)
+{
+    int nc = (int)src.size();
+    if (nc == 0) return;
+    dst = cv::Mat(src[0].rows, src[0].cols, CV_MAKETYPE(src[0].depth(), nc));
+    int elemSize1 = (int)src[0].elemSize1();
+    int step = nc * elemSize1;
+    for (int y = 0; y < dst.rows; y++) {
+        uchar *drow = dst.ptr(y);
+        for (int c = 0; c < nc; c++) {
+            const uchar *srow = src[c].ptr(y);
+            for (int x = 0; x < dst.cols; x++) {
+                std::memcpy(drow + x * step + c * elemSize1, srow + x * elemSize1, elemSize1);
+            }
+        }
+    }
+}
+
+// ─── SVD least-squares solver (replaces cv::solve with DECOMP_SVD) ─────────
+static bool solveSVD(const cv::Mat &A, const cv::Mat &b, cv::Mat &x)
+{
+    int m = A.rows, n = A.cols;
+    std::vector<double> U(m * n), W(n), rv1(n);
+    std::vector<double> V(n * n);
+    for (int i = 0; i < m; i++)
+        for (int j = 0; j < n; j++)
+            U[i * n + j] = A.at<double>(i, j);
+
+    double g = 0, scale = 0, anorm = 0;
+    for (int i = 0; i < n; i++) {
+        int l = i + 1;
+        rv1[i] = scale * g;
+        g = scale = 0;
+        if (i < m) {
+            for (int k = i; k < m; k++) scale += std::abs(U[k*n+i]);
+            if (scale != 0) {
+                double s = 0;
+                for (int k = i; k < m; k++) { U[k*n+i] /= scale; s += U[k*n+i]*U[k*n+i]; }
+                double f = U[i*n+i];
+                g = -std::copysign(std::sqrt(s), f);
+                double h = f*g - s;
+                U[i*n+i] = f - g;
+                for (int j = l; j < n; j++) {
+                    double s2 = 0;
+                    for (int k = i; k < m; k++) s2 += U[k*n+i]*U[k*n+j];
+                    double f2 = s2 / h;
+                    for (int k = i; k < m; k++) U[k*n+j] += f2*U[k*n+i];
+                }
+                for (int k = i; k < m; k++) U[k*n+i] *= scale;
+            }
+        }
+        W[i] = scale * g;
+        g = scale = 0;
+        if (i < m && i != n-1) {
+            for (int k = l; k < n; k++) scale += std::abs(U[i*n+k]);
+            if (scale != 0) {
+                double s = 0;
+                for (int k = l; k < n; k++) { U[i*n+k] /= scale; s += U[i*n+k]*U[i*n+k]; }
+                double f = U[i*n+l];
+                g = -std::copysign(std::sqrt(s), f);
+                double h = f*g - s;
+                U[i*n+l] = f - g;
+                for (int k = l; k < n; k++) rv1[k] = U[i*n+k] / h;
+                for (int j = l; j < m; j++) {
+                    double s2 = 0;
+                    for (int k = l; k < n; k++) s2 += U[j*n+k]*U[i*n+k];
+                    for (int k = l; k < n; k++) U[j*n+k] += s2*rv1[k];
+                }
+                for (int k = l; k < n; k++) U[i*n+k] *= scale;
+            }
+        }
+        anorm = std::max(anorm, std::abs(W[i]) + std::abs(rv1[i]));
+    }
+    for (int i = n-1; i >= 0; i--) {
+        int l = i + 1;
+        if (i < n-1) {
+            if (g != 0) {
+                for (int j = l; j < n; j++) V[j*n+i] = (U[i*n+j]/U[i*n+l]) / g;
+                for (int j = l; j < n; j++) {
+                    double s = 0;
+                    for (int k = l; k < n; k++) s += U[i*n+k]*V[k*n+j];
+                    for (int k = l; k < n; k++) V[k*n+j] += s*V[k*n+i];
+                }
+            }
+            for (int j = l; j < n; j++) V[i*n+j] = V[j*n+i] = 0;
+        }
+        V[i*n+i] = 1;
+        g = rv1[i];
+    }
+    for (int i = std::min(m,n)-1; i >= 0; i--) {
+        int l = i + 1;
+        g = W[i];
+        for (int j = l; j < n; j++) U[i*n+j] = 0;
+        if (g != 0) {
+            g = 1.0 / g;
+            for (int j = l; j < n; j++) {
+                double s = 0;
+                for (int k = l; k < m; k++) s += U[k*n+i]*U[k*n+j];
+                double f = (s / U[i*n+i]) * g;
+                for (int k = i; k < m; k++) U[k*n+j] += f*U[k*n+i];
+            }
+            for (int j = i; j < m; j++) U[j*n+i] *= g;
+        } else {
+            for (int j = i; j < m; j++) U[j*n+i] = 0;
+        }
+        U[i*n+i] += 1;
+    }
+    for (int k = n-1; k >= 0; k--) {
+        for (int its = 0; its < 30; its++) {
+            int l;
+            bool flag = true;
+            int nm = k;
+            for (l = k; l >= 0; l--) {
+                nm = l - 1;
+                if (std::abs(rv1[l]) + anorm == anorm) { flag = false; break; }
+                if (nm >= 0 && std::abs(W[nm]) + anorm == anorm) break;
+            }
+            if (flag) {
+                double c = 0, s = 1;
+                for (int i = l; i <= k; i++) {
+                    double f = s * rv1[i];
+                    rv1[i] *= c;
+                    if (std::abs(f) + anorm == anorm) break;
+                    g = W[i];
+                    double h = std::hypot(f, g);
+                    W[i] = h; h = 1.0 / h; c = g * h; s = -f * h;
+                    for (int j = 0; j < m; j++) {
+                        double y = U[j*n+nm], z = U[j*n+i];
+                        U[j*n+nm] = y*c + z*s;
+                        U[j*n+i] = z*c - y*s;
+                    }
+                }
+            }
+            double z = W[k];
+            if (l == k) {
+                if (z < 0) { W[k] = -z; for (int j = 0; j < n; j++) V[j*n+k] = -V[j*n+k]; }
+                break;
+            }
+            if (its == 29) return false;
+            double xx = W[l], y = W[k-1];
+            g = rv1[k-1]; double h = rv1[k];
+            double f = ((y-z)*(y+z) + (g-h)*(g+h)) / (2*h*y);
+            g = std::hypot(f, 1.0);
+            f = ((xx-z)*(xx+z) + h*(y/(f + std::copysign(g, f)) - h)) / xx;
+            double c = 1, s = 1;
+            for (int j = l; j < k; j++) {
+                int i = j + 1;
+                g = rv1[i]; y = W[i];
+                h = s*g; g = c*g;
+                z = std::hypot(f, h);
+                rv1[j] = z; c = f/z; s = h/z;
+                f = xx*c + g*s; g = g*c - xx*s;
+                h = y*s; y *= c;
+                for (int jj = 0; jj < n; jj++) {
+                    xx = V[jj*n+j]; z = V[jj*n+i];
+                    V[jj*n+j] = xx*c + z*s;
+                    V[jj*n+i] = z*c - xx*s;
+                }
+                z = std::hypot(f, h);
+                W[j] = z;
+                if (z != 0) { z = 1.0/z; c = f*z; s = h*z; }
+                f = c*g + s*y; xx = c*y - s*g;
+                for (int jj = 0; jj < m; jj++) {
+                    y = U[jj*n+j]; z = U[jj*n+i];
+                    U[jj*n+j] = y*c + z*s;
+                    U[jj*n+i] = z*c - y*s;
+                }
+            }
+            rv1[l] = 0; rv1[k] = f; W[k] = xx;
+        }
+    }
+    double wmax = *std::max_element(W.begin(), W.end());
+    double thresh = 1e-12 * wmax;
+    x = cv::Mat(n, 1, CV_64F);
+    std::vector<double> tmp(n);
+    for (int j = 0; j < n; j++) {
+        double s = 0;
+        if (W[j] > thresh) {
+            for (int i = 0; i < m; i++) s += U[i*n+j] * b.at<double>(i, 0);
+            s /= W[j];
+        }
+        tmp[j] = s;
+    }
+    for (int j = 0; j < n; j++) {
+        double s = 0;
+        for (int jj = 0; jj < n; jj++) s += V[j*n+jj] * tmp[jj];
+        x.at<double>(j, 0) = s;
+    }
+    return true;
+}
 
 // ─── FITS I/O ───────────────────────────────────────────────────────────────
 
@@ -49,7 +279,7 @@ cv::Mat StackEngine::loadFits(const QString &path)
         planes.push_back(plane.clone());
     }
     cv::Mat merged;
-    cv::merge(planes, merged);
+    mergeChannels(planes, merged);
     return merged;
 }
 
@@ -65,7 +295,7 @@ bool StackEngine::saveFits(const QString &path, const cv::Mat &image)
     fits_create_file(&fptr, spath.c_str(), &status);
     fits_create_img(fptr, FLOAT_IMG, naxis, naxes, &status);
     std::vector<cv::Mat> channels;
-    cv::split(image, channels);
+    splitChannels(image, channels);
     for (int i = 0; i < c; i++) {
         long fpixel[3] = {1, 1, i + 1};
         cv::Mat cont;
@@ -75,6 +305,109 @@ bool StackEngine::saveFits(const QString &path, const cv::Mat &image)
     }
     fits_close_file(fptr, &status);
     return status == 0;
+}
+
+// ─── Calibration (bias, dark, flat) ─────────────────────────────────────────
+
+void StackEngine::loadCalibrationFrames(const StackParams &params)
+{
+    m_masterBias = cv::Mat();
+    m_masterDark = cv::Mat();
+    m_masterFlat = cv::Mat();
+
+    if (!params.masterBiasPath.isEmpty()) {
+        m_masterBias = loadFits(params.masterBiasPath);
+        if (!m_masterBias.empty())
+            qDebug() << "Loaded master bias:" << params.masterBiasPath
+                     << m_masterBias.cols << "x" << m_masterBias.rows;
+    }
+    if (!params.masterDarkPath.isEmpty()) {
+        m_masterDark = loadFits(params.masterDarkPath);
+        if (!m_masterDark.empty()) {
+            if (!m_masterBias.empty() &&
+                m_masterBias.rows == m_masterDark.rows &&
+                m_masterBias.cols == m_masterDark.cols &&
+                m_masterBias.channels() == m_masterDark.channels()) {
+                m_masterDark -= m_masterBias;
+                qDebug() << "Loaded master dark (bias-subtracted):" << params.masterDarkPath
+                         << m_masterDark.cols << "x" << m_masterDark.rows;
+            } else {
+                qDebug() << "Loaded master dark:" << params.masterDarkPath
+                         << m_masterDark.cols << "x" << m_masterDark.rows;
+            }
+        }
+    }
+    if (!params.masterFlatPath.isEmpty()) {
+        m_masterFlat = loadFits(params.masterFlatPath);
+        if (!m_masterFlat.empty()) {
+            if (!m_masterBias.empty() &&
+                m_masterBias.rows == m_masterFlat.rows &&
+                m_masterBias.cols == m_masterFlat.cols &&
+                m_masterBias.channels() == m_masterFlat.channels()) {
+                m_masterFlat -= m_masterBias;
+            }
+            int totalPix = m_masterFlat.rows * m_masterFlat.cols * m_masterFlat.channels();
+            std::vector<float> vals(totalPix);
+            int idx = 0;
+            for (int y = 0; y < m_masterFlat.rows; y++) {
+                const float *p = m_masterFlat.ptr<float>(y);
+                int nc = m_masterFlat.channels();
+                for (int x = 0; x < m_masterFlat.cols * nc; x++)
+                    vals[idx++] = p[x];
+            }
+            std::nth_element(vals.begin(), vals.begin() + vals.size()/2, vals.end());
+            float flatMedian = vals[vals.size()/2];
+            if (flatMedian > 0)
+                m_masterFlat /= flatMedian;
+            qDebug() << "Loaded master flat:" << params.masterFlatPath
+                     << m_masterFlat.cols << "x" << m_masterFlat.rows
+                     << "(bias-subtracted, median normalized to 1.0)";
+        }
+    }
+}
+
+cv::Mat StackEngine::calibrateFrame(const cv::Mat &raw) const
+{
+    if (m_masterBias.empty() && m_masterDark.empty() && m_masterFlat.empty())
+        return raw;
+
+    cv::Mat result = raw.clone();
+
+    if (!m_masterBias.empty() &&
+        m_masterBias.rows == result.rows && m_masterBias.cols == result.cols &&
+        m_masterBias.channels() == result.channels()) {
+        result -= m_masterBias;
+    }
+
+    if (!m_masterDark.empty() &&
+        m_masterDark.rows == result.rows && m_masterDark.cols == result.cols &&
+        m_masterDark.channels() == result.channels()) {
+        result -= m_masterDark;
+    }
+
+    if (!m_masterFlat.empty() &&
+        m_masterFlat.rows == result.rows && m_masterFlat.cols == result.cols &&
+        m_masterFlat.channels() == result.channels()) {
+        int rows = result.rows, cols = result.cols;
+        int nc = result.channels();
+        for (int y = 0; y < rows; y++) {
+            float *rp = result.ptr<float>(y);
+            const float *fp = m_masterFlat.ptr<float>(y);
+            for (int x = 0; x < cols * nc; x++) {
+                if (fp[x] > 0.01f)
+                    rp[x] /= fp[x];
+            }
+        }
+    }
+
+    int rows = result.rows, cols = result.cols, nc = result.channels();
+    for (int y = 0; y < rows; y++) {
+        float *p = result.ptr<float>(y);
+        for (int x = 0; x < cols * nc; x++)
+            if (p[x] < 0) p[x] = 0;
+    }
+
+    return result;
 }
 
 void StackEngine::dumpGradients(const QString &outDir, const StackParams &params)
@@ -111,7 +444,7 @@ void StackEngine::dumpGradients(const QString &outDir, const StackParams &params
         if (!hasGrad) continue;
 
         cv::Mat gradient;
-        cv::merge(gradChans, gradient);
+        mergeChannels(gradChans, gradient);
 
         QString fname = QFileInfo(fi.path).completeBaseName();
         QString outPath = dir.filePath(QString("grad_%1.fits").arg(fname));
@@ -127,7 +460,7 @@ cv::Mat StackEngine::toGray(const cv::Mat &color)
 {
     if (color.channels() == 1) return color;
     std::vector<cv::Mat> ch;
-    cv::split(color, ch);
+    splitChannels(color, ch);
     return 0.2126f * ch[0] + 0.7152f * ch[1] + 0.0722f * ch[2];
 }
 
@@ -209,13 +542,111 @@ StackEngine::SolarPosition StackEngine::computeSolarPosition(const QString &date
     return {altitude, azimuth};
 }
 
+// ─── Separable Gaussian blur (replaces cv::GaussianBlur) ────────────────────
+static void gaussianBlur(const cv::Mat &src, cv::Mat &dst, double sigma)
+{
+    int krad = (int)std::ceil(sigma * 3.0);
+    int ksize = 2 * krad + 1;
+    std::vector<float> kernel(ksize);
+    double sum = 0;
+    for (int i = 0; i < ksize; i++) {
+        double d = i - krad;
+        kernel[i] = (float)std::exp(-0.5 * d * d / (sigma * sigma));
+        sum += kernel[i];
+    }
+    for (int i = 0; i < ksize; i++) kernel[i] /= (float)sum;
+
+    int rows = src.rows, cols = src.cols;
+    cv::Mat tmp(rows, cols, CV_32FC1);
+    for (int y = 0; y < rows; y++) {
+        const float *sp = src.ptr<float>(y);
+        float *dp = tmp.ptr<float>(y);
+        for (int x = 0; x < cols; x++) {
+            float v = 0;
+            for (int k = -krad; k <= krad; k++) {
+                int xx = x + k;
+                if (xx < 0) xx = 0; else if (xx >= cols) xx = cols - 1;
+                v += sp[xx] * kernel[k + krad];
+            }
+            dp[x] = v;
+        }
+    }
+    dst = cv::Mat(rows, cols, CV_32FC1);
+    for (int y = 0; y < rows; y++) {
+        float *dp = dst.ptr<float>(y);
+        for (int x = 0; x < cols; x++) {
+            float v = 0;
+            for (int k = -krad; k <= krad; k++) {
+                int yy = y + k;
+                if (yy < 0) yy = 0; else if (yy >= rows) yy = rows - 1;
+                v += tmp.ptr<float>(yy)[x] * kernel[k + krad];
+            }
+            dp[x] = v;
+        }
+    }
+}
+
+// ─── Local max (replaces cv::dilate with rect kernel) ───────────────────────
+static void localMax(const cv::Mat &src, cv::Mat &dst, int ksize)
+{
+    int rows = src.rows, cols = src.cols, r = ksize / 2;
+    dst = cv::Mat(rows, cols, CV_32FC1);
+    for (int y = 0; y < rows; y++) {
+        float *dp = dst.ptr<float>(y);
+        for (int x = 0; x < cols; x++) {
+            float mx = -1e30f;
+            for (int dy = -r; dy <= r; dy++) {
+                int yy = y + dy;
+                if (yy < 0 || yy >= rows) continue;
+                const float *sp = src.ptr<float>(yy);
+                for (int dx = -r; dx <= r; dx++) {
+                    int xx = x + dx;
+                    if (xx < 0 || xx >= cols) continue;
+                    if (sp[xx] > mx) mx = sp[xx];
+                }
+            }
+            dp[x] = mx;
+        }
+    }
+}
+
+// ─── Bilinear resize (replaces cv::resize with INTER_LINEAR) ────────────────
+static void bilinearResize(const cv::Mat &src, cv::Mat &dst, int dstW, int dstH)
+{
+    dst = cv::Mat(dstH, dstW, src.type());
+    int srcH = src.rows, srcW = src.cols;
+    double sx = (double)srcW / dstW, sy = (double)srcH / dstH;
+    int depth = src.depth();
+    for (int y = 0; y < dstH; y++) {
+        double fy = (y + 0.5) * sy - 0.5;
+        int y0 = (int)std::floor(fy), y1 = y0 + 1;
+        double wy = fy - y0;
+        if (y0 < 0) y0 = 0; if (y1 >= srcH) y1 = srcH - 1;
+        for (int x = 0; x < dstW; x++) {
+            double fx = (x + 0.5) * sx - 0.5;
+            int x0 = (int)std::floor(fx), x1 = x0 + 1;
+            double wx = fx - x0;
+            if (x0 < 0) x0 = 0; if (x1 >= srcW) x1 = srcW - 1;
+            if (depth == CV_32F) {
+                float v = (float)((1-wy)*((1-wx)*src.at<float>(y0,x0) + wx*src.at<float>(y0,x1))
+                                 + wy*((1-wx)*src.at<float>(y1,x0) + wx*src.at<float>(y1,x1)));
+                dst.at<float>(y,x) = v;
+            } else {
+                double v = (1-wy)*((1-wx)*src.at<double>(y0,x0) + wx*src.at<double>(y0,x1))
+                         + wy*((1-wx)*src.at<double>(y1,x0) + wx*src.at<double>(y1,x1));
+                dst.at<double>(y,x) = v;
+            }
+        }
+    }
+}
+
 // ─── Star Detection (DoG) ───────────────────────────────────────────────────
 
 std::vector<StarPos> StackEngine::detectStars(const cv::Mat &gray, int maxStars)
 {
     cv::Mat blur1, blur2, dog;
-    cv::GaussianBlur(gray, blur1, cv::Size(0, 0), 1.5);
-    cv::GaussianBlur(gray, blur2, cv::Size(0, 0), 4.0);
+    gaussianBlur(gray, blur1, 1.5);
+    gaussianBlur(gray, blur2, 4.0);
     dog = blur1 - blur2;
 
     // Robust threshold: median + 5*MAD (subsampled)
@@ -236,7 +667,7 @@ std::vector<StarPos> StackEngine::detectStars(const cv::Mat &gray, int maxStars)
 
     // Local maxima
     cv::Mat dilated;
-    cv::dilate(dog, dilated, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5)));
+    localMax(dog, dilated, 5);
 
     std::vector<StarPos> stars;
     int border = 20;
@@ -315,6 +746,58 @@ double StackEngine::measureFWHM(const cv::Mat &gray, cv::Point2f center)
     }
     if (hm_count < 2) return -1;
     return 2.0 * hm_sum / hm_count;
+}
+
+// ─── Star Detection (PCL StarDetector) ─────────────────────────────────────
+
+#include <pcl/StarDetector.h>
+
+std::vector<StarPos> StackEngine::detectStarsPCL(const cv::Mat &gray, int maxStars)
+{
+    int w = gray.cols, h = gray.rows;
+
+    // Build a pcl::Image (single channel) from the cv::Mat float32
+    pcl::Image pclImg;
+    pclImg.AllocateData( w, h, 1, pcl::ColorSpace::Gray );
+    for ( int y = 0; y < h; y++ )
+    {
+        const float* row = gray.ptr<float>( y );
+        for ( int x = 0; x < w; x++ )
+            pclImg( x, y, 0 ) = row[x];
+    }
+
+    pcl::StarDetector sd;
+    sd.SetStructureLayers( 5 );
+    sd.SetHotPixelFilterRadius( 1 );
+    sd.SetSensitivity( 0.5F );
+    sd.SetPeakResponse( 0.5F );
+    sd.SetMaxDistortion( 0.6F );
+    sd.EnablePSFFitting( false );
+    sd.DisableClusteredSources();
+
+    pcl::ImageVariant iv( &pclImg );
+    pcl::StarDetector::star_list pclStars = sd.DetectStars( iv );
+    iv.Free();
+
+    // Convert to StarPos
+    std::vector<StarPos> stars;
+    stars.reserve( pclStars.Length() );
+    for ( const auto& s : pclStars )
+    {
+        StarPos sp;
+        sp.pos = cv::Point2f( float( s.pos.x ), float( s.pos.y ) );
+        sp.brightness = s.flux;
+        sp.fwhm = 0;
+        stars.push_back( sp );
+    }
+
+    if ( (int)stars.size() > maxStars )
+        stars.resize( maxStars );
+
+    for ( auto& s : stars )
+        s.fwhm = measureFWHM( gray, s.pos );
+
+    return stars;
 }
 
 // ─── PSF Fitting (2D Elliptical Gaussian via Levenberg-Marquardt) ───────────
@@ -423,7 +906,7 @@ bool StackEngine::fitPSF(const cv::Mat &gray, cv::Point2f center,
         cv::Mat H(6, 6, CV_64F, JtJ);
         cv::Mat g(6, 1, CV_64F, Jtr);
         cv::Mat dp;
-        if (!cv::solve(H, g, dp, cv::DECOMP_SVD)) break;
+        if (!solveSVD(H, g, dp)) break;
 
         // Update parameters
         for (int a = 0; a < 6; a++)
@@ -518,6 +1001,15 @@ void StackEngine::buildRefTriangleHash(int maxStars)
              << "bins from" << n << "stars";
 }
 
+// Forward declarations
+static cv::Mat computeHomographyDLT(const std::vector<cv::Point2f> &src,
+                                     const std::vector<cv::Point2f> &dst,
+                                     const std::vector<int> &indices);
+static cv::Mat findHomographyRANSAC(const std::vector<cv::Point2f> &src,
+                                     const std::vector<cv::Point2f> &dst,
+                                     double thresh, cv::Mat &inlierMask,
+                                     int maxIters = 2000);
+
 StackEngine::AlignResult StackEngine::matchStars(const std::vector<StarPos> &frameStars)
 {
     AlignResult res = {{}, 0};
@@ -580,10 +1072,12 @@ StackEngine::AlignResult StackEngine::matchStars(const std::vector<StarPos> &fra
     if ((int)srcPts.size() < 4) return res;
 
     cv::Mat mask;
-    cv::Mat H = cv::findHomography(srcPts, dstPts, cv::RANSAC, 3.0, mask, 2000, 0.995);
+    cv::Mat H = findHomographyRANSAC(srcPts, dstPts, 3.0, mask);
     if (H.empty()) return res;
 
-    res.inliers = cv::countNonZero(mask);
+    int inlierCount = 0;
+    for (int i = 0; i < mask.rows; i++) if (mask.at<uchar>(i)) inlierCount++;
+    res.inliers = inlierCount;
     if (res.inliers < 4) return res;
     res.H = H;
 
@@ -595,6 +1089,127 @@ StackEngine::AlignResult StackEngine::matchStars(const std::vector<StarPos> &fra
         }
     }
     return res;
+}
+
+// ─── Homography estimation (replaces cv::findHomography with RANSAC) ────────
+static cv::Mat computeHomographyDLT(const std::vector<cv::Point2f> &src,
+                                     const std::vector<cv::Point2f> &dst,
+                                     const std::vector<int> &indices)
+{
+    int N = (int)indices.size();
+    double AtA[81] = {};
+    for (int i = 0; i < N; i++) {
+        double x = src[indices[i]].x, y = src[indices[i]].y;
+        double u = dst[indices[i]].x, v = dst[indices[i]].y;
+        double r0[9] = {x, y, 1, 0, 0, 0, -u*x, -u*y, -u};
+        double r1[9] = {0, 0, 0, x, y, 1, -v*x, -v*y, -v};
+        for (int j = 0; j < 9; j++)
+            for (int k = 0; k < 9; k++)
+                AtA[j*9+k] += r0[j]*r0[k] + r1[j]*r1[k];
+    }
+    int n = 9;
+    std::vector<double> Uv(n*n), Wv(n), rv1(n), Vv(n*n);
+    for (int i = 0; i < n*n; i++) Uv[i] = AtA[i];
+    double g2 = 0, sc = 0, anm = 0;
+    for (int i = 0; i < n; i++) {
+        int l = i+1; rv1[i] = sc*g2; g2 = sc = 0;
+        { double s = 0; for (int k=i;k<n;k++) sc += std::abs(Uv[k*n+i]);
+          if (sc != 0) { for (int k=i;k<n;k++) { Uv[k*n+i]/=sc; s+=Uv[k*n+i]*Uv[k*n+i]; }
+            double f=Uv[i*n+i]; g2=-std::copysign(std::sqrt(s),f); double h2=f*g2-s; Uv[i*n+i]=f-g2;
+            for (int j=l;j<n;j++) { double s2=0; for (int k=i;k<n;k++) s2+=Uv[k*n+i]*Uv[k*n+j]; double f2=s2/h2; for (int k=i;k<n;k++) Uv[k*n+j]+=f2*Uv[k*n+i]; }
+            for (int k=i;k<n;k++) Uv[k*n+i]*=sc; } }
+        Wv[i] = sc*g2; g2=sc=0;
+        if (i<n-1) { for (int k=l;k<n;k++) sc+=std::abs(Uv[i*n+k]);
+          if (sc != 0) { double s=0; for (int k=l;k<n;k++) { Uv[i*n+k]/=sc; s+=Uv[i*n+k]*Uv[i*n+k]; }
+            double f=Uv[i*n+l]; g2=-std::copysign(std::sqrt(s),f); double h2=f*g2-s; Uv[i*n+l]=f-g2;
+            for (int k=l;k<n;k++) rv1[k]=Uv[i*n+k]/h2;
+            for (int j=l;j<n;j++) { double s2=0; for (int k=l;k<n;k++) s2+=Uv[j*n+k]*Uv[i*n+k]; for (int k=l;k<n;k++) Uv[j*n+k]+=s2*rv1[k]; }
+            for (int k=l;k<n;k++) Uv[i*n+k]*=sc; } }
+        anm = std::max(anm, std::abs(Wv[i])+std::abs(rv1[i]));
+    }
+    for (int i=n-1;i>=0;i--) { int l=i+1;
+        if (i<n-1) { if (g2!=0) { for (int j=l;j<n;j++) Vv[j*n+i]=(Uv[i*n+j]/Uv[i*n+l])/g2;
+            for (int j=l;j<n;j++) { double s=0; for (int k=l;k<n;k++) s+=Uv[i*n+k]*Vv[k*n+j]; for (int k=l;k<n;k++) Vv[k*n+j]+=s*Vv[k*n+i]; } }
+          for (int j=l;j<n;j++) Vv[i*n+j]=Vv[j*n+i]=0; } Vv[i*n+i]=1; g2=rv1[i]; }
+    for (int i=n-1;i>=0;i--) { int l=i+1; g2=Wv[i]; for (int j=l;j<n;j++) Uv[i*n+j]=0;
+        if (g2!=0) { g2=1.0/g2; for (int j=l;j<n;j++) { double s=0; for (int k=l;k<n;k++) s+=Uv[k*n+i]*Uv[k*n+j]; double f=(s/Uv[i*n+i])*g2; for (int k=i;k<n;k++) Uv[k*n+j]+=f*Uv[k*n+i]; }
+          for (int j=i;j<n;j++) Uv[j*n+i]*=g2; } else for (int j=i;j<n;j++) Uv[j*n+i]=0; Uv[i*n+i]+=1; }
+    for (int k=n-1;k>=0;k--) { for (int its=0;its<30;its++) { int l; bool flag=true; int nm=k;
+        for (l=k;l>=0;l--) { nm=l-1; if (std::abs(rv1[l])+anm==anm){flag=false;break;} if (nm>=0&&std::abs(Wv[nm])+anm==anm) break; }
+        if (flag) { double c=0,s=1; for (int i=l;i<=k;i++) { double f=s*rv1[i]; rv1[i]*=c; if (std::abs(f)+anm==anm) break; g2=Wv[i]; double h2=std::hypot(f,g2); Wv[i]=h2; h2=1.0/h2; c=g2*h2; s=-f*h2;
+            for (int j=0;j<n;j++) { double y=Uv[j*n+nm],z=Uv[j*n+i]; Uv[j*n+nm]=y*c+z*s; Uv[j*n+i]=z*c-y*s; } } }
+        double z=Wv[k]; if (l==k) { if (z<0){Wv[k]=-z; for (int j=0;j<n;j++) Vv[j*n+k]=-Vv[j*n+k];} break; }
+        if (its==29) break;
+        double xx=Wv[l],y2=Wv[k-1]; g2=rv1[k-1]; double h2=rv1[k]; double f=((y2-z)*(y2+z)+(g2-h2)*(g2+h2))/(2*h2*y2); g2=std::hypot(f,1.0);
+        f=((xx-z)*(xx+z)+h2*(y2/(f+std::copysign(g2,f))-h2))/xx; double c=1,s=1;
+        for (int j=l;j<k;j++) { int i=j+1; g2=rv1[i]; y2=Wv[i]; h2=s*g2; g2=c*g2; z=std::hypot(f,h2); rv1[j]=z; c=f/z; s=h2/z; f=xx*c+g2*s; g2=g2*c-xx*s; h2=y2*s; y2*=c;
+            for (int jj=0;jj<n;jj++) { xx=Vv[jj*n+j]; z=Vv[jj*n+i]; Vv[jj*n+j]=xx*c+z*s; Vv[jj*n+i]=z*c-xx*s; }
+            z=std::hypot(f,h2); Wv[j]=z; if (z!=0){z=1.0/z; c=f*z; s=h2*z;} f=c*g2+s*y2; xx=c*y2-s*g2;
+            for (int jj=0;jj<n;jj++) { y2=Uv[jj*n+j]; z=Uv[jj*n+i]; Uv[jj*n+j]=y2*c+z*s; Uv[jj*n+i]=z*c-y2*s; } }
+        rv1[l]=0; rv1[k]=f; Wv[k]=xx; } }
+    int minIdx = 0;
+    for (int i = 1; i < n; i++) if (std::abs(Wv[i]) < std::abs(Wv[minIdx])) minIdx = i;
+    cv::Mat H(3, 3, CV_64F);
+    for (int i = 0; i < 9; i++) H.at<double>(i/3, i%3) = Vv[i*n+minIdx];
+    double hv = H.at<double>(2,2);
+    if (std::abs(hv) > 1e-12) H /= hv;
+    return H;
+}
+
+static cv::Mat findHomographyRANSAC(const std::vector<cv::Point2f> &src,
+                                     const std::vector<cv::Point2f> &dst,
+                                     double thresh, cv::Mat &inlierMask,
+                                     int maxIters)
+{
+    int N = (int)src.size();
+    inlierMask = cv::Mat::zeros(N, 1, CV_8U);
+    if (N < 4) return cv::Mat();
+
+    double bestScore = 0;
+    cv::Mat bestH;
+    std::vector<uchar> bestInliers(N, 0);
+    double thresh2 = thresh * thresh;
+
+    std::mt19937 rng(42);
+    for (int iter = 0; iter < maxIters; iter++) {
+        std::vector<int> idx(4);
+        for (int i = 0; i < 4; i++) {
+            bool ok;
+            do { ok = true; idx[i] = rng() % N;
+                for (int j = 0; j < i; j++) if (idx[j] == idx[i]) { ok = false; break; }
+            } while (!ok);
+        }
+        cv::Mat H = computeHomographyDLT(src, dst, idx);
+        if (H.empty()) continue;
+
+        double h00=H.at<double>(0,0), h01=H.at<double>(0,1), h02=H.at<double>(0,2);
+        double h10=H.at<double>(1,0), h11=H.at<double>(1,1), h12=H.at<double>(1,2);
+        double h20=H.at<double>(2,0), h21=H.at<double>(2,1), h22=H.at<double>(2,2);
+        int nInliers = 0;
+        std::vector<uchar> curInliers(N, 0);
+        for (int i = 0; i < N; i++) {
+            double x = src[i].x, y = src[i].y;
+            double w = h20*x + h21*y + h22;
+            if (std::abs(w) < 1e-12) continue;
+            double px = (h00*x + h01*y + h02) / w;
+            double py = (h10*x + h11*y + h12) / w;
+            double dx = px - dst[i].x, dy = py - dst[i].y;
+            if (dx*dx + dy*dy < thresh2) { curInliers[i] = 1; nInliers++; }
+        }
+        if (nInliers > bestScore) {
+            bestScore = nInliers;
+            bestH = H;
+            bestInliers = curInliers;
+            if (nInliers > N * 0.995) break;
+        }
+    }
+
+    if (bestScore < 4) return cv::Mat();
+    std::vector<int> inlierIdx;
+    for (int i = 0; i < N; i++) if (bestInliers[i]) inlierIdx.push_back(i);
+    bestH = computeHomographyDLT(src, dst, inlierIdx);
+    for (int i = 0; i < N; i++) inlierMask.at<uchar>(i) = bestInliers[i];
+    return bestH;
 }
 
 // ─── TPS Distortion Correction ─────────────────────────────────────────────
@@ -637,13 +1252,13 @@ FrameInfo::TPSCoeffs StackEngine::fitTPS(const std::vector<cv::Point2f> &srcPts,
     cv::Mat vx(M, 1, CV_64F, cv::Scalar(0));
     for (int i = 0; i < N; i++) vx.at<double>(i, 0) = dstPts[i].x;
     cv::Mat solX;
-    if (!cv::solve(L, vx, solX, cv::DECOMP_SVD)) return result;
+    if (!solveSVD(L, vx, solX)) return result;
 
     // Solve for y-mapping
     cv::Mat vy(M, 1, CV_64F, cv::Scalar(0));
     for (int i = 0; i < N; i++) vy.at<double>(i, 0) = dstPts[i].y;
     cv::Mat solY;
-    if (!cv::solve(L, vy, solY, cv::DECOMP_SVD)) return result;
+    if (!solveSVD(L, vy, solY)) return result;
 
     result.ctrlPts.assign(srcPts.begin(), srcPts.end());
     result.wx.resize(N);
@@ -671,8 +1286,8 @@ void StackEngine::generateTPSRemapMaps(const FrameInfo::TPSCoeffs &tps, int rows
     int sRows = (rows + 3) / 4, sCols = (cols + 3) / 4;
     cv::Mat smX(sRows, sCols, CV_32FC1), smY(sRows, sCols, CV_32FC1);
 
-    cv::parallel_for_(cv::Range(0, sRows), [&](const cv::Range &range) {
-        for (int sy = range.start; sy < range.end; sy++) {
+    parallelFor(0, sRows, [&](int lo, int hi) {
+        for (int sy = lo; sy < hi; sy++) {
             float *px = smX.ptr<float>(sy);
             float *py = smY.ptr<float>(sy);
             double y = sy * 4.0;
@@ -694,8 +1309,8 @@ void StackEngine::generateTPSRemapMaps(const FrameInfo::TPSCoeffs &tps, int rows
         }
     });
 
-    cv::resize(smX, mapX, cv::Size(cols, rows), 0, 0, cv::INTER_LINEAR);
-    cv::resize(smY, mapY, cv::Size(cols, rows), 0, 0, cv::INTER_LINEAR);
+    bilinearResize(smX, mapX, cols, rows);
+    bilinearResize(smY, mapY, cols, rows);
 }
 
 // ─── Background Gradient ────────────────────────────────────────────────────
@@ -770,7 +1385,7 @@ cv::Mat StackEngine::fitGradient(const cv::Mat &channel, const std::vector<StarP
         }
 
         cv::Mat c;
-        cv::solve(A, b, c, cv::DECOMP_SVD);
+        solveSVD(A, b, c);
         coeffs.resize(nterms);
         for (int i = 0; i < nterms; i++) coeffs[i] = c.at<double>(i, 0);
 
@@ -861,7 +1476,7 @@ cv::Mat StackEngine::fitGradient(const cv::Mat &channel, const std::vector<StarP
         }
 
         cv::Mat c;
-        cv::solve(A, b, c, cv::DECOMP_SVD);
+        solveSVD(A, b, c);
         coeffs.resize(nterms);
         for (int i = 0; i < nterms; i++) coeffs[i] = c.at<double>(i, 0);
 
@@ -995,7 +1610,7 @@ void StackEngine::fitRayleighGradient(const std::vector<cv::Mat> &channels,
             }
         }
 
-        cv::solve(A, b, solution, cv::DECOMP_SVD);
+        solveSVD(A, b, solution);
 
         // Sigma-clip on first iteration
         if (iter < 1) {
@@ -1110,32 +1725,62 @@ void StackEngine::computeNormalization(const cv::Mat &refChan, const cv::Mat &fr
     offset = refMed - scale * frmMed;
 }
 
+// Map FITS BAYERPAT string to OpenCV demosaic code, or -1 if not recognised.
+static int bayerCode(const QString &pat)
+{
+    if (pat == "RGGB") return cv::COLOR_BayerRG2RGB;
+    if (pat == "BGGR") return cv::COLOR_BayerBG2RGB;
+    if (pat == "GRBG") return cv::COLOR_BayerGR2RGB;
+    if (pat == "GBRG") return cv::COLOR_BayerGB2RGB;
+    return -1;
+}
+
+// Demosaic a single-channel float32 Bayer frame to 3-channel float32 RGB.
+static cv::Mat demosaicFloat(const cv::Mat &raw, int code)
+{
+    cv::Mat u16;
+    raw.convertTo(u16, CV_16UC1, 65535.0);
+    cv::Mat rgb16;
+    cv::cvtColor(u16, rgb16, code);
+    cv::Mat rgbf;
+    rgb16.convertTo(rgbf, CV_32FC3, 1.0 / 65535.0);
+    return rgbf;
+}
+
 // ─── Frame Preparation ─────────────────────────────────────────────────────
 
 cv::Mat StackEngine::prepareFrame(const FrameInfo &fi, const cv::Mat &raw, cv::Mat &mask)
 {
     int h = m_refImage.rows, w = m_refImage.cols;
 
+    // Demosaic Bayer frames before warping so interpolation doesn't mix colours
+    cv::Mat input = raw;
+    if (m_debayer && raw.channels() == 1 && !fi.bayerPattern.isEmpty()) {
+        int code = bayerCode(fi.bayerPattern);
+        if (code >= 0)
+            input = demosaicFloat(raw, code);
+    }
+
     cv::Mat warped;
-    cv::Mat ones = cv::Mat::ones(raw.size(), CV_8UC1);
+    cv::Mat ones = cv::Mat::ones(input.size(), CV_8UC1);
 
     if (fi.tpsCoeffs.valid) {
         // TPS distortion-corrected warping
         cv::Mat mapX, mapY;
         generateTPSRemapMaps(fi.tpsCoeffs, h, w, mapX, mapY);
-        cv::remap(raw, warped, mapX, mapY, cv::INTER_LINEAR,
+        cv::remap(input, warped, mapX, mapY, cv::INTER_LINEAR,
                   cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
         cv::remap(ones, mask, mapX, mapY, cv::INTER_NEAREST,
                   cv::BORDER_CONSTANT, cv::Scalar(0));
     } else {
-        cv::warpPerspective(raw, warped, fi.homography, cv::Size(w, h),
+        cv::warpPerspective(input, warped, fi.homography, cv::Size(w, h),
                             cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
         cv::warpPerspective(ones, mask, fi.homography, cv::Size(w, h),
                             cv::INTER_NEAREST, cv::BORDER_CONSTANT, cv::Scalar(0));
     }
 
     std::vector<cv::Mat> channels;
-    cv::split(warped, channels);
+    splitChannels(warped, channels);
 
     int nc = std::min((int)channels.size(), 3);
     for (int c = 0; c < nc; c++) {
@@ -1174,8 +1819,8 @@ cv::Mat StackEngine::prepareFrame(const FrameInfo &fi, const cv::Mat &raw, cv::M
                     offsetGrid.at<double>(gy, gx) = refMed - s * frmMed;
                 }
             cv::Mat scaleFull, offsetFull;
-            cv::resize(scaleGrid, scaleFull, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
-            cv::resize(offsetGrid, offsetFull, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+            bilinearResize(scaleGrid, scaleFull, w, h);
+            bilinearResize(offsetGrid, offsetFull, w, h);
             scaleFull.convertTo(scaleFull, CV_32FC1);
             offsetFull.convertTo(offsetFull, CV_32FC1);
             channels[c] = scaleFull.mul(channels[c] - grad) + offsetFull;
@@ -1185,7 +1830,7 @@ cv::Mat StackEngine::prepareFrame(const FrameInfo &fi, const cv::Mat &raw, cv::M
     }
 
     cv::Mat result;
-    cv::merge(channels, result);
+    mergeChannels(channels, result);
     return result;
 }
 
@@ -1225,6 +1870,49 @@ void StackEngine::preselectFrames(const QStringList &paths, const StackParams &p
             status = 0;
             fits_read_key(fptr, TDOUBLE, "OBJCTALT", &fi.objAltitude, nullptr, &status);
             status = 0;
+            char bayerpat[80] = {};
+            fits_read_key(fptr, TSTRING, "BAYERPAT", bayerpat, nullptr, &status);
+            if (!status) fi.bayerPattern = QString(bayerpat).trimmed();
+            status = 0;
+
+            // Read WCS if present
+            {
+                SimpleTANWCS &w = fi.wcs;
+                char ctype1[80] = {};
+                fits_read_key(fptr, TSTRING, "CTYPE1", ctype1, nullptr, &status);
+                if (!status && QString(ctype1).contains("TAN")) {
+                    status = 0;
+                    fits_read_key(fptr, TDOUBLE, "CRVAL1", &w.crval1, nullptr, &status);
+                    fits_read_key(fptr, TDOUBLE, "CRVAL2", &w.crval2, nullptr, &status);
+                    fits_read_key(fptr, TDOUBLE, "CRPIX1", &w.crpix1, nullptr, &status);
+                    fits_read_key(fptr, TDOUBLE, "CRPIX2", &w.crpix2, nullptr, &status);
+                    if (!status) {
+                        int cdst = 0;
+                        fits_read_key(fptr, TDOUBLE, "CD1_1", &w.cd11, nullptr, &cdst);
+                        if (!cdst) {
+                            fits_read_key(fptr, TDOUBLE, "CD1_2", &w.cd12, nullptr, &cdst);
+                            fits_read_key(fptr, TDOUBLE, "CD2_1", &w.cd21, nullptr, &cdst);
+                            fits_read_key(fptr, TDOUBLE, "CD2_2", &w.cd22, nullptr, &cdst);
+                        } else {
+                            // Fallback: CDELT + CROTA
+                            double cdelt1 = 0, cdelt2 = 0, crota = 0;
+                            cdst = 0;
+                            fits_read_key(fptr, TDOUBLE, "CDELT1", &cdelt1, nullptr, &cdst);
+                            fits_read_key(fptr, TDOUBLE, "CDELT2", &cdelt2, nullptr, &cdst);
+                            int rot_st = 0;
+                            fits_read_key(fptr, TDOUBLE, "CROTA2", &crota, nullptr, &rot_st);
+                            double rad = crota * M_PI / 180.0;
+                            w.cd11 = cdelt1 * cos(rad);
+                            w.cd12 = -cdelt2 * sin(rad);
+                            w.cd21 = cdelt1 * sin(rad);
+                            w.cd22 = cdelt2 * cos(rad);
+                        }
+                        w.valid = !cdst;
+                    }
+                }
+                status = 0;
+            }
+
             fits_close_file(fptr, &status);
 
             if (!fi.dateObs.isEmpty() && (siteLat != 0 || siteLong != 0)) {
@@ -1254,6 +1942,8 @@ void StackEngine::preselectFrames(const QStringList &paths, const StackParams &p
 void StackEngine::analyzeFrames(const StackParams &params)
 {
     m_cancelled = false;
+    m_debayer = params.debayer;
+    loadCalibrationFrames(params);
     int total = m_frames.size();
     if (total == 0) { emit analysisComplete(); return; }
 
@@ -1275,7 +1965,7 @@ void StackEngine::analyzeFrames(const StackParams &params)
         FrameInfo &fi = m_frames[i];
         if (!fi.enabled) return;  // skip pre-filtered
 
-        cv::Mat img = loadFits(fi.path);
+        cv::Mat img = calibrateFrame(loadFits(fi.path));
         if (img.empty() || m_cancelled) { fi.enabled = false; return; }
 
         fi.width = img.cols;
@@ -1284,7 +1974,9 @@ void StackEngine::analyzeFrames(const StackParams &params)
 
         cv::Mat gray = toGray(img);
         if (m_cancelled) return;
-        fi.stars = detectStars(gray, params.maxStarsAlign);
+        fi.stars = params.usePCLStarDetector
+                 ? detectStarsPCL(gray, params.maxStarsAlign)
+                 : detectStars(gray, params.maxStarsAlign);
         if (m_cancelled) return;
         fi.starCount = fi.stars.size();
 
@@ -1330,7 +2022,7 @@ void StackEngine::analyzeFrames(const StackParams &params)
         // Per-channel stats (used for normalization; overwritten in Phase 1b if gradient enabled)
         {
             std::vector<cv::Mat> chans;
-            cv::split(img, chans);
+            splitChannels(img, chans);
             for (int c = 0; c < std::min((int)chans.size(), 3); c++) {
                 fi.flatMedian[c] = robustMedian(chans[c]);
                 fi.flatMAD[c] = robustMAD(chans[c], fi.flatMedian[c]);
@@ -1348,35 +2040,86 @@ void StackEngine::analyzeFrames(const StackParams &params)
         }
 
         if (m_cancelled) return;
-        // Satellite trail detection: threshold → Hough lines
+        // Satellite trail detection: threshold → morphological close → line scan
         {
             float thresh = fi.backgroundLevel + 15.0f * fi.backgroundNoise;
-            cv::Mat bright;
-            cv::threshold(gray, bright, thresh, 255, cv::THRESH_BINARY);
-            bright.convertTo(bright, CV_8U);
-
-            // Morphological close to connect trail segments
-            cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 1));
-            cv::morphologyEx(bright, bright, cv::MORPH_CLOSE, kernel);
-            kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 5));
-            cv::morphologyEx(bright, bright, cv::MORPH_CLOSE, kernel);
-
-            std::vector<cv::Vec4i> lines;
-            cv::HoughLinesP(bright, lines, 1, CV_PI / 180, 50,
-                            std::min(gray.cols, gray.rows) * 0.15, // minLineLength: 15% of image
-                            20);                                    // maxLineGap
-
-            if (!lines.empty()) {
-                // Check for lines significantly longer than star FWHM
-                double maxLen = 0;
-                for (auto &l : lines) {
-                    double len = std::sqrt((l[2]-l[0])*(l[2]-l[0]) + (l[3]-l[1])*(l[3]-l[1]));
-                    maxLen = std::max(maxLen, len);
+            int rows = gray.rows, cols = gray.cols;
+            cv::Mat bright(rows, cols, CV_8UC1);
+            for (int y = 0; y < rows; y++) {
+                const float *sp = gray.ptr<float>(y);
+                uchar *dp = bright.ptr<uchar>(y);
+                for (int x = 0; x < cols; x++)
+                    dp[x] = sp[x] > thresh ? 255 : 0;
+            }
+            auto dilateRect = [](const cv::Mat &src, cv::Mat &dst, int kw, int kh) {
+                int rows = src.rows, cols = src.cols;
+                int rx = kw/2, ry = kh/2;
+                dst = cv::Mat(rows, cols, CV_8UC1);
+                for (int y = 0; y < rows; y++) {
+                    uchar *dp = dst.ptr<uchar>(y);
+                    for (int x = 0; x < cols; x++) {
+                        uchar mx = 0;
+                        for (int dy = -ry; dy <= ry; dy++) {
+                            int yy = y + dy;
+                            if (yy < 0 || yy >= rows) continue;
+                            const uchar *sp = src.ptr<uchar>(yy);
+                            for (int dx = -rx; dx <= rx; dx++) {
+                                int xx = x + dx;
+                                if (xx >= 0 && xx < cols && sp[xx] > mx) mx = sp[xx];
+                            }
+                        }
+                        dp[x] = mx;
+                    }
                 }
-                if (maxLen > fi.fwhm * 10) {
-                    fi.hasSatelliteTrail = true;
-                    fi.qualityScore *= 0.01; // heavily penalize
+            };
+            auto erodeRect = [](const cv::Mat &src, cv::Mat &dst, int kw, int kh) {
+                int rows = src.rows, cols = src.cols;
+                int rx = kw/2, ry = kh/2;
+                dst = cv::Mat(rows, cols, CV_8UC1);
+                for (int y = 0; y < rows; y++) {
+                    uchar *dp = dst.ptr<uchar>(y);
+                    for (int x = 0; x < cols; x++) {
+                        uchar mn = 255;
+                        for (int dy = -ry; dy <= ry; dy++) {
+                            int yy = y + dy;
+                            if (yy < 0 || yy >= rows) continue;
+                            const uchar *sp = src.ptr<uchar>(yy);
+                            for (int dx = -rx; dx <= rx; dx++) {
+                                int xx = x + dx;
+                                if (xx >= 0 && xx < cols && sp[xx] < mn) mn = sp[xx];
+                            }
+                        }
+                        dp[x] = mn;
+                    }
                 }
+            };
+            cv::Mat tmp1, tmp2;
+            dilateRect(bright, tmp1, 5, 1); erodeRect(tmp1, tmp2, 5, 1);
+            dilateRect(tmp2, tmp1, 1, 5);   erodeRect(tmp1, bright, 1, 5);
+
+            double minLen = std::min(cols, rows) * 0.15;
+            double maxTrailLen = 0;
+            for (int y = 0; y < rows; y++) {
+                const uchar *p = bright.ptr<uchar>(y);
+                int run = 0;
+                for (int x = 0; x < cols; x++) {
+                    if (p[x]) { run++; }
+                    else { if (run > maxTrailLen) maxTrailLen = run; run = 0; }
+                }
+                if (run > maxTrailLen) maxTrailLen = run;
+            }
+            for (int x = 0; x < cols; x++) {
+                int run = 0;
+                for (int y = 0; y < rows; y++) {
+                    if (bright.ptr<uchar>(y)[x]) { run++; }
+                    else { if (run > maxTrailLen) maxTrailLen = run; run = 0; }
+                }
+                if (run > maxTrailLen) maxTrailLen = run;
+            }
+
+            if (maxTrailLen > minLen && maxTrailLen > fi.fwhm * 10) {
+                fi.hasSatelliteTrail = true;
+                fi.qualityScore *= 0.01;
             }
         }
 
@@ -1417,7 +2160,12 @@ void StackEngine::analyzeFrames(const StackParams &params)
     }
     if (m_refIndex < 0) { emit analysisComplete(); return; }
 
-    m_refImage = loadFits(m_frames[m_refIndex].path);
+    m_refImage = calibrateFrame(loadFits(m_frames[m_refIndex].path));
+    if (m_debayer && m_refImage.channels() == 1 && !m_frames[m_refIndex].bayerPattern.isEmpty()) {
+        int code = bayerCode(m_frames[m_refIndex].bayerPattern);
+        if (code >= 0)
+            m_refImage = demosaicFloat(m_refImage, code);
+    }
     m_refStars = m_frames[m_refIndex].stars;
 
     int matchStarCount = std::min(40, (int)m_refStars.size());
@@ -1542,11 +2290,11 @@ void StackEngine::refitGradients(const StackParams &params)
         int idx = keyFrames[ki];
         FrameInfo &fi = m_frames[idx];
 
-        cv::Mat img = loadFits(fi.path);
+        cv::Mat img = calibrateFrame(loadFits(fi.path));
         if (img.empty()) continue;
 
         std::vector<cv::Mat> chans;
-        cv::split(img, chans);
+        splitChannels(img, chans);
         int nc = std::min((int)chans.size(), 3);
 
         if (params.rayleighModel && nc == 3) {
@@ -1712,7 +2460,8 @@ cv::Mat StackEngine::stackFrames(const StackParams &params)
     m_cancelled = false;
     if (m_refImage.empty() || m_frames.empty()) return {};
 
-    int h = m_refImage.rows, w = m_refImage.cols, nc = m_refImage.channels();
+    int h = m_refImage.rows, w = m_refImage.cols;
+    int nc = m_refImage.channels();
 
     std::vector<int> selected;
     for (int i = 0; i < (int)m_frames.size(); i++) {
@@ -1755,8 +2504,8 @@ cv::Mat StackEngine::stackFrames(const StackParams &params)
             FrameInfo &fi = m_frames[idx];
             double w_i = fi.weight;
 
-            // Get pre-loaded frame from pipeline
-            cv::Mat raw = nextLoad.get();
+            // Get pre-loaded frame from pipeline and apply calibration
+            cv::Mat raw = calibrateFrame(nextLoad.get());
 
             // Start loading the next frame while we process this one
             if (si + 1 < nFrames)
@@ -1765,18 +2514,35 @@ cv::Mat StackEngine::stackFrames(const StackParams &params)
 
             if (raw.empty()) continue;
 
+            bool useBayerDrizzle = m_debayer
+                                && raw.channels() == 1
+                                && !fi.bayerPattern.isEmpty();
+
+            cv::Mat prepared;
             cv::Mat mask;
-            cv::Mat prepared = prepareFrame(fi, raw, mask);
+            cv::Mat mask3;
+
+            if (useBayerDrizzle) {
+                prepared = prepareFrameBayerDrizzle(fi, raw, mask3);
+            } else if (params.wcsAlignment) {
+                prepared = prepareFrameWCS(fi, raw, mask);
+            } else {
+                prepared = prepareFrame(fi, raw, mask);
+            }
 
             std::vector<cv::Mat> channels;
-            cv::split(prepared, channels);
+            splitChannels(prepared, channels);
+
+            std::vector<cv::Mat> maskCh;
+            if (useBayerDrizzle)
+                splitChannels(mask3, maskCh);
 
             // Parallel accumulation over rows
             float sigLo = (float)params.sigmaLow;
             float sigHi = (float)params.sigmaHigh;
-            cv::parallel_for_(cv::Range(0, h), [&](const cv::Range &range) {
-                for (int y = range.start; y < range.end; y++) {
-                    const uchar *pm = mask.ptr<uchar>(y);
+            parallelFor(0, h, [&](int lo, int hi) {
+                for (int y = lo; y < hi; y++) {
+                    const uchar *pm1 = useBayerDrizzle ? nullptr : mask.ptr<uchar>(y);
                     int *pc = countMat.ptr<int>(y);
 
                     for (int c = 0; c < nc; c++) {
@@ -1786,16 +2552,18 @@ cv::Mat StackEngine::stackFrames(const StackParams &params)
                         double *pw = weightSum[c].ptr<double>(y);
                         const float *pmean = doClip ? mean[c].ptr<float>(y) : nullptr;
                         const float *psigma = doClip ? sigma[c].ptr<float>(y) : nullptr;
+                        const uchar *pmC = useBayerDrizzle ? maskCh[c].ptr<uchar>(y) : nullptr;
 
                         for (int x = 0; x < w; x++) {
-                            if (pm[x] == 0) continue;
+                            if (useBayerDrizzle ? (pmC[x] == 0) : (pm1[x] == 0))
+                                continue;
                             float val = pv[x];
                             if (!std::isfinite(val)) continue;
 
                             if (doClip && pmean && psigma) {
                                 float lo = pmean[x] - sigLo * psigma[x];
                                 float hi = pmean[x] + sigHi * psigma[x];
-                                if (val < lo || val > hi) continue; // reject outlier
+                                if (val < lo || val > hi) continue;
                             }
 
                             ps[x] += w_i * val;
@@ -1815,8 +2583,8 @@ cv::Mat StackEngine::stackFrames(const StackParams &params)
             mean[c] = cv::Mat(h, w, CV_32FC1);
             sigma[c] = cv::Mat(h, w, CV_32FC1);
         }
-        cv::parallel_for_(cv::Range(0, h), [&](const cv::Range &range) {
-            for (int y = range.start; y < range.end; y++) {
+        parallelFor(0, h, [&](int lo, int hi) {
+            for (int y = lo; y < hi; y++) {
                 for (int c = 0; c < nc; c++) {
                     const double *ps = sum[c].ptr<double>(y);
                     const double *psq = sumSq[c].ptr<double>(y);
@@ -1840,7 +2608,7 @@ cv::Mat StackEngine::stackFrames(const StackParams &params)
     }
 
     cv::Mat result;
-    cv::merge(mean, result);
+    mergeChannels(mean, result);
     emit stackComplete(result);
     return result;
 }
@@ -1880,4 +2648,330 @@ cv::Mat StackEngine::autoStretch(const cv::Mat &image, double blackPct, double w
     cv::Mat out;
     stretched.convertTo(out, CV_8U, 255.0);
     return out;
+}
+
+// ─── SimpleTANWCS implementation ────────────────────────────────────────────
+
+bool SimpleTANWCS::pixelToWorld(double px, double py, double &ra, double &dec) const
+{
+    if (!valid) return false;
+    double dx = px - crpix1;
+    double dy = py - crpix2;
+    double xi  = cd11 * dx + cd12 * dy;
+    double eta = cd21 * dx + cd22 * dy;
+
+    double xi_r  = xi  * M_PI / 180.0;
+    double eta_r = eta * M_PI / 180.0;
+    double dec0  = crval2 * M_PI / 180.0;
+
+    double denom = cos(dec0) - eta_r * sin(dec0);
+    if (std::abs(denom) < 1e-12) return false;
+
+    ra  = crval1 + atan2(xi_r, denom) * 180.0 / M_PI;
+    dec = atan(cos(atan2(xi_r, denom)) * (sin(dec0) + eta_r * cos(dec0)) / denom) * 180.0 / M_PI;
+
+    if (ra < 0)   ra += 360.0;
+    if (ra >= 360) ra -= 360.0;
+    return true;
+}
+
+bool SimpleTANWCS::worldToPixel(double ra, double dec, double &px, double &py) const
+{
+    if (!valid) return false;
+    double ra_r  = ra  * M_PI / 180.0;
+    double dec_r = dec * M_PI / 180.0;
+    double ra0_r = crval1 * M_PI / 180.0;
+    double dec0  = crval2 * M_PI / 180.0;
+    double dra   = ra_r - ra0_r;
+
+    double denom = sin(dec_r) * sin(dec0) + cos(dec_r) * cos(dec0) * cos(dra);
+    if (std::abs(denom) < 1e-12) return false;
+
+    double xi  = (cos(dec_r) * sin(dra)) / denom;
+    double eta = (sin(dec_r) * cos(dec0) - cos(dec_r) * sin(dec0) * cos(dra)) / denom;
+
+    xi  *= 180.0 / M_PI;
+    eta *= 180.0 / M_PI;
+
+    double det = cd11 * cd22 - cd12 * cd21;
+    if (std::abs(det) < 1e-20) return false;
+
+    px = ( cd22 * xi - cd12 * eta) / det + crpix1;
+    py = (-cd21 * xi + cd11 * eta) / det + crpix2;
+    return true;
+}
+
+double SimpleTANWCS::pixelScale() const
+{
+    double det = std::abs(cd11 * cd22 - cd12 * cd21);
+    return std::sqrt(det) * 3600.0;
+}
+
+// ─── Additional stretch modes ───────────────────────────────────────────────
+
+cv::Mat StackEngine::stretch(const cv::Mat &image, StretchMode mode,
+                             double blackPct, double whitePct, double gamma)
+{
+    if (mode == StretchMode::Auto)
+        return autoStretch(image, blackPct, whitePct);
+
+    cv::Mat gray = toGray(image);
+    std::vector<float> vals;
+    vals.reserve(gray.rows * gray.cols / 16);
+    for (int y = 0; y < gray.rows; y += 4)
+        for (int x = 0; x < gray.cols; x += 4) {
+            float v = gray.at<float>(y, x);
+            if (std::isfinite(v)) vals.push_back(v);
+        }
+    std::sort(vals.begin(), vals.end());
+
+    float black = vals[(size_t)(vals.size() * blackPct / 100.0)];
+    float white = vals[(size_t)(vals.size() * whitePct / 100.0)];
+    if (white <= black) white = black + 1;
+
+    cv::Mat stretched;
+    image.convertTo(stretched, CV_32F);
+    stretched = (stretched - black) / (white - black);
+
+    int nc = stretched.channels();
+    float invGamma = 1.0f / (float)gamma;
+    float sinh3 = std::sinh(3.0f);
+
+    if (nc == 3) {
+        stretched.forEach<cv::Vec3f>([&](cv::Vec3f &pixel, const int *) {
+            for (int i = 0; i < 3; i++) {
+                float v = std::clamp(pixel[i], 0.0f, 1.0f);
+                switch (mode) {
+                    case StretchMode::Linear: break;
+                    case StretchMode::Gamma:  v = std::pow(v, invGamma); break;
+                    case StretchMode::Log:    v = std::log2(1.0f + v); break;
+                    case StretchMode::Sinh:   v = std::sinh(v * 3.0f) / sinh3; break;
+                    default: break;
+                }
+                pixel[i] = std::clamp(v, 0.0f, 1.0f);
+            }
+        });
+    } else {
+        stretched.forEach<float>([&](float &v, const int *) {
+            v = std::clamp(v, 0.0f, 1.0f);
+            switch (mode) {
+                case StretchMode::Linear: break;
+                case StretchMode::Gamma:  v = std::pow(v, invGamma); break;
+                case StretchMode::Log:    v = std::log2(1.0f + v); break;
+                case StretchMode::Sinh:   v = std::sinh(v * 3.0f) / sinh3; break;
+                default: break;
+            }
+            v = std::clamp(v, 0.0f, 1.0f);
+        });
+    }
+
+    cv::Mat out;
+    stretched.convertTo(out, CV_8U, 255.0);
+    return out;
+}
+
+// ─── CFA-aware 2x2 binning ─────────────────────────────────────────────────
+
+cv::Mat StackEngine::cfaBin2x2(const cv::Mat &bayer)
+{
+    if (bayer.channels() != 1 || bayer.rows < 2 || bayer.cols < 2)
+        return bayer;
+
+    int bh = bayer.rows / 2;
+    int bw = bayer.cols / 2;
+    cv::Mat out(bh, bw, CV_32FC1);
+
+    for (int y = 0; y < bh; y++) {
+        const float *r0 = bayer.ptr<float>(y * 2);
+        const float *r1 = bayer.ptr<float>(y * 2 + 1);
+        float *dst = out.ptr<float>(y);
+        for (int x = 0; x < bw; x++) {
+            int x2 = x * 2;
+            dst[x] = (r0[x2] + r0[x2 + 1] + r1[x2] + r1[x2 + 1]) * 0.25f;
+        }
+    }
+    return out;
+}
+
+// ─── WCS reprojection ───────────────────────────────────────────────────────
+
+cv::Mat StackEngine::prepareFrameWCS(const FrameInfo &fi, const cv::Mat &raw, cv::Mat &mask)
+{
+    if (!fi.wcs.valid || !m_frames[m_refIndex].wcs.valid)
+        return prepareFrame(fi, raw, mask);
+
+    const SimpleTANWCS &refWCS = m_frames[m_refIndex].wcs;
+    int h = m_refImage.rows, w = m_refImage.cols;
+    int nc = m_refImage.channels();
+
+    cv::Mat input = raw;
+    if (m_debayer && raw.channels() == 1 && !fi.bayerPattern.isEmpty()) {
+        int code = bayerCode(fi.bayerPattern);
+        if (code >= 0)
+            input = demosaicFloat(raw, code);
+    }
+
+    cv::Mat result = cv::Mat::zeros(h, w, input.type());
+    mask = cv::Mat::zeros(h, w, CV_8UC1);
+
+    parallelFor(0, h, [&](int lo, int hi) {
+        for (int y = lo; y < hi; y++) {
+            for (int x = 0; x < w; x++) {
+                double ra, dec;
+                if (!refWCS.pixelToWorld(x + 1.0, y + 1.0, ra, dec))
+                    continue;
+
+                double srcX, srcY;
+                if (!fi.wcs.worldToPixel(ra, dec, srcX, srcY))
+                    continue;
+
+                float sx = (float)(srcX - 1.0);
+                float sy = (float)(srcY - 1.0);
+
+                if (sx < 0 || sx >= input.cols - 1 || sy < 0 || sy >= input.rows - 1)
+                    continue;
+
+                int x0 = (int)std::floor(sx);
+                int y0 = (int)std::floor(sy);
+                float fx = sx - x0;
+                float fy = sy - y0;
+
+                if (nc >= 3) {
+                    const cv::Vec3f &p00 = input.at<cv::Vec3f>(y0, x0);
+                    const cv::Vec3f &p01 = input.at<cv::Vec3f>(y0, x0 + 1);
+                    const cv::Vec3f &p10 = input.at<cv::Vec3f>(y0 + 1, x0);
+                    const cv::Vec3f &p11 = input.at<cv::Vec3f>(y0 + 1, x0 + 1);
+
+                    cv::Vec3f val;
+                    for (int c = 0; c < 3; c++) {
+                        float v0 = p00[c] * (1 - fx) + p01[c] * fx;
+                        float v1 = p10[c] * (1 - fx) + p11[c] * fx;
+                        val[c] = v0 * (1 - fy) + v1 * fy;
+                    }
+                    result.at<cv::Vec3f>(y, x) = val;
+                } else {
+                    float v00 = input.at<float>(y0, x0);
+                    float v01 = input.at<float>(y0, x0 + 1);
+                    float v10 = input.at<float>(y0 + 1, x0);
+                    float v11 = input.at<float>(y0 + 1, x0 + 1);
+                    float v0 = v00 * (1 - fx) + v01 * fx;
+                    float v1 = v10 * (1 - fx) + v11 * fx;
+                    result.at<float>(y, x) = v0 * (1 - fy) + v1 * fy;
+                }
+                mask.at<uchar>(y, x) = 255;
+            }
+        }
+    });
+
+    std::vector<cv::Mat> channels;
+    splitChannels(result, channels);
+    for (int c = 0; c < nc; c++) {
+        channels[c] = fi.scale[c] * (channels[c] - fi.offset[c])
+                      + m_frames[m_refIndex].flatMedian[c];
+    }
+    mergeChannels(channels, result);
+
+    return result;
+}
+
+// ─── Bayer drizzle ──────────────────────────────────────────────────────────
+static int bayerChannel(const QString &pat, int x, int y)
+{
+    int bx = x & 1, by = y & 1;
+    int pos = by * 2 + bx;
+    if (pat == "RGGB") { static const int ch[] = {0,1,1,2}; return ch[pos]; }
+    if (pat == "BGGR") { static const int ch[] = {2,1,1,0}; return ch[pos]; }
+    if (pat == "GRBG") { static const int ch[] = {1,0,2,1}; return ch[pos]; }
+    if (pat == "GBRG") { static const int ch[] = {1,2,0,1}; return ch[pos]; }
+    return 1;
+}
+
+cv::Mat StackEngine::prepareFrameBayerDrizzle(const FrameInfo &fi,
+                                               const cv::Mat &raw,
+                                               cv::Mat &mask3)
+{
+    int h = m_refImage.rows, w = m_refImage.cols;
+    cv::Mat result = cv::Mat::zeros(h, w, CV_32FC3);
+    mask3 = cv::Mat::zeros(h, w, CV_8UC3);
+
+    if (fi.tpsCoeffs.valid) {
+        cv::Mat mapX, mapY;
+        generateTPSRemapMaps(fi.tpsCoeffs, h, w, mapX, mapY);
+        parallelFor(0, h, [&](int lo, int hi) {
+            for (int y = lo; y < hi; y++) {
+                const float *mx = mapX.ptr<float>(y);
+                const float *my = mapY.ptr<float>(y);
+                for (int x = 0; x < w; x++) {
+                    int sx = (int)std::round(mx[x]);
+                    int sy = (int)std::round(my[x]);
+                    if (sx < 0 || sx >= raw.cols || sy < 0 || sy >= raw.rows) continue;
+                    float val = raw.at<float>(sy, sx);
+                    if (!std::isfinite(val)) continue;
+                    int ch = bayerChannel(fi.bayerPattern, sx, sy);
+                    result.at<cv::Vec3f>(y, x)[ch] = val;
+                    mask3.at<cv::Vec3b>(y, x)[ch] = 255;
+                }
+            }
+        });
+    } else {
+        cv::Mat Hinv = fi.homography.inv();
+        parallelFor(0, h, [&](int lo, int hi) {
+            double h00 = Hinv.at<double>(0,0), h01 = Hinv.at<double>(0,1), h02 = Hinv.at<double>(0,2);
+            double h10 = Hinv.at<double>(1,0), h11 = Hinv.at<double>(1,1), h12 = Hinv.at<double>(1,2);
+            double h20 = Hinv.at<double>(2,0), h21 = Hinv.at<double>(2,1), h22 = Hinv.at<double>(2,2);
+            for (int y = lo; y < hi; y++) {
+                for (int x = 0; x < w; x++) {
+                    double denom = h20 * x + h21 * y + h22;
+                    if (std::abs(denom) < 1e-12) continue;
+                    int sx = (int)std::round((h00 * x + h01 * y + h02) / denom);
+                    int sy = (int)std::round((h10 * x + h11 * y + h12) / denom);
+                    if (sx < 0 || sx >= raw.cols || sy < 0 || sy >= raw.rows) continue;
+                    float val = raw.at<float>(sy, sx);
+                    if (!std::isfinite(val)) continue;
+                    int ch = bayerChannel(fi.bayerPattern, sx, sy);
+                    result.at<cv::Vec3f>(y, x)[ch] = val;
+                    mask3.at<cv::Vec3b>(y, x)[ch] = 255;
+                }
+            }
+        });
+    }
+
+    std::vector<cv::Mat> channels;
+    splitChannels(result, channels);
+    std::vector<cv::Mat> maskCh;
+    splitChannels(mask3, maskCh);
+
+    for (int c = 0; c < 3; c++) {
+        if (!fi.gradientCoeffs[c].empty()) {
+            int deg = (int)std::round((-1 + std::sqrt(1 + 8.0 * fi.gradientCoeffs[c].size())) / 2.0);
+            cv::Mat origGrad = evalGradient(raw.rows, raw.cols, fi.gradientCoeffs[c], deg);
+            cv::Mat grad;
+            if (fi.tpsCoeffs.valid) {
+                cv::Mat gMapX, gMapY;
+                generateTPSRemapMaps(fi.tpsCoeffs, h, w, gMapX, gMapY);
+                cv::remap(origGrad, grad, gMapX, gMapY, cv::INTER_LINEAR,
+                          cv::BORDER_CONSTANT, cv::Scalar(0));
+            } else {
+                cv::warpPerspective(origGrad, grad, fi.homography, cv::Size(w, h),
+                                    cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0));
+            }
+            for (int y = 0; y < h; y++) {
+                float *pch = channels[c].ptr<float>(y);
+                const float *pg = grad.ptr<float>(y);
+                const uchar *pm = maskCh[c].ptr<uchar>(y);
+                for (int x = 0; x < w; x++)
+                    if (pm[x]) pch[x] = (float)(fi.scale[c] * (pch[x] - pg[x]) + fi.offset[c]);
+            }
+        } else {
+            for (int y = 0; y < h; y++) {
+                float *pch = channels[c].ptr<float>(y);
+                const uchar *pm = maskCh[c].ptr<uchar>(y);
+                for (int x = 0; x < w; x++)
+                    if (pm[x]) pch[x] = (float)(fi.scale[c] * pch[x] + fi.offset[c]);
+            }
+        }
+    }
+
+    mergeChannels(channels, result);
+    return result;
 }
