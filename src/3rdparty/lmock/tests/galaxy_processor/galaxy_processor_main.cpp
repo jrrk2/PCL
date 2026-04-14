@@ -33,6 +33,7 @@ int main( int argc, char** argv )
    {
       std::cerr << "Usage: galaxy_processor <input.xisf|fits ...> [-o output.xisf]\n"
                 << "       [--spcc] [--bgneutralize] [--debayer] [--sdss]\n"
+                << "       [--survey=<layer>]  (Legacy Survey layer, e.g. sdss, ls-dr10, des-dr1, unwise-neo7, galex, hsc-dr3)\n"
                 << "       [--gaia-db /path/to/gdr3sp*.xpsd]\n"
                 << "       [--stretch] [--optimize[=N]]\n"
                 << "       [--stack] [--lrgb] [--gradient=0|1|2|3] [--global-gradient] [--survey-mask]\n"
@@ -64,6 +65,7 @@ int main( int argc, char** argv )
    bool doBgNeutralize = false;
    bool doDebayer = true;
    bool doSDSS = false;
+   std::string surveyLayer = "sdss";
    bool doStretch = false;
    bool doOptimize = false;
    int  optIterations = 50;
@@ -91,6 +93,8 @@ int main( int argc, char** argv )
          doDebayer = false;
       else if ( arg == "--sdss" )
          doSDSS = true;
+      else if ( arg.substr( 0, 9 ) == "--survey=" )
+         surveyLayer = arg.substr( 9 );
       else if ( arg == "--stretch" )
          doStretch = true;
       else if ( arg == "--optimize" )
@@ -403,7 +407,8 @@ int main( int argc, char** argv )
                      // Fetch survey tile and reproject to match stacked image
                      Image surveyRef;
                      if ( FetchSurveyReference( surveyRef, stackWcs, iw, ih,
-                                                survCenterRA, survCenterDec, survPixscale, 0.0 ) )
+                                                survCenterRA, survCenterDec, survPixscale, 0.0,
+                                                surveyLayer.c_str() ) )
                      {
                         // Convert reprojected survey to luminance
                         int sw = surveyRef.Width(), sh = surveyRef.Height();
@@ -831,7 +836,8 @@ int main( int argc, char** argv )
 
             std::cout << "--- Step 5+6: Optimize Stretch + Wavelet ---\n";
             RunOptimization( image, optIterations, tanWcs,
-                             optCenterRA, optCenterDec, optPixscale );
+                             optCenterRA, optCenterDec, optPixscale,
+                             surveyLayer.c_str() );
             std::cout << "\n";
          }
          else

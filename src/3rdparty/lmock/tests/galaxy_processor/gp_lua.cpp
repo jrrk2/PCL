@@ -427,14 +427,16 @@ int RunLuaScript( const std::string& scriptPath )
    {
       if ( !li || !lw ) throw std::runtime_error( "nil image or wcs" );
       int maxIter = 50;
+      std::string layer = "sdss";
       if ( opts )
       {
          if ( auto v = (*opts)["iterations"]; v.valid() ) maxIter = v.get<int>();
+         if ( auto v = (*opts)["survey"]; v.valid() ) layer = v.get<std::string>();
       }
       double centerRA = lw->wcs.crval1;
       double centerDec = lw->wcs.crval2;
       double pixscale = lw->wcs.valid ? lw->wcs.Resolution() * 3600.0 : 0;
-      RunOptimization( li->img, maxIter, lw->wcs, centerRA, centerDec, pixscale );
+      RunOptimization( li->img, maxIter, lw->wcs, centerRA, centerDec, pixscale, layer.c_str() );
    };
 
    // ---- PCL module wrappers ------------------------------------------------

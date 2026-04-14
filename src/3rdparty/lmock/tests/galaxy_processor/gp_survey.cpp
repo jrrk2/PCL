@@ -367,7 +367,8 @@ bool FetchSurveyReference(
 // ============================================================================
 
 void RunOptimization( Image& image, int maxIterations, const SimpleTANWCS& wcs,
-                      double centerRA, double centerDec, double pixscaleArcsec )
+                      double centerRA, double centerDec, double pixscaleArcsec,
+                      const char* layer )
 {
    std::cout << "\n=== OPTIMIZATION MODE (" << maxIterations << " iterations) ===\n\n";
 
@@ -377,7 +378,7 @@ void RunOptimization( Image& image, int maxIterations, const SimpleTANWCS& wcs,
    if ( !FetchSurveyReference( refImage, wcs,
          image.Width(), image.Height(),
          centerRA, centerDec, pixscaleArcsec,
-         defaultParams.target_bg ) )
+         defaultParams.target_bg, layer ) )
    {
       std::cerr << "  ERROR: Cannot fetch survey reference — optimization aborted\n";
       return;

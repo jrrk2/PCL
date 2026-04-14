@@ -17,4 +17,5 @@ bool FetchSurveyReference( Image& refImage, const SimpleTANWCS& wcs,
 
 // Run iterative coefficient optimization against survey reference
 void RunOptimization( Image& image, int maxIterations, const SimpleTANWCS& wcs,
-                      double centerRA, double centerDec, double pixscaleArcsec );
+                      double centerRA, double centerDec, double pixscaleArcsec,
+                      const char* layer = "sdss" );
